@@ -1,0 +1,13 @@
+{
+  "name": "@receptionalx/supabase",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --project-id tvcdqmmxjntxkkmbguwc > ../types/src/database.ts",
+    "db:reset": "supabase db reset"
+  },
+  "devDependencies": {
+    "supabase": "^1.134.0"
+  }
+}

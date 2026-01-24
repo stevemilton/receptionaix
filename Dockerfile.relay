@@ -1,0 +1,59 @@
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy workspace files and tsconfig
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.json ./
+COPY apps/relay/package.json apps/relay/tsconfig.json ./apps/relay/
+COPY packages/grok/package.json packages/grok/tsconfig.json ./packages/grok/
+COPY packages/types/package.json packages/types/tsconfig.json ./packages/types/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source files
+COPY apps/relay ./apps/relay
+COPY packages/grok ./packages/grok
+COPY packages/types ./packages/types
+
+# Build packages first (types, then grok), then relay
+RUN pnpm --filter @receptionalx/types build
+RUN pnpm --filter @receptionalx/grok build
+RUN pnpm --filter @receptionalx/relay build
+
+# Production stage
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Install pnpm for running
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy built files and dependencies
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/pnpm-lock.yaml ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/relay/package.json ./apps/relay/
+COPY --from=builder /app/apps/relay/dist ./apps/relay/dist
+COPY --from=builder /app/apps/relay/node_modules ./apps/relay/node_modules
+COPY --from=builder /app/packages/grok/package.json ./packages/grok/
+COPY --from=builder /app/packages/grok/dist ./packages/grok/dist
+COPY --from=builder /app/packages/grok/node_modules ./packages/grok/node_modules
+COPY --from=builder /app/packages/types/package.json ./packages/types/
+COPY --from=builder /app/packages/types/dist ./packages/types/dist
+
+# Set environment
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV HOST=0.0.0.0
+
+EXPOSE 8080
+
+# Run the relay server
+WORKDIR /app/apps/relay
+CMD ["node", "dist/server.js"]

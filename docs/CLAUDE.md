@@ -1,0 +1,579 @@
+# ReceptionAI - CLAUDE.md
+
+## Project Overview
+ReceptionAI is a voice-first AI receptionist for UK SMEs using the **Grok Audio-to-Audio Realtime API**.
+See `/docs/PRD.md` for full business requirements.
+
+---
+
+## Tech Stack & Architecture
+
+| Layer | Technology | Hosting |
+|-------|------------|---------|
+| Frontend (Web) | Next.js 14 (App Router) | Vercel |
+| Frontend (Mobile) | React Native + Expo | App Stores |
+| Backend API | Next.js API Routes | Vercel |
+| Voice Relay | Node.js WebSocket Server | Fly.io |
+| Database | Supabase (PostgreSQL + RLS) | Supabase Cloud |
+| Voice AI | Grok Realtime API (Beta) | xAI Cloud |
+| Scraping | Firecrawl API | External Service |
+| Payments | Stripe | Stripe Cloud |
+
+---
+
+## Directory Structure
+
+```
+/reception-ai
+  /apps
+    /web              # Next.js (Vercel) - Dashboard + API routes
+    /relay            # Node.js WebSocket server (Fly.io)
+    /mobile           # React Native (Expo)
+  /packages
+    /supabase         # Migrations, types, RLS policies
+    /ui               # Shared UI components (Button, Card, etc.)
+    /grok             # Grok client, types, tool definitions
+    /knowledge        # Knowledge base generation (Firecrawl + Places API)
+    /types            # Shared TypeScript interfaces
+  /docs
+    /PRD.md           # Product Requirements Document
+  CLAUDE.md           # This file
+  .env.example        # Environment template
+```
+
+---
+
+## ⚠️ Critical Build Rules (The "Vibe-Coding" Guardrails)
+
+### 1. Voice Architecture (Grok Realtime)
+
+| Rule | Details |
+|------|---------|
+| **Protocol** | WebSockets only: `wss://api.x.ai/v1/realtime` |
+| **Audio Format** | `g711_ulaw` (mulaw) at 8000Hz - matches Twilio native |
+| **No Transcoding** | Do NOT build STT/TTS pipelines. Pipe raw audio directly. |
+| **No Vercel WebSockets** | Do NOT host relay on Vercel. Use `apps/relay` on Fly.io |
+| **Tools in Handshake** | Tool definitions MUST be sent in `connection_init` message |
+
+### 2. Knowledge Base (Scraping)
+
+| Rule | Details |
+|------|---------|
+| **Prohibited** | Do NOT install `puppeteer`, `playwright`, or `chrome-aws-lambda` |
+| **Use Instead** | Firecrawl API (`fetch()` call to external service) |
+| **Mock First** | Build `MockScraper` returning fixed JSON before real API |
+
+### 3. Google Calendar & Auth
+
+| Rule | Details |
+|------|---------|
+| **Test Mode** | Assume Google App is unverified. Use hardcoded "Allowed Emails" list |
+| **Mock First** | Build `CalendarService` interface with mock implementation first |
+
+### 4. General Coding Standards
+
+| Rule | Details |
+|------|---------|
+| **TypeScript** | Strict mode. No `any`. Define shared interfaces in `/packages/types` |
+| **Environment** | Access via `process.env`. Never hardcode secrets. |
+| **Components** | Use `/packages/ui` components. Don't duplicate. |
+
+---
+
+## Build Sequence
+
+**Build phases in this exact order. Do not skip ahead.**
+
+```
+Phase 1: Foundation ──→ Phase 2: UI ──→ Phase 3: Knowledge Base ──→
+Phase 4: Onboarding ──→ Phase 5: Voice Agent ──→ Phase 6: Dashboard ──→
+Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
+```
+
+### Current Phase: [ ] ← UPDATE THIS AS YOU PROGRESS
+
+---
+
+## Phase Completion Checklist
+
+### Phase 1: Foundation (3-4 hours)
+- [ ] Monorepo initialized with pnpm workspaces
+- [ ] `apps/web` created (Next.js 14)
+- [ ] `apps/relay` created (Node.js with ws package)
+- [ ] `packages/supabase` has migrations for all tables
+- [ ] Supabase Auth working (email + Google OAuth)
+- [ ] Protected routes redirect to login
+- [ ] **Test:** `pnpm dev` runs without errors
+
+### Phase 2: UI Components (3-4 hours)
+- [ ] Button (primary, secondary, destructive, ghost)
+- [ ] Card, MetricCard, Input, Select, Badge, Avatar, Modal, Toast, Table
+- [ ] Design system colors applied
+- [ ] **Test:** `pnpm build` passes in packages/ui
+
+### Phase 3: Knowledge Base (3-4 hours)
+- [ ] `MockScraper` returns fixed JSON
+- [ ] Google Places API search working
+- [ ] Firecrawl integration working
+- [ ] LLM extracts services/FAQs from markdown
+- [ ] **Test:** Enter business name → get structured knowledge base
+
+### Phase 4: Merchant Onboarding (5-6 hours)
+- [ ] All onboarding pages built (business-search → phone-setup)
+- [ ] Google Calendar OAuth flow working
+- [ ] Twilio number provisioning working
+- [ ] Knowledge base saved to merchant record
+- [ ] **Test:** New user completes onboarding, has Twilio number
+
+### Phase 5: Voice Agent + Relay (8-10 hours)
+- [ ] `packages/grok` exports tool definitions
+- [ ] Relay server handles Twilio Media Stream WebSocket
+- [ ] Relay connects to Grok with tools in handshake
+- [ ] Audio pipes bidirectionally (Twilio ↔ Relay ↔ Grok)
+- [ ] Tool calls executed mid-stream
+- [ ] Transcript saved to Supabase on call end
+- [ ] Relay deployed to Fly.io
+- [ ] **Test:** Call Twilio number → Grok responds → booking created → transcript in DB
+
+### Phase 6: Merchant Dashboard (4-5 hours)
+- [ ] Dashboard home with metrics
+- [ ] Calls list + detail with transcript
+- [ ] Appointments calendar
+- [ ] Customers list
+- [ ] Knowledge base editor
+- [ ] Settings page
+- [ ] **Test:** Merchant can view calls, edit knowledge base
+
+### Phase 7: Enterprise Admin (4-5 hours)
+- [ ] Admin authentication (separate from merchant)
+- [ ] Merchants list with filters
+- [ ] Merchant detail with impersonation
+- [ ] Revenue dashboard
+- [ ] System health monitor
+- [ ] **Test:** Admin can view all merchants, impersonate
+
+### Phase 8: Billing (3-4 hours)
+- [ ] Stripe checkout flow
+- [ ] Webhook handlers (subscription events)
+- [ ] Billing page with portal link
+- [ ] Trial expiration enforcement
+- [ ] **Test:** Merchant can subscribe, webhooks update plan
+
+### Phase 9: Mobile App (4-5 hours)
+- [ ] Expo project setup
+- [ ] Auth flow (shared with web)
+- [ ] Dashboard home
+- [ ] Calls list
+- [ ] Push notifications
+- [ ] **Test:** App runs on iOS simulator + Android emulator
+
+---
+
+## Call Flow (Reference)
+
+```
+┌──────────┐     ┌──────────┐     ┌─────────────────┐     ┌────────────┐
+│  Caller  │────▶│  Twilio  │────▶│  Relay Server   │────▶│   Grok     │
+│  Phone   │◀────│  Media   │◀────│  (Fly.io)       │◀────│   Voice    │
+└──────────┘     │  Stream  │     │                 │     │   API      │
+                 └──────────┘     │                 │     └────────────┘
+                                  │  Tool Handlers  │
+                                  │       │         │
+                                  │       ▼         │
+                                  │  ┌──────────┐   │
+                                  │  │ Supabase │   │
+                                  │  │ Google   │   │
+                                  │  │ Calendar │   │
+                                  │  └──────────┘   │
+                                  └─────────────────┘
+```
+
+### Step-by-Step:
+
+1. **Caller dials** merchant's forwarded number → hits Twilio
+2. **Twilio webhook** `POST /api/twilio/incoming` (Next.js on Vercel)
+3. **Returns TwiML:**
+   ```xml
+   <Response>
+     <Connect>
+       <Stream url="wss://receptionai-relay.fly.dev/media-stream">
+         <Parameter name="merchantId" value="{merchant_id}" />
+       </Stream>
+     </Connect>
+   </Response>
+   ```
+4. **Twilio opens WebSocket** to relay server (long-lived connection)
+5. **Relay fetches merchant config** from Supabase (knowledge base, voice settings)
+6. **Relay opens WebSocket to Grok** with `connection_init` (includes tools)
+7. **Audio flows bidirectionally:** Twilio ↔ Relay ↔ Grok
+8. **Grok sends `tool_call`** → Relay executes → returns `tool_result`
+9. **Call ends** → Relay POSTs transcript to Supabase API
+10. **Dashboard updates** via Supabase realtime subscription
+
+---
+
+## Tool Definitions (packages/grok/tools.ts)
+
+Export these for inclusion in the Grok handshake:
+
+```typescript
+// packages/grok/tools.ts
+
+export const RECEPTION_TOOLS = [
+  {
+    name: "lookupCustomer",
+    description: "Find an existing customer by their phone number",
+    parameters: {
+      type: "object",
+      properties: {
+        phone: {
+          type: "string",
+          description: "Phone number in E.164 format (e.g., +447700900123)"
+        }
+      },
+      required: ["phone"]
+    }
+  },
+  {
+    name: "checkAvailability",
+    description: "Get available appointment slots for a service on a specific date",
+    parameters: {
+      type: "object",
+      properties: {
+        date: {
+          type: "string",
+          description: "Date in YYYY-MM-DD format"
+        },
+        service: {
+          type: "string",
+          description: "Name of the service (e.g., 'Dental Checkup', 'Haircut')"
+        }
+      },
+      required: ["date"]
+    }
+  },
+  {
+    name: "createBooking",
+    description: "Book an appointment for a customer",
+    parameters: {
+      type: "object",
+      properties: {
+        customerPhone: {
+          type: "string",
+          description: "Customer phone number"
+        },
+        customerName: {
+          type: "string",
+          description: "Customer name (for new customers)"
+        },
+        service: {
+          type: "string",
+          description: "Service to book"
+        },
+        dateTime: {
+          type: "string",
+          description: "Appointment start time in ISO 8601 format"
+        }
+      },
+      required: ["customerPhone", "service", "dateTime"]
+    }
+  },
+  {
+    name: "cancelBooking",
+    description: "Cancel an existing appointment",
+    parameters: {
+      type: "object",
+      properties: {
+        customerPhone: {
+          type: "string",
+          description: "Phone number to find the booking"
+        },
+        appointmentDate: {
+          type: "string",
+          description: "Date of the appointment to cancel (YYYY-MM-DD)"
+        }
+      },
+      required: ["customerPhone"]
+    }
+  },
+  {
+    name: "takeMessage",
+    description: "Record a message for the business owner",
+    parameters: {
+      type: "object",
+      properties: {
+        callerName: {
+          type: "string",
+          description: "Name of the caller"
+        },
+        callerPhone: {
+          type: "string",
+          description: "Phone number of the caller"
+        },
+        message: {
+          type: "string",
+          description: "The message content"
+        },
+        urgency: {
+          type: "string",
+          enum: ["low", "medium", "high"],
+          description: "How urgent is the message"
+        }
+      },
+      required: ["callerPhone", "message"]
+    }
+  }
+] as const;
+
+export type ToolName = typeof RECEPTION_TOOLS[number]["name"];
+```
+
+---
+
+## Grok Voice Handshake
+
+The initial WebSocket message to Grok must include system prompt and tools:
+
+```typescript
+// packages/grok/client.ts
+
+import { RECEPTION_TOOLS } from './tools';
+
+export function createConnectionInit(merchant: Merchant, knowledgeBase: KnowledgeBase) {
+  return {
+    type: "connection_init",
+    data: {
+      model_id: "grok-voice-beta",
+      voice: {
+        id: "eve",  // British female voice
+        speed: 1.0
+      },
+      input_audio_format: "g711_ulaw",
+      output_audio_format: "g711_ulaw",
+      turn_detection: {
+        type: "server_vad"  // Server-side voice activity detection
+      },
+      instructions: buildSystemPrompt(merchant, knowledgeBase),
+      tools: RECEPTION_TOOLS
+    }
+  };
+}
+
+function buildSystemPrompt(merchant: Merchant, kb: KnowledgeBase): string {
+  return `You are a friendly, professional receptionist for ${merchant.business_name},
+a ${merchant.business_type} in the UK.
+
+YOUR CAPABILITIES:
+- Book appointments by checking calendar availability
+- Cancel or reschedule existing appointments
+- Take messages for the business owner
+- Answer questions about services and opening hours
+
+BUSINESS INFORMATION:
+- Name: ${merchant.business_name}
+- Type: ${merchant.business_type}
+- Address: ${kb.google_maps_data?.address || 'Not specified'}
+- Opening Hours: ${JSON.stringify(kb.opening_hours)}
+- Services: ${JSON.stringify(kb.services)}
+
+FREQUENTLY ASKED QUESTIONS:
+${kb.faqs?.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
+
+CONVERSATION STYLE:
+- Use British English
+- Be warm but professional
+- Use contractions naturally (I'll, you're, we've)
+- Always confirm details before booking
+- If unsure, offer to take a message`;
+}
+```
+
+---
+
+## Error Handling Patterns
+
+### Grok WebSocket Disconnect
+```typescript
+grokWs.on('close', (code, reason) => {
+  console.error(`Grok disconnected: ${code} - ${reason}`);
+
+  // Notify caller gracefully
+  sendToTwilio({
+    type: 'output_audio',
+    data: generateGoodbyeAudio("I'm sorry, I'm having technical difficulties. Please try again.")
+  });
+
+  // Log for admin dashboard
+  await supabase.from('call_errors').insert({
+    call_id: currentCallId,
+    error_type: 'grok_disconnect',
+    error_code: code,
+    error_message: reason
+  });
+
+  // End Twilio stream
+  twilioWs.close();
+});
+```
+
+### Firecrawl Failure
+```typescript
+async function scrapeWebsite(url: string): Promise<WebsiteContent | null> {
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url, formats: ['markdown'] })
+    });
+
+    if (!response.ok) throw new Error(`Firecrawl error: ${response.status}`);
+    return await response.json();
+
+  } catch (error) {
+    console.error('Firecrawl failed:', error);
+    // Don't block onboarding - return null and let user enter manually
+    return null;
+  }
+}
+```
+
+### Tool Execution Failure
+```typescript
+async function executeToolCall(toolName: string, params: any): Promise<ToolResult> {
+  try {
+    switch (toolName) {
+      case 'createBooking':
+        return await createBooking(params);
+      // ... other tools
+    }
+  } catch (error) {
+    // Return error to Grok so it can inform the caller
+    return {
+      success: false,
+      error: `I wasn't able to complete that action. ${error.message}`
+    };
+  }
+}
+```
+
+---
+
+## Deployment
+
+### Web (Vercel)
+- Auto-deploys from `main` branch
+- Environment variables in Vercel dashboard
+- URL: `https://receptionai.vercel.app` (or custom domain)
+
+### Relay Server (Fly.io)
+```bash
+cd apps/relay
+fly launch --name receptionai-relay
+fly secrets set GROK_API_KEY=xxx SUPABASE_URL=xxx SUPABASE_SERVICE_KEY=xxx
+fly deploy
+```
+- URL: `wss://receptionai-relay.fly.dev/media-stream`
+- Scale: Start with 1 instance, auto-scale based on connections
+
+### Database (Supabase)
+```bash
+cd packages/supabase
+npx supabase db push
+npx supabase gen types typescript --project-id xxx > types.ts
+```
+
+---
+
+## Environment Variables
+
+```bash
+# .env.example
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+
+# Grok Voice API (xAI)
+GROK_API_KEY=xxx
+GROK_REALTIME_URL=wss://api.x.ai/v1/realtime
+
+# Twilio
+TWILIO_ACCOUNT_SID=ACxxx
+TWILIO_AUTH_TOKEN=xxx
+
+# Google APIs
+GOOGLE_PLACES_API_KEY=xxx
+GOOGLE_OAUTH_CLIENT_ID=xxx
+GOOGLE_OAUTH_CLIENT_SECRET=xxx
+
+# Firecrawl (Scraping)
+FIRECRAWL_API_KEY=xxx
+
+# Stripe
+STRIPE_SECRET_KEY=sk_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# Relay Server
+RELAY_URL=wss://receptionai-relay.fly.dev/media-stream
+
+# App
+NEXT_PUBLIC_APP_URL=https://receptionai.vercel.app
+```
+
+---
+
+## Build Commands
+
+```bash
+# Development
+pnpm dev              # Start web + relay in parallel
+pnpm dev:web          # Start web only
+pnpm dev:relay        # Start relay only
+
+# Database
+pnpm db:push          # Push migrations to Supabase
+pnpm db:types         # Generate TypeScript types
+pnpm db:reset         # Reset database (dev only)
+
+# Build
+pnpm build            # Build all packages
+pnpm build:web        # Build web only
+pnpm build:relay      # Build relay only
+
+# Test
+pnpm test             # Run all tests
+pnpm test:voice       # Test voice integration (requires Twilio test credentials)
+
+# Deploy
+pnpm deploy:web       # Deploy to Vercel
+pnpm deploy:relay     # Deploy to Fly.io
+```
+
+---
+
+## Quick Reference
+
+### When Building Voice Features:
+1. Audio format is always `g711_ulaw`
+2. Tools go in the `connection_init` handshake
+3. Relay handles tool execution, not Grok
+4. Test with Twilio's test credentials first
+
+### When Building UI:
+1. Use components from `packages/ui`
+2. Follow design system in PRD Section 8
+3. Mobile-first (test at 375px width)
+
+### When Stuck:
+1. Check PRD for requirements
+2. Check this file for technical constraints
+3. Mock external services to unblock development
+4. Log errors to Supabase for debugging
+
+---
+
+**END OF CLAUDE.md**

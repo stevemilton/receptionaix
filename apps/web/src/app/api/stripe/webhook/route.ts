@@ -1,0 +1,228 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import { stripe, getTierByPriceId } from '@/lib/stripe/config';
+import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
+
+// Use service role for webhook - no user context
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function POST(request: NextRequest) {
+  const body = await request.text();
+  const headersList = await headers();
+  const signature = headersList.get('stripe-signature');
+
+  if (!signature) {
+    return NextResponse.json({ error: 'No signature' }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err);
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+  }
+
+  console.log(`[Stripe Webhook] Received event: ${event.type}`);
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutCompleted(session);
+        break;
+      }
+
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionUpdated(subscription);
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionCancelled(subscription);
+        break;
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handleInvoicePaid(invoice);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handleInvoiceFailed(invoice);
+        break;
+      }
+
+      default:
+        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error handling ${event.type}:`, error);
+    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
+  }
+}
+
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const userId = session.metadata?.user_id;
+  const tierId = session.metadata?.tier_id;
+
+  if (!userId) {
+    console.error('No user_id in checkout session metadata');
+    return;
+  }
+
+  console.log(`[Stripe] Checkout completed for user ${userId}, tier ${tierId}`);
+
+  // Update merchant with subscription info
+  await supabase
+    .from('merchants')
+    .update({
+      subscription_status: 'active',
+      subscription_tier: tierId,
+      stripe_subscription_id: session.subscription as string,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const customerId = subscription.customer as string;
+
+  // Find merchant by Stripe customer ID
+  const { data: merchant } = await supabase
+    .from('merchants')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .single();
+
+  if (!merchant) {
+    console.error('No merchant found for customer:', customerId);
+    return;
+  }
+
+  // Get the price ID from the subscription
+  const priceId = subscription.items.data[0]?.price.id;
+  const tier = getTierByPriceId(priceId);
+
+  // Determine status
+  let status = 'active';
+  if (subscription.status === 'trialing') {
+    status = 'trial';
+  } else if (subscription.status === 'past_due') {
+    status = 'past_due';
+  } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+    status = 'cancelled';
+  }
+
+  console.log(`[Stripe] Subscription updated for merchant ${merchant.id}: ${status}`);
+
+  // Get period end - handle different Stripe API versions
+  const periodEnd = (subscription as Stripe.Subscription & { current_period_end?: number }).current_period_end;
+
+  await supabase
+    .from('merchants')
+    .update({
+      subscription_status: status,
+      subscription_tier: tier?.id || null,
+      subscription_ends_at: periodEnd
+        ? new Date(periodEnd * 1000).toISOString()
+        : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', merchant.id);
+}
+
+async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
+  const customerId = subscription.customer as string;
+
+  const { data: merchant } = await supabase
+    .from('merchants')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .single();
+
+  if (!merchant) {
+    console.error('No merchant found for customer:', customerId);
+    return;
+  }
+
+  console.log(`[Stripe] Subscription cancelled for merchant ${merchant.id}`);
+
+  await supabase
+    .from('merchants')
+    .update({
+      subscription_status: 'cancelled',
+      subscription_ends_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', merchant.id);
+}
+
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  // Handle different Stripe API versions
+  const invoiceAny = invoice as Stripe.Invoice & { subscription?: string | null };
+  if (!invoiceAny.subscription) return;
+
+  const customerId = invoice.customer as string;
+
+  const { data: merchant } = await supabase
+    .from('merchants')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .single();
+
+  if (!merchant) return;
+
+  console.log(`[Stripe] Invoice paid for merchant ${merchant.id}`);
+
+  // Ensure status is active after successful payment
+  await supabase
+    .from('merchants')
+    .update({
+      subscription_status: 'active',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', merchant.id);
+}
+
+async function handleInvoiceFailed(invoice: Stripe.Invoice) {
+  // Handle different Stripe API versions
+  const invoiceAny = invoice as Stripe.Invoice & { subscription?: string | null };
+  if (!invoiceAny.subscription) return;
+
+  const customerId = invoice.customer as string;
+
+  const { data: merchant } = await supabase
+    .from('merchants')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .single();
+
+  if (!merchant) return;
+
+  console.log(`[Stripe] Invoice failed for merchant ${merchant.id}`);
+
+  await supabase
+    .from('merchants')
+    .update({
+      subscription_status: 'past_due',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', merchant.id);
+}
