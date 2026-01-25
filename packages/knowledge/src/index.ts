@@ -25,3 +25,18 @@ export {
   generateKnowledgeBaseFromPlace,
   generateKnowledgeBaseFromUrl,
 } from './pipeline';
+
+// Master Knowledge Base
+export type {
+  ServiceTemplate,
+  FAQPattern,
+  GreetingPattern,
+  BusinessTypeInsights,
+} from './master-kb';
+export {
+  getBusinessTypeTemplates,
+  getBusinessTypes,
+  getUniversalFAQs,
+  suggestServicesForNewMerchant,
+  suggestFAQsForNewMerchant,
+} from './master-kb';
