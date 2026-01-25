@@ -129,7 +129,8 @@ async function simulateToolCall(
 
 /**
  * Check if mock mode is enabled via environment variable
+ * Only use mock when explicitly set - don't auto-enable in development
  */
 export function isMockModeEnabled(): boolean {
-  return process.env['MOCK_GROK'] === 'true' || process.env['NODE_ENV'] === 'development';
+  return process.env['MOCK_GROK'] === 'true';
 }

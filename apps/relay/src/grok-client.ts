@@ -20,9 +20,16 @@ export async function connectToGrok(
 ): Promise<GrokConnection> {
   const config = await getMerchantConfig(merchantId);
 
-  const ws = new WebSocket(process.env['GROK_REALTIME_URL'] || 'wss://api.x.ai/v1/realtime', {
+  // Grok Voice Agent API uses OpenAI Realtime API format
+  // Connect with model query param as per xAI docs
+  const wsUrl = process.env['GROK_REALTIME_URL'] || 'wss://api.x.ai/v1/realtime?model=grok-2-public';
+
+  console.log('[Grok] Connecting to:', wsUrl);
+
+  const ws = new WebSocket(wsUrl, {
     headers: {
       Authorization: `Bearer ${process.env['GROK_API_KEY']}`,
+      'OpenAI-Beta': 'realtime=v1',
     },
   });
 
@@ -33,35 +40,46 @@ export async function connectToGrok(
     }, 10000);
 
     ws.on('open', () => {
-      const connectionInit = createConnectionInit(config);
-      ws.send(JSON.stringify(connectionInit));
+      console.log('[Grok] WebSocket connected, sending session.update');
+
+      // Send session configuration using OpenAI Realtime API format
+      const sessionUpdate = createSessionUpdate(config);
+      ws.send(JSON.stringify(sessionUpdate));
     });
 
     ws.on('message', async (data: Buffer) => {
       try {
-        const message = JSON.parse(data.toString()) as GrokMessage;
+        const message = JSON.parse(data.toString());
+        console.log('[Grok] Received:', message.type);
+
         await handleGrokMessage(ws, message, options);
 
-        if (message.type === 'connection_ack') {
+        // Session created = connection ready
+        if (message.type === 'session.created' || message.type === 'session.updated') {
           clearTimeout(timeout);
+
+          // Send initial greeting using response.create
+          sendInitialGreeting(ws, config);
+
           resolve({
             sendAudio: (audio) => sendAudioToGrok(ws, audio),
             close: () => ws.close(),
           });
         }
       } catch (error) {
-        console.error('Error handling Grok message:', error);
+        console.error('[Grok] Error handling message:', error);
       }
     });
 
     ws.on('error', (error) => {
+      console.error('[Grok] WebSocket error:', error);
       clearTimeout(timeout);
       options.onError(error);
       reject(error);
     });
 
     ws.on('close', (code, reason) => {
-      console.log(`Grok connection closed: ${code} - ${reason.toString()}`);
+      console.log(`[Grok] Connection closed: ${code} - ${reason.toString()}`);
     });
   });
 }
@@ -73,32 +91,73 @@ interface MerchantConfig {
   services: Array<{ name: string; duration: number; price: number }>;
   openingHours: Record<string, string>;
   greeting?: string;
+  voiceId?: string;
 }
 
-function createConnectionInit(config: MerchantConfig) {
+// OpenAI Realtime API format for session configuration
+function createSessionUpdate(config: MerchantConfig) {
+  // Convert tools to OpenAI function format
+  const tools = RECEPTION_TOOLS.map(tool => ({
+    type: 'function',
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.parameters,
+  }));
+
+  // Map user-friendly voice names to xAI voice IDs
+  // xAI supports: alloy, ash, ballad, coral, echo, sage, shimmer, verse
+  const voiceMap: Record<string, string> = {
+    'ara': 'alloy',
+    'rex': 'echo',
+    'sal': 'shimmer',
+    'eve': 'coral',
+    'leo': 'ash',
+  };
+  const voice = voiceMap[config.voiceId?.toLowerCase() || 'ara'] || 'alloy';
+
+  // xAI Grok uses PCM16 at 24kHz - NOT g711_ulaw
+  // We must convert between Twilio's μ-law 8kHz and Grok's PCM16 24kHz
   return {
-    type: 'connection_init',
-    data: {
-      model_id: 'grok-voice-beta',
-      voice: {
-        id: 'eve',
-        speed: 1.0,
+    type: 'session.update',
+    session: {
+      modalities: ['text', 'audio'],
+      instructions: buildSystemPrompt(config),
+      voice,
+      input_audio_format: 'pcm16',
+      output_audio_format: 'pcm16',
+      input_audio_transcription: {
+        model: 'grok-2',
       },
-      input_audio_format: 'g711_ulaw',
-      output_audio_format: 'g711_ulaw',
       turn_detection: {
         type: 'server_vad',
         threshold: 0.5,
         prefix_padding_ms: 300,
-        silence_duration_ms: 500,
+        silence_duration_ms: 1200,
       },
-      instructions: buildSystemPrompt(config),
-      tools: RECEPTION_TOOLS,
-      initial_message:
-        config.greeting ||
-        `Good ${getTimeOfDay()}, ${config.businessName}, how can I help you today?`,
+      tools,
+      tool_choice: 'auto',
+      temperature: 0.8,
     },
   };
+}
+
+function sendInitialGreeting(ws: WebSocket, config: MerchantConfig) {
+  const greeting = config.greeting ||
+    `Good ${getTimeOfDay()}, thank you for calling ${config.businessName}. How can I help you today?`;
+
+  console.log('[Grok] Sending initial greeting:', greeting);
+  console.log('[Grok] Config business name:', config.businessName);
+  console.log('[Grok] Opening hours:', JSON.stringify(config.openingHours));
+  console.log('[Grok] Services count:', config.services.length);
+
+  // Create a response with the initial greeting
+  ws.send(JSON.stringify({
+    type: 'response.create',
+    response: {
+      modalities: ['text', 'audio'],
+      instructions: `Say exactly: "${greeting}"`,
+    },
+  }));
 }
 
 function getTimeOfDay(): string {
@@ -144,107 +203,168 @@ HANDLING COMMON SCENARIOS:
 - Questions: Answer from knowledge base, or take message if unsure`;
 }
 
-interface GrokMessage {
+// OpenAI Realtime API message types
+interface RealtimeMessage {
   type: string;
-  data: {
-    audio?: string;
-    text?: string;
-    speaker?: 'user' | 'assistant';
-    tool_call_id?: string;
-    name?: string;
-    arguments?: string;
-    message?: string;
-    code?: string;
-    reason?: string;
+  event_id?: string;
+  session?: Record<string, unknown>;
+  response?: Record<string, unknown>;
+  delta?: string;
+  audio?: string;
+  transcript?: string;
+  text?: string;
+  item?: {
+    id?: string;
+    type?: string;
+    role?: string;
+    content?: Array<{
+      type: string;
+      text?: string;
+      transcript?: string;
+      audio?: string;
+    }>;
+  };
+  item_id?: string;
+  output_index?: number;
+  content_index?: number;
+  call_id?: string;
+  name?: string;
+  arguments?: string;
+  error?: {
+    type: string;
+    code: string;
+    message: string;
   };
 }
 
 async function handleGrokMessage(
   ws: WebSocket,
-  message: GrokMessage,
+  message: RealtimeMessage,
   options: GrokConnectionOptions
 ): Promise<void> {
   switch (message.type) {
-    case 'connection_ack':
-      console.log('Grok connection established');
+    case 'session.created':
+      console.log('[Grok] Session created');
       break;
 
-    case 'output_audio':
-      if (message.data.audio) {
-        options.onAudio(message.data.audio);
+    case 'session.updated':
+      // Log the actual session config to verify audio format was accepted
+      console.log('[Grok] Session updated:', JSON.stringify(message.session || message, null, 2));
+      break;
+
+    case 'response.audio.delta': {
+      // Audio chunk received - send to Twilio
+      // The audio might be in message.delta or message.audio depending on API version
+      const audioData = message.delta || message.audio;
+      if (audioData) {
+        // Log first audio chunk to verify format (use a module-level flag)
+        const g = global as Record<string, unknown>;
+        if (!g['_audioLogged']) {
+          console.log('[Grok] Full audio.delta message keys:', Object.keys(message));
+          console.log('[Grok] First audio sample (first 100 chars):', audioData.substring(0, 100));
+          console.log('[Grok] Audio length:', audioData.length);
+          g['_audioLogged'] = true;
+        }
+        options.onAudio(audioData);
+      }
+      break;
+    }
+
+    case 'response.audio_transcript.delta':
+      // Assistant transcript chunk
+      if (message.delta) {
+        options.onTranscript(message.delta, 'assistant');
       }
       break;
 
-    case 'transcript':
-      if (message.data.text && message.data.speaker) {
-        options.onTranscript(message.data.text, message.data.speaker);
+    case 'conversation.item.input_audio_transcription.completed':
+      // User speech transcription completed
+      if (message.transcript) {
+        options.onTranscript(message.transcript, 'user');
       }
       break;
 
-    case 'tool_call':
+    case 'response.function_call_arguments.done':
+      // Tool call completed - execute it
       await handleToolCall(ws, message, options);
       break;
 
-    case 'tool_call_cancelled':
-      console.log(`Tool call cancelled: ${message.data.tool_call_id}`);
+    case 'response.done':
+      console.log('[Grok] Response completed');
+      break;
+
+    case 'input_audio_buffer.speech_started':
+      console.log('[Grok] User started speaking');
+      break;
+
+    case 'input_audio_buffer.speech_stopped':
+      console.log('[Grok] User stopped speaking');
       break;
 
     case 'error':
-      options.onError(new Error(message.data.message || 'Unknown Grok error'));
+      console.error('[Grok] Error:', message.error);
+      options.onError(new Error(message.error?.message || 'Unknown Grok error'));
       break;
 
-    case 'session_end':
-      console.log(`Grok session ended: ${message.data.reason}`);
-      break;
+    default:
+      // Log unknown message types for debugging
+      if (!message.type.startsWith('response.') && !message.type.startsWith('input_audio_buffer')) {
+        console.log('[Grok] Unhandled message type:', message.type);
+      }
   }
 }
 
 async function handleToolCall(
   ws: WebSocket,
-  message: GrokMessage,
+  message: RealtimeMessage,
   options: GrokConnectionOptions
 ): Promise<void> {
-  const { tool_call_id, name, arguments: argsString } = message.data;
+  const { call_id, name, arguments: argsString } = message;
 
-  if (!tool_call_id || !name) return;
+  if (!call_id || !name) return;
 
-  console.log(`Tool call: ${name}`, argsString);
+  console.log(`[Grok] Tool call: ${name}`, argsString);
 
   try {
     const params = argsString ? JSON.parse(argsString) : {};
     const result = await options.onToolCall(name, params);
 
-    ws.send(
-      JSON.stringify({
-        type: 'tool_result',
-        data: {
-          tool_call_id,
-          result: JSON.stringify(result),
-        },
-      })
-    );
+    // Send tool result using OpenAI format
+    ws.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id,
+        output: JSON.stringify(result),
+      },
+    }));
+
+    // Trigger response generation after tool result
+    ws.send(JSON.stringify({
+      type: 'response.create',
+    }));
   } catch (error) {
-    ws.send(
-      JSON.stringify({
-        type: 'tool_result',
-        data: {
-          tool_call_id,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        },
-      })
-    );
+    ws.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id,
+        output: JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      },
+    }));
+
+    ws.send(JSON.stringify({
+      type: 'response.create',
+    }));
   }
 }
 
 function sendAudioToGrok(ws: WebSocket, audioBase64: string): void {
   if (ws.readyState !== WebSocket.OPEN) return;
 
-  ws.send(
-    JSON.stringify({
-      type: 'input_audio',
-      data: {
-        audio: audioBase64,
-      },
-    })
-  );
+  // OpenAI Realtime API format for audio input
+  ws.send(JSON.stringify({
+    type: 'input_audio_buffer.append',
+    audio: audioBase64,
+  }));
 }

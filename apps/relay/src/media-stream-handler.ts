@@ -3,6 +3,7 @@ import { connectToGrok, type GrokConnection } from './grok-client.js';
 import { connectToMockGrok, isMockModeEnabled } from './mock-grok-client.js';
 import { executeToolCall } from './tool-handlers.js';
 import { saveCallRecord } from './supabase-client.js';
+import { convertTwilioToGrok, convertGrokToTwilio } from './audio-utils.js';
 
 interface CallSession {
   streamSid: string;
@@ -66,6 +67,9 @@ export function handleMediaStream(twilioWs: WebSocket): void {
 }
 
 async function handleStart(session: CallSession, message: TwilioStartMessage): Promise<void> {
+  // Log the full start message to debug parameter passing
+  console.log('[MediaStream] Full start message:', JSON.stringify(message, null, 2));
+
   session.streamSid = message.start.streamSid;
   session.merchantId = message.start.customParameters?.merchantId || '';
   session.callerPhone = message.start.customParameters?.callerPhone || '';
@@ -75,7 +79,9 @@ async function handleStart(session: CallSession, message: TwilioStartMessage): P
   try {
     const connectionOptions = {
       onAudio: (audioBase64: string) => {
-        sendToTwilio(session, audioBase64);
+        // Convert Grok's PCM16 24kHz to Twilio's μ-law 8kHz
+        const convertedAudio = convertGrokToTwilio(audioBase64);
+        sendToTwilio(session, convertedAudio);
       },
       onToolCall: async (toolName: string, params: Record<string, unknown>) => {
         return await executeToolCall(session.merchantId, toolName, params);
@@ -104,8 +110,9 @@ async function handleStart(session: CallSession, message: TwilioStartMessage): P
 function handleMedia(session: CallSession, message: TwilioMediaMessage): void {
   if (!session.grokConnection) return;
 
-  const audioBase64 = message.media.payload;
-  session.grokConnection.sendAudio(audioBase64);
+  // Convert Twilio's μ-law 8kHz to Grok's PCM16 24kHz
+  const convertedAudio = convertTwilioToGrok(message.media.payload);
+  session.grokConnection.sendAudio(convertedAudio);
 }
 
 async function handleStop(session: CallSession): Promise<void> {

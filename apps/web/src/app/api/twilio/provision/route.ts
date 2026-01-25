@@ -35,12 +35,20 @@ export async function POST(request: Request) {
     // Configure webhooks for the phone number
     const webhookUrl = `${appUrl}/api/twilio/incoming`;
 
+    // Bundle SID for UK regulatory compliance
+    const bundleSid = process.env.TWILIO_BUNDLE_SID;
+
     const params = new URLSearchParams({
       PhoneNumber: phoneNumber,
       VoiceUrl: webhookUrl,
       VoiceMethod: 'POST',
       FriendlyName: 'ReceptionAI Line',
     });
+
+    // Add bundle SID if available (required for UK mobile numbers)
+    if (bundleSid) {
+      params.append('BundleSid', bundleSid);
+    }
 
     const response = await fetch(url, {
       method: 'POST',

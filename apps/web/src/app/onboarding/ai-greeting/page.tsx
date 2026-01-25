@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Button, Card } from '@receptionalx/ui';
 import { useOnboardingStore } from '@/lib/onboarding-store';
 
+// Grok Realtime API voices - https://docs.x.ai/docs/guides/voice
 const VOICE_OPTIONS = [
-  { id: 'alloy', name: 'Alloy', description: 'Neutral and professional' },
-  { id: 'echo', name: 'Echo', description: 'Warm and friendly' },
-  { id: 'fable', name: 'Fable', description: 'British accent, expressive' },
-  { id: 'onyx', name: 'Onyx', description: 'Deep and authoritative' },
-  { id: 'nova', name: 'Nova', description: 'Energetic and upbeat' },
-  { id: 'shimmer', name: 'Shimmer', description: 'Soft and calming' },
+  { id: 'Ara', name: 'Ara', description: 'Warm & friendly (Female)', recommended: true },
+  { id: 'Rex', name: 'Rex', description: 'Professional & articulate (Male)' },
+  { id: 'Sal', name: 'Sal', description: 'Smooth & versatile (Neutral)' },
+  { id: 'Eve', name: 'Eve', description: 'Energetic & engaging (Female)' },
+  { id: 'Leo', name: 'Leo', description: 'Authoritative & commanding (Male)' },
 ];
 
 const GREETING_TEMPLATES = [
@@ -56,7 +56,6 @@ export default function AIGreetingPage() {
     greeting.replace('{businessName}', businessName || 'your business')
   );
   const [localVoiceId, setLocalVoiceId] = useState(voiceId);
-  const [isPlaying, setIsPlaying] = useState(false);
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
@@ -64,21 +63,6 @@ export default function AIGreetingPage() {
     if (template && template.template) {
       setLocalGreeting(template.template.replace('{businessName}', businessName || 'your business'));
     }
-  };
-
-  const handlePlayPreview = async () => {
-    setIsPlaying(true);
-    // In a real implementation, this would call a TTS API
-    // For now, we'll simulate a brief delay
-    setTimeout(() => {
-      setIsPlaying(false);
-      // Could use Web Speech API for demo:
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(localGreeting);
-        utterance.onend = () => setIsPlaying(false);
-        speechSynthesis.speak(utterance);
-      }
-    }, 500);
   };
 
   const handleContinue = () => {
@@ -141,25 +125,18 @@ export default function AIGreetingPage() {
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           placeholder="Enter your custom greeting..."
         />
-        <div className="flex items-center justify-between mt-3">
-          <p className="text-sm text-gray-500">
-            Tip: Use a friendly, welcoming tone that matches your brand.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePlayPreview}
-            disabled={isPlaying}
-          >
-            {isPlaying ? 'Playing...' : '▶ Preview'}
-          </Button>
-        </div>
+        <p className="text-sm text-gray-500 mt-3">
+          Tip: Use a friendly, welcoming tone that matches your brand.
+        </p>
       </Card>
 
       {/* Voice Selection */}
       <Card>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Voice Selection</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <p className="text-sm text-gray-600 mb-4">
+          Choose a voice for your AI receptionist. Powered by Grok. You will be able to hear the voices when testing.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {VOICE_OPTIONS.map((voice) => (
             <button
               key={voice.id}
@@ -187,8 +164,15 @@ export default function AIGreetingPage() {
                     />
                   </svg>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-900 block">{voice.name}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-900">{voice.name}</span>
+                    {'recommended' in voice && voice.recommended && (
+                      <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
+                        Recommended
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm text-gray-500">{voice.description}</span>
                 </div>
               </div>

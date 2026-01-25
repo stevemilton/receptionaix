@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useOnboardingStore } from '@/lib/onboarding-store';
 
@@ -46,38 +46,64 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { completedSteps, skippedSteps, hasHydrated } = useOnboardingStore();
-  const [isAllowed, setIsAllowed] = useState(false);
+  const [checkComplete, setCheckComplete] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+  const hasCheckedRef = useRef(false);
+  const currentPathnameRef = useRef(pathname);
 
+  // Reset check state when pathname changes
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (currentPathnameRef.current !== pathname) {
+      currentPathnameRef.current = pathname;
+      hasCheckedRef.current = false;
+      setCheckComplete(false);
+      setShouldRender(false);
+    }
+  }, [pathname]);
+
+  // Main permission check - runs once per pathname after hydration
+  useEffect(() => {
+    if (!hasHydrated || hasCheckedRef.current) return;
+
+    hasCheckedRef.current = true;
 
     const currentStep = PATH_TO_STEP[pathname];
+
+    // Unknown path (like /onboarding landing) - allow it
     if (!currentStep) {
-      // Unknown path, allow it (might be the landing page)
-      setIsAllowed(true);
+      setShouldRender(true);
+      setCheckComplete(true);
       return;
     }
 
     const requiredSteps = REQUIRED_STEPS[currentStep] || [];
-    const completedOrSkipped = [...completedSteps, ...skippedSteps];
 
-    // Check if all required steps are completed (or skipped for optional steps)
-    const missingSteps = requiredSteps.filter(
-      (step) => !completedOrSkipped.includes(step)
-    );
+    // Step 1 has no requirements - always allow
+    if (requiredSteps.length === 0) {
+      setShouldRender(true);
+      setCheckComplete(true);
+      return;
+    }
+
+    const completedOrSkipped = new Set([...completedSteps, ...skippedSteps]);
+    const missingSteps = requiredSteps.filter(step => !completedOrSkipped.has(step));
 
     if (missingSteps.length > 0) {
-      // Find the first incomplete required step
+      // Redirect to first missing step
       const firstMissingStep = Math.min(...missingSteps);
       const redirectPath = STEP_PATHS[firstMissingStep];
+      setShouldRender(false);
+      setCheckComplete(true);
       router.replace(redirectPath);
     } else {
-      setIsAllowed(true);
+      // All requirements met
+      setShouldRender(true);
+      setCheckComplete(true);
     }
-  }, [pathname, completedSteps, skippedSteps, hasHydrated, router]);
+  }, [hasHydrated, pathname, completedSteps, skippedSteps, router]);
 
-  // Show loading state while checking hydration
-  if (!hasHydrated) {
+  // Show loading while hydrating or checking
+  if (!hasHydrated || !checkComplete) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
@@ -85,8 +111,8 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
     );
   }
 
-  // Show loading state while checking permissions
-  if (!isAllowed) {
+  // Don't render if redirecting
+  if (!shouldRender) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />

@@ -13,11 +13,12 @@ export default async function OnboardingPage() {
   // Check if already onboarded
   const { data: merchant } = await supabase
     .from('merchants')
-    .select('id')
+    .select('id, onboarding_completed')
     .eq('id', user.id)
     .single();
 
-  if (merchant) {
+  // Only redirect to dashboard if onboarding is actually complete
+  if (merchant?.onboarding_completed) {
     redirect('/dashboard');
   }
 

@@ -13,6 +13,7 @@ export default function CompletePage() {
     address,
     phone,
     services,
+    openingHours,
     greeting,
     voiceId,
     googleCalendarConnected,
@@ -27,14 +28,15 @@ export default function CompletePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
 
-  // Auto-save once hydrated
+  // Auto-save once hydrated - use a ref-like flag to ensure it only runs once
   useEffect(() => {
-    if (hasHydrated && !saved && !saving) {
+    if (hasHydrated && !saveAttempted) {
+      setSaveAttempted(true);
       handleSave();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated]);
+  }, [hasHydrated, saveAttempted]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -50,6 +52,7 @@ export default function CompletePage() {
           address,
           phone,
           services,
+          openingHours,
           greeting,
           voiceId,
           googleCalendarConnected,

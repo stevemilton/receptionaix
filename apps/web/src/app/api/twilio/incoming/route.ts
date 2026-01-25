@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: Request) {
   // Parse Twilio webhook data
@@ -10,7 +10,8 @@ export async function POST(request: Request) {
   console.log(`[Twilio Incoming] Call from ${from} to ${to}`);
 
   // Look up merchant by their Twilio phone number
-  const supabase = await createClient();
+  // Use admin client to bypass RLS since this is an external webhook
+  const supabase = createAdminClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: merchant, error } = await (supabase as any)

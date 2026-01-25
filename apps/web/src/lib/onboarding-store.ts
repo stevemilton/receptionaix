@@ -88,7 +88,7 @@ const initialState: OnboardingData = {
   services: [],
   openingHours: {},
   greeting: "Hello! Thank you for calling {businessName}. How can I help you today?",
-  voiceId: 'alloy',
+  voiceId: 'Ara',
   googleCalendarConnected: false,
   googleCalendarToken: null,
   faqs: [],
