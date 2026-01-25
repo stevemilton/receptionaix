@@ -249,6 +249,9 @@ export default async function AdminOverviewPage() {
         </div>
       </div>
 
+      {/* API Usage */}
+      <ApiUsageSection supabase={supabaseAny} totalMerchants={totalMerchants || 0} />
+
       {/* Recent Signups */}
       <div className="bg-white rounded-xl shadow-sm border">
         <div className="px-6 py-4 border-b flex justify-between items-center">
@@ -326,6 +329,127 @@ function StatCard({
           {trend}
         </p>
       )}
+    </div>
+  );
+}
+
+async function ApiUsageSection({ supabase, totalMerchants }: { supabase: ReturnType<typeof createClient>; totalMerchants: number }) {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Get API usage from daily aggregates
+  const { data: usageData } = await supabase
+    .from('api_usage_daily')
+    .select('api_name, total_requests, total_cost_gbp, successful_requests, failed_requests')
+    .gte('date', thirtyDaysAgo.toISOString().split('T')[0]);
+
+  // Aggregate by API
+  const apiStats = (usageData || []).reduce((acc: Record<string, { requests: number; cost: number; success: number; failed: number }>, row: {
+    api_name: string;
+    total_requests: number;
+    total_cost_gbp: string;
+    successful_requests: number;
+    failed_requests: number;
+  }) => {
+    if (!acc[row.api_name]) {
+      acc[row.api_name] = { requests: 0, cost: 0, success: 0, failed: 0 };
+    }
+    acc[row.api_name].requests += row.total_requests;
+    acc[row.api_name].cost += Number(row.total_cost_gbp);
+    acc[row.api_name].success += row.successful_requests;
+    acc[row.api_name].failed += row.failed_requests;
+    return acc;
+  }, {});
+
+  const totalCost = Object.values(apiStats).reduce((sum, api) => sum + api.cost, 0);
+  const totalRequests = Object.values(apiStats).reduce((sum, api) => sum + api.requests, 0);
+
+  const apiDisplayNames: Record<string, string> = {
+    claude: 'Claude AI',
+    firecrawl: 'Firecrawl',
+    twilio: 'Twilio',
+    google_places: 'Google Places',
+  };
+
+  const apiColors: Record<string, string> = {
+    claude: 'bg-purple-500',
+    firecrawl: 'bg-orange-500',
+    twilio: 'bg-red-500',
+    google_places: 'bg-blue-500',
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">API Usage (30 days)</h2>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-gray-900">£{totalCost.toFixed(2)}</p>
+          <p className="text-xs text-gray-500">Total API Cost</p>
+        </div>
+      </div>
+
+      {Object.keys(apiStats).length > 0 ? (
+        <div className="space-y-4">
+          {Object.entries(apiStats)
+            .sort((a, b) => b[1].cost - a[1].cost)
+            .map(([apiName, stats]) => {
+              const successRate = stats.requests > 0
+                ? Math.round((stats.success / stats.requests) * 100)
+                : 0;
+              const costPercentage = totalCost > 0
+                ? Math.round((stats.cost / totalCost) * 100)
+                : 0;
+
+              return (
+                <div key={apiName} className="flex items-center gap-4">
+                  <div className={`w-3 h-3 rounded-full ${apiColors[apiName] || 'bg-gray-400'}`} />
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">{apiDisplayNames[apiName] || apiName}</span>
+                      <span className="text-gray-500">
+                        {stats.requests.toLocaleString()} requests · £{stats.cost.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 bg-gray-100 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${apiColors[apiName] || 'bg-gray-400'}`}
+                          style={{ width: `${costPercentage}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs ${successRate >= 95 ? 'text-green-600' : successRate >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {successRate}% success
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      ) : (
+        <p className="text-gray-500 text-center py-8">
+          No API usage data yet. Usage tracking starts when merchants onboard.
+        </p>
+      )}
+
+      <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-4 text-center">
+        <div>
+          <p className="text-2xl font-bold text-gray-900">{totalRequests.toLocaleString()}</p>
+          <p className="text-xs text-gray-500">Total Requests</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-gray-900">
+            £{totalRequests > 0 ? (totalCost / totalRequests).toFixed(4) : '0.00'}
+          </p>
+          <p className="text-xs text-gray-500">Avg Cost/Request</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-gray-900">
+            £{totalMerchants > 0 ? (totalCost / totalMerchants).toFixed(2) : '0.00'}
+          </p>
+          <p className="text-xs text-gray-500">Avg Cost/Merchant</p>
+        </div>
+      </div>
     </div>
   );
 }
