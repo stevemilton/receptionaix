@@ -21,9 +21,14 @@ export async function POST(request: Request) {
     // Check for required API keys
     const googlePlacesApiKey = process.env.GOOGLE_PLACES_API_KEY;
     const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
-    const grokApiKey = process.env.GROK_API_KEY;
+    const claudeApiKey = process.env.ANTHROPIC_API_KEY;
 
-    if (!googlePlacesApiKey || !firecrawlApiKey || !grokApiKey) {
+    if (!googlePlacesApiKey || !firecrawlApiKey || !claudeApiKey) {
+      console.error('[Knowledge] Missing API keys:', {
+        googlePlaces: !!googlePlacesApiKey,
+        firecrawl: !!firecrawlApiKey,
+        claude: !!claudeApiKey,
+      });
       return NextResponse.json(
         { error: 'API keys not configured' },
         { status: 500 }
@@ -33,7 +38,7 @@ export async function POST(request: Request) {
     const config = {
       googlePlacesApiKey,
       firecrawlApiKey,
-      grokApiKey,
+      claudeApiKey,
       useMockData: useMock === true,
     };
 

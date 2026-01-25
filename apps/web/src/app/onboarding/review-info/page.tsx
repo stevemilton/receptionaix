@@ -40,11 +40,19 @@ export default function ReviewInfoPage() {
   const [localServices, setLocalServices] = useState<OnboardingService[]>(
     services.length > 0 ? services : [{ name: '', description: '', duration: 30, price: 0 }]
   );
-  const [localHours, setLocalHours] = useState<Record<string, string>>(
-    Object.keys(openingHours).length > 0
-      ? openingHours
-      : DAYS_OF_WEEK.reduce((acc, day) => ({ ...acc, [day]: '09:00 - 17:00' }), {})
-  );
+  const [localHours, setLocalHours] = useState<Record<string, string>>(() => {
+    // Normalize opening hours keys to match DAYS_OF_WEEK format (capitalized)
+    // Google Places returns lowercase keys (monday, tuesday, etc.)
+    if (Object.keys(openingHours).length > 0) {
+      const normalized: Record<string, string> = {};
+      for (const day of DAYS_OF_WEEK) {
+        const lowerDay = day.toLowerCase();
+        normalized[day] = openingHours[day] || openingHours[lowerDay] || '';
+      }
+      return normalized;
+    }
+    return DAYS_OF_WEEK.reduce((acc, day) => ({ ...acc, [day]: '09:00 - 17:00' }), {});
+  });
 
   const handleAddService = () => {
     setLocalServices([...localServices, { name: '', description: '', duration: 30, price: 0 }]);

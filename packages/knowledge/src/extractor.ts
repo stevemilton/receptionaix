@@ -1,11 +1,29 @@
 import type { ExtractedKnowledge, ExtractedService, ExtractedFAQ } from './types';
 
-const EXTRACTION_PROMPT = `You are an AI that extracts structured business information from website content.
+const EXTRACTION_PROMPT = `You are an AI that extracts structured business information from website content to help build a knowledge base for an AI receptionist.
 
-Analyze the following website content and extract:
+Analyze the following website content and extract information that would help an AI answer phone calls about this business.
+
+IMPORTANT: Adapt your extraction based on the business type:
+- For RESTAURANTS/CAFES/BAKERIES: Extract popular menu items, specialties, cuisine type, dietary options as "services"
+- For SALONS/SPAS: Extract treatments and services with duration and price
+- For RETAIL SHOPS: Extract product categories, popular items, brands stocked
+- For PROFESSIONAL SERVICES: Extract service offerings, consultation types
+- For ANY business: Extract what they offer that customers commonly ask about
+
+Extract:
 1. A brief business description (1-2 sentences)
-2. Services offered with name, description, estimated duration in minutes, and price if mentioned
-3. Frequently asked questions and their answers
+2. What the business offers (call these "services" even if they're products/menu items):
+   - name: The item/service name
+   - description: Brief description
+   - duration: Only if it's a timed service (leave undefined for products/food)
+   - price: Only if clearly stated (leave undefined if not mentioned)
+3. Common FAQs - Think about what callers would ask:
+   - "Do you have parking?"
+   - "Do you take reservations/bookings?"
+   - "Are you wheelchair accessible?"
+   - "Do you cater for dietary requirements?"
+   - Any specific FAQs mentioned on the website
 4. Opening hours if mentioned
 
 Return ONLY valid JSON in this exact format (no markdown, no explanation):
@@ -40,44 +58,45 @@ WEBSITE CONTENT:
 `;
 
 /**
- * Extract structured knowledge from website content using Grok API
+ * Extract structured knowledge from website content using Claude API
  */
-export async function extractKnowledgeWithGrok(
+export async function extractKnowledgeWithClaude(
   markdown: string,
   apiKey: string
 ): Promise<ExtractedKnowledge> {
   try {
-    // Truncate content if too long (Grok has context limits)
+    // Truncate content if too long
     const truncatedContent = markdown.slice(0, 15000);
 
-    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'grok-2-latest',
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
         messages: [
           {
             role: 'user',
             content: EXTRACTION_PROMPT + truncatedContent,
           },
         ],
-        temperature: 0.1, // Low temperature for consistent extraction
       }),
     });
 
     if (!response.ok) {
-      console.error(`Grok API error: ${response.status} ${response.statusText}`);
+      console.error(`Claude API error: ${response.status} ${response.statusText}`);
       return getEmptyKnowledge();
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.content?.[0]?.text;
 
     if (!content) {
-      console.error('Grok returned no content');
+      console.error('Claude returned no content');
       return getEmptyKnowledge();
     }
 
@@ -85,9 +104,20 @@ export async function extractKnowledgeWithGrok(
     const parsed = parseExtractedJson(content);
     return parsed;
   } catch (error) {
-    console.error('Grok extraction failed:', error);
+    console.error('Claude extraction failed:', error);
     return getEmptyKnowledge();
   }
+}
+
+/**
+ * @deprecated Use extractKnowledgeWithClaude instead
+ */
+export async function extractKnowledgeWithGrok(
+  markdown: string,
+  apiKey: string
+): Promise<ExtractedKnowledge> {
+  console.warn('extractKnowledgeWithGrok is deprecated, use extractKnowledgeWithClaude');
+  return getEmptyKnowledge();
 }
 
 /**

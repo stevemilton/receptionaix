@@ -1,13 +1,15 @@
 import type { KnowledgeBaseResult, PlaceResult, ExtractedKnowledge } from './types';
 import { searchBusiness, getPlaceDetails } from './google-places';
 import { scrapeWebsite } from './firecrawl';
-import { extractKnowledgeWithGrok } from './extractor';
+import { extractKnowledgeWithClaude } from './extractor';
 import { getMockScrapedContent, getMockExtractedKnowledge } from './mock-scraper';
 
 export interface PipelineConfig {
   googlePlacesApiKey: string;
   firecrawlApiKey: string;
-  grokApiKey: string;
+  claudeApiKey: string;
+  /** @deprecated Use claudeApiKey instead */
+  grokApiKey?: string;
   useMockData?: boolean;
 }
 
@@ -67,11 +69,11 @@ export async function generateKnowledgeBase(
     if (scrapedData) {
       console.log(`[Knowledge] Scraped ${scrapedData.markdown.length} characters`);
 
-      // Step 3: Extract structured data with Grok
-      console.log('[Knowledge] Extracting services and FAQs with Grok...');
-      extractedKnowledge = await extractKnowledgeWithGrok(
+      // Step 3: Extract structured data with Claude
+      console.log('[Knowledge] Extracting services and FAQs with Claude...');
+      extractedKnowledge = await extractKnowledgeWithClaude(
         scrapedData.markdown,
-        config.grokApiKey
+        config.claudeApiKey
       );
       console.log(
         `[Knowledge] Extracted ${extractedKnowledge.services.length} services, ${extractedKnowledge.faqs.length} FAQs`
@@ -131,9 +133,9 @@ export async function generateKnowledgeBaseFromPlace(
     scrapedData = await scrapeWebsite(placeData.website, config.firecrawlApiKey);
 
     if (scrapedData) {
-      extractedKnowledge = await extractKnowledgeWithGrok(
+      extractedKnowledge = await extractKnowledgeWithClaude(
         scrapedData.markdown,
-        config.grokApiKey
+        config.claudeApiKey
       );
 
       // Preserve Google opening hours if extraction didn't find any
@@ -172,9 +174,9 @@ export async function generateKnowledgeBaseFromUrl(
     };
   }
 
-  const extractedKnowledge = await extractKnowledgeWithGrok(
+  const extractedKnowledge = await extractKnowledgeWithClaude(
     scrapedData.markdown,
-    config.grokApiKey
+    config.claudeApiKey
   );
 
   return {
