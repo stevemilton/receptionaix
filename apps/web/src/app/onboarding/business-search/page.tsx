@@ -90,6 +90,8 @@ export default function BusinessSearchPage() {
       const businessType = selectedPlace.types?.[0]?.replace(/_/g, ' ') || 'business';
 
       // Update onboarding store with business info
+      // API returns { knowledgeBase: { extractedKnowledge: { services, faqs, openingHours } } }
+      const extracted = data.knowledgeBase?.extractedKnowledge || {};
       setBusinessInfo({
         placeId: selectedPlace.placeId,
         businessName: selectedPlace.name,
@@ -97,9 +99,9 @@ export default function BusinessSearchPage() {
         address: selectedPlace.address,
         phone: selectedPlace.phone || '',
         website: selectedPlace.website || null,
-        services: data.result?.extracted?.services || [],
-        openingHours: data.result?.extracted?.openingHours || {},
-        faqs: data.result?.extracted?.faqs || [],
+        services: extracted.services || [],
+        openingHours: extracted.openingHours || {},
+        faqs: extracted.faqs || [],
       });
 
       markStepCompleted(1);

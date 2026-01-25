@@ -349,8 +349,7 @@ export default function CompletePage() {
               1
             </div>
             <p className="text-gray-600">
-              Set up call forwarding from your existing business number to{' '}
-              <span className="font-semibold">{twilioPhoneNumber}</span>
+              Dial <span className="font-semibold">{twilioPhoneNumber}</span> and test how it works
             </p>
           </div>
           <div className="flex items-start gap-3">
@@ -358,7 +357,8 @@ export default function CompletePage() {
               2
             </div>
             <p className="text-gray-600">
-              Make a test call to hear your AI receptionist in action
+              When you&apos;re ready, forward your existing business number to{' '}
+              <span className="font-semibold">{twilioPhoneNumber}</span>
             </p>
           </div>
           <div className="flex items-start gap-3">
