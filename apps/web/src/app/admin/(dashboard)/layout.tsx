@@ -8,22 +8,36 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/admin/login');
-  }
+  // DEV MODE: Skip auth check for local development
+  const isDev = process.env.NODE_ENV === 'development';
+  let user = null;
+  let adminUser = null;
 
-  // Check if user is admin
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: adminUser } = await (supabase as any)
-    .from('admin_users')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
+  if (isDev) {
+    // Mock admin user for local dev
+    adminUser = { email: 'dev@localhost', role: 'admin' };
+  } else {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    user = authUser;
 
-  if (!adminUser) {
-    redirect('/admin/login');
+    if (!user) {
+      redirect('/admin/login');
+    }
+
+    // Check if user is admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
+      .from('admin_users')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    adminUser = data;
+
+    if (!adminUser) {
+      redirect('/admin/login');
+    }
   }
 
   return (
@@ -44,7 +58,7 @@ export default async function AdminLayout({
               </nav>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-300">{adminUser.email || user.email}</span>
+              <span className="text-sm text-gray-300">{adminUser?.email || user?.email || 'Dev Mode'}</span>
               <form action="/api/auth/signout" method="POST">
                 <button
                   type="submit"
