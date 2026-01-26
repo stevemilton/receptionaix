@@ -16,14 +16,19 @@ export const supabaseAdmin = createClient<any>(
 interface MerchantConfig {
   businessName: string;
   businessType: string;
+  address: string;
+  phone: string;
   knowledgeBase: string;
-  services: Array<{ name: string; duration: number; price: number }>;
+  services: Array<{ name: string; description?: string; duration: number; price: number }>;
   openingHours: Record<string, string>;
+  faqs: Array<{ question: string; answer: string }>;
   greeting?: string;
   voiceId?: string;
 }
 
 export async function getMerchantConfig(merchantId: string): Promise<MerchantConfig> {
+  console.log('[Supabase] Fetching merchant config for:', merchantId);
+
   // Fetch merchant
   const { data: merchant, error: merchantError } = await supabaseAdmin
     .from('merchants')
@@ -32,11 +37,14 @@ export async function getMerchantConfig(merchantId: string): Promise<MerchantCon
     .single();
 
   if (merchantError || !merchant) {
-    console.error('Failed to fetch merchant config:', merchantError);
+    console.error('[Supabase] Failed to fetch merchant:', merchantError);
+    console.log('[Supabase] Returning DEFAULT config (merchant not found)');
     // Return default config
     return {
       businessName: 'Our Business',
       businessType: 'service provider',
+      address: '',
+      phone: '',
       knowledgeBase: '',
       services: [],
       openingHours: {
@@ -46,15 +54,31 @@ export async function getMerchantConfig(merchantId: string): Promise<MerchantCon
         Thursday: '9am - 5pm',
         Friday: '9am - 5pm',
       },
+      faqs: [],
     };
   }
 
+  console.log('[Supabase] Found merchant:', merchant.business_name);
+
   // Fetch knowledge base separately
-  const { data: kb } = await supabaseAdmin
+  const { data: kb, error: kbError } = await supabaseAdmin
     .from('knowledge_bases')
     .select('*')
     .eq('merchant_id', merchantId)
     .single();
+
+  if (kbError) {
+    console.log('[Supabase] Knowledge base error:', kbError.message);
+  }
+
+  console.log('[Supabase] Knowledge base data:', {
+    found: !!kb,
+    hasServices: !!kb?.services,
+    servicesCount: Array.isArray(kb?.services) ? kb.services.length : 0,
+    hasOpeningHours: !!kb?.opening_hours,
+    openingHoursKeys: kb?.opening_hours ? Object.keys(kb.opening_hours) : [],
+    hasFaqs: !!kb?.faqs,
+  });
 
   // Extract services from knowledge base
   const services = Array.isArray(kb?.services)
@@ -63,15 +87,54 @@ export async function getMerchantConfig(merchantId: string): Promise<MerchantCon
       ? Object.values(kb.services)
       : [];
 
-  return {
+  // Extract FAQs from knowledge base
+  const faqs = Array.isArray(kb?.faqs)
+    ? kb.faqs
+    : [];
+
+  const openingHours = (kb?.opening_hours as Record<string, string>) || {};
+  const address = merchant.address || kb?.google_maps_data?.address || '';
+  const phone = merchant.phone || kb?.google_maps_data?.phone || '';
+
+  // Build knowledgeBase text from structured data since the content column is not populated
+  const knowledgeParts: string[] = [];
+  if (address) {
+    knowledgeParts.push(`Address: ${address}`);
+  }
+  if (phone) {
+    knowledgeParts.push(`Phone: ${phone}`);
+  }
+  if (kb?.google_maps_data?.rating) {
+    knowledgeParts.push(`Google Rating: ${kb.google_maps_data.rating}/5 (${kb.google_maps_data.reviewCount || 0} reviews)`);
+  }
+  const knowledgeBase = kb?.content || knowledgeParts.join('\n');
+
+  const config: MerchantConfig = {
     businessName: merchant.business_name || 'Our Business',
     businessType: merchant.business_type || 'service provider',
-    knowledgeBase: kb?.content || '',
-    services: services as Array<{ name: string; duration: number; price: number }>,
-    openingHours: (kb?.opening_hours as Record<string, string>) || {},
+    address,
+    phone,
+    knowledgeBase,
+    services: services as Array<{ name: string; description?: string; duration: number; price: number }>,
+    openingHours,
+    faqs: faqs as Array<{ question: string; answer: string }>,
     greeting: merchant.greeting,
     voiceId: merchant.voice_id,
   };
+
+  console.log('[Supabase] Returning config:', {
+    businessName: config.businessName,
+    businessType: config.businessType,
+    address: config.address,
+    servicesCount: config.services.length,
+    openingHoursCount: Object.keys(config.openingHours).length,
+    faqsCount: config.faqs.length,
+    knowledgeBaseLength: config.knowledgeBase.length,
+    hasGreeting: !!config.greeting,
+    voiceId: config.voiceId,
+  });
+
+  return config;
 }
 
 interface CallRecord {

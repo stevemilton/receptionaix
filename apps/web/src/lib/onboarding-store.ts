@@ -45,10 +45,13 @@ export interface OnboardingData {
 
   // Step 6: Phone
   twilioPhoneNumber: string | null;
+  forwardPhone: string;
 
   // Step 7: Conditions
   termsAccepted: boolean;
   privacyAccepted: boolean;
+  dataSharingConsent: boolean;
+  marketingConsent: boolean;
 
   // Metadata
   currentStep: number;
@@ -70,8 +73,11 @@ interface OnboardingStore extends OnboardingData {
   setGoogleCalendar: (token: OnboardingData['googleCalendarToken']) => void;
   setFaqs: (faqs: OnboardingFAQ[]) => void;
   setTwilioPhone: (phone: string) => void;
+  setForwardPhone: (phone: string) => void;
   setTermsAccepted: (accepted: boolean) => void;
   setPrivacyAccepted: (accepted: boolean) => void;
+  setDataSharingConsent: (consent: boolean) => void;
+  setMarketingConsent: (consent: boolean) => void;
   setCurrentStep: (step: number) => void;
   markStepCompleted: (step: number) => void;
   markStepSkipped: (step: number) => void;
@@ -93,8 +99,11 @@ const initialState: OnboardingData = {
   googleCalendarToken: null,
   faqs: [],
   twilioPhoneNumber: null,
+  forwardPhone: '',
   termsAccepted: false,
   privacyAccepted: false,
+  dataSharingConsent: false,
+  marketingConsent: false,
   currentStep: 1,
   completedSteps: [],
   skippedSteps: [],
@@ -127,9 +136,15 @@ export const useOnboardingStore = create<OnboardingStore>()(
 
       setTwilioPhone: (twilioPhoneNumber) => set({ twilioPhoneNumber }),
 
+      setForwardPhone: (forwardPhone) => set({ forwardPhone }),
+
       setTermsAccepted: (termsAccepted) => set({ termsAccepted }),
 
       setPrivacyAccepted: (privacyAccepted) => set({ privacyAccepted }),
+
+      setDataSharingConsent: (dataSharingConsent) => set({ dataSharingConsent }),
+
+      setMarketingConsent: (marketingConsent) => set({ marketingConsent }),
 
       setCurrentStep: (currentStep) => set({ currentStep }),
 

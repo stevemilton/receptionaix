@@ -16,7 +16,10 @@ export default function PhoneSetupPage() {
   const router = useRouter();
   const {
     twilioPhoneNumber,
+    forwardPhone,
+    phone,
     setTwilioPhone,
+    setForwardPhone,
     markStepCompleted,
     setCurrentStep,
   } = useOnboardingStore();
@@ -105,32 +108,51 @@ export default function PhoneSetupPage() {
       )}
 
       {provisioned ? (
-        <Card>
-          <div className="text-center py-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+        <>
+          <Card>
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  className="w-8 h-8 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Phone Number Ready!</h2>
+              <p className="text-3xl font-bold text-primary-600 mt-2">
+                {twilioPhoneNumber}
+              </p>
+              <p className="text-gray-600 mt-2">
+                Your AI receptionist is ready to answer calls on this number.
+              </p>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Phone Number Ready!</h2>
-            <p className="text-3xl font-bold text-primary-600 mt-2">
-              {twilioPhoneNumber}
+          </Card>
+
+          <Card>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Your personal phone number</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              If your AI receptionist can&apos;t take a call (e.g. your call limit is reached or your subscription expires), calls will be forwarded to this number instead.
             </p>
-            <p className="text-gray-600 mt-2">
-              Your AI receptionist is ready to answer calls on this number.
+            <input
+              type="tel"
+              value={forwardPhone || phone || ''}
+              onChange={(e) => setForwardPhone(e.target.value)}
+              placeholder="+44 7700 900123"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-400 mt-2">
+              This should be a number you can answer personally. We&apos;ll never share it with callers.
             </p>
-          </div>
-        </Card>
+          </Card>
+        </>
       ) : (
         <>
           {/* Search for numbers */}

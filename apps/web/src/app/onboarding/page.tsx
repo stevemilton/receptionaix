@@ -15,7 +15,7 @@ export default async function OnboardingPage() {
     .from('merchants')
     .select('id, onboarding_completed')
     .eq('id', user.id)
-    .single();
+    .single() as { data: { id: string; onboarding_completed: boolean } | null };
 
   // Only redirect to dashboard if onboarding is actually complete
   if (merchant?.onboarding_completed) {

@@ -19,8 +19,11 @@ export default function CompletePage() {
     googleCalendarConnected,
     faqs,
     twilioPhoneNumber,
+    forwardPhone,
     termsAccepted,
     privacyAccepted,
+    dataSharingConsent,
+    marketingConsent,
     hasHydrated,
     reset,
   } = useOnboardingStore();
@@ -58,8 +61,11 @@ export default function CompletePage() {
           googleCalendarConnected,
           faqs,
           twilioPhoneNumber,
+          forwardPhone,
           termsAccepted,
           privacyAccepted,
+          dataSharingConsent,
+          marketingConsent,
         }),
       });
 

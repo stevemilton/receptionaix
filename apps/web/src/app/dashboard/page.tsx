@@ -19,6 +19,13 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single();
 
+  // Fetch subscription info for usage widget
+  const { data: merchantSub } = await supabaseAny
+    .from('merchants')
+    .select('subscription_status, subscription_tier, billing_period_start')
+    .eq('id', user.id)
+    .single();
+
   // Fetch metrics
   const [callsResult, appointmentsResult, messagesResult] = await Promise.all([
     supabaseAny
@@ -48,6 +55,26 @@ export default async function DashboardPage() {
     : 0;
   const avgMinutes = Math.floor(avgDuration / 60);
   const avgSeconds = avgDuration % 60;
+
+  // Get billing period call count for usage widget
+  let billingCalls = 0;
+  let billingCallLimit = 0;
+  if (merchantSub?.billing_period_start) {
+    const { data: billingUsage } = await supabaseAny
+      .rpc('get_merchant_call_count', {
+        p_merchant_id: user.id,
+        p_period_start: merchantSub.billing_period_start,
+      })
+      .single();
+    if (billingUsage) {
+      billingCalls = billingUsage.call_count || 0;
+    }
+  }
+  // Determine limit based on tier
+  if (merchantSub?.subscription_tier === 'starter') billingCallLimit = 80;
+  else if (merchantSub?.subscription_tier === 'professional') billingCallLimit = 400;
+  else if (merchantSub?.subscription_tier === 'enterprise') billingCallLimit = -1;
+  else billingCallLimit = 400; // trial default
 
   // Fetch recent calls
   const { data: recentCalls } = await supabaseAny
@@ -81,6 +108,38 @@ export default async function DashboardPage() {
         <MetricCard title="Unread Messages" value={unreadMessages} highlight={unreadMessages > 0} />
         <MetricCard title="Avg Call Duration" value={`${avgMinutes}:${avgSeconds.toString().padStart(2, '0')}`} />
       </div>
+
+      {/* Usage Widget */}
+      <Link href="/dashboard/usage" className="block mb-8">
+        <div className="bg-white rounded-xl shadow-sm border p-6 hover:border-primary-300 transition-colors">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold text-gray-900">Calls This Billing Period</h2>
+            <span className="text-sm text-primary-600">View details &rarr;</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-3xl font-bold text-gray-900">{billingCalls}</span>
+            {billingCallLimit === -1 ? (
+              <span className="text-sm text-green-600 font-medium">Unlimited</span>
+            ) : (
+              <span className="text-sm text-gray-500">/ {billingCallLimit} calls</span>
+            )}
+          </div>
+          {billingCallLimit > 0 && (
+            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all ${
+                  billingCalls / billingCallLimit >= 1
+                    ? 'bg-red-500'
+                    : billingCalls / billingCallLimit >= 0.8
+                    ? 'bg-yellow-500'
+                    : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min((billingCalls / billingCallLimit) * 100, 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      </Link>
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

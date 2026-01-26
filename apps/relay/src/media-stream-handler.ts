@@ -136,6 +136,35 @@ async function handleStop(session: CallSession): Promise<void> {
   } catch (error) {
     console.error('Failed to save call record:', error);
   }
+
+  // Fire-and-forget: notify web app for overage tracking
+  notifyCallComplete(session.merchantId);
+}
+
+function notifyCallComplete(merchantId: string): void {
+  const appUrl = process.env['APP_URL'] || 'https://receptionai.vercel.app';
+  const serviceKey = process.env['RELAY_SERVICE_KEY'];
+
+  if (!serviceKey) {
+    console.warn('[MediaStream] RELAY_SERVICE_KEY not set, skipping overage check');
+    return;
+  }
+
+  fetch(`${appUrl}/api/calls/post-complete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({ merchantId }),
+  })
+    .then((res) => {
+      if (!res.ok) console.error(`[MediaStream] Post-complete failed: ${res.status}`);
+      else console.log(`[MediaStream] Post-complete notified for ${merchantId}`);
+    })
+    .catch((err) => {
+      console.error('[MediaStream] Post-complete error:', err);
+    });
 }
 
 function sendToTwilio(session: CallSession, audioBase64: string): void {

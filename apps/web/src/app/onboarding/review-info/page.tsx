@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Card } from '@receptionalx/ui';
 import { useOnboardingStore, OnboardingService } from '@/lib/onboarding-store';
+
+interface SuggestedService {
+  serviceName: string;
+  description: string | null;
+  typicalDurationMins: number | null;
+  typicalPriceGbp: number | null;
+}
 
 const DAYS_OF_WEEK = [
   'Monday',
@@ -53,6 +60,47 @@ export default function ReviewInfoPage() {
     }
     return DAYS_OF_WEEK.reduce((acc, day) => ({ ...acc, [day]: '09:00 - 17:00' }), {});
   });
+
+  // Fetch master KB suggestions for the business type
+  const [suggestedServices, setSuggestedServices] = useState<SuggestedService[]>([]);
+
+  useEffect(() => {
+    if (localBusinessType) {
+      fetch(`/api/master-kb/suggestions?businessType=${encodeURIComponent(localBusinessType)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.suggestions?.services) {
+            setSuggestedServices(data.suggestions.services);
+          }
+        })
+        .catch(() => {
+          // Silently fail — suggestions are enhancement only
+        });
+    }
+  }, [localBusinessType]);
+
+  const handleAddSuggestedService = (suggestion: SuggestedService) => {
+    const newService: OnboardingService = {
+      name: suggestion.serviceName,
+      description: suggestion.description || '',
+      duration: suggestion.typicalDurationMins || 30,
+      price: suggestion.typicalPriceGbp || 0,
+    };
+
+    const emptyIndex = localServices.findIndex((s) => !s.name.trim());
+    if (emptyIndex >= 0) {
+      const updated = [...localServices];
+      updated[emptyIndex] = newService;
+      setLocalServices(updated);
+    } else {
+      setLocalServices([...localServices, newService]);
+    }
+  };
+
+  // Filter out suggestions that are already in the services list
+  const unusedSuggestions = suggestedServices.filter(
+    (s) => !localServices.some((ls) => ls.name.toLowerCase() === s.serviceName.toLowerCase())
+  );
 
   const handleAddService = () => {
     setLocalServices([...localServices, { name: '', description: '', duration: 30, price: 0 }]);
@@ -158,6 +206,27 @@ export default function ReviewInfoPage() {
             + Add Service
           </Button>
         </div>
+
+        {/* Suggested services from master KB */}
+        {unusedSuggestions.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-2">
+              Popular services for {localBusinessType || 'your business type'}:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {unusedSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion.serviceName}
+                  onClick={() => handleAddSuggestedService(suggestion)}
+                  className="px-3 py-1.5 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-full transition-colors"
+                >
+                  + {suggestion.serviceName}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           {localServices.map((service, index) => (
             <div key={index} className="p-4 bg-gray-50 rounded-lg space-y-3">

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { stripe, getTierByPriceId } from '@/lib/stripe/config';
+import { stripe, getStripe, getTierByPriceId } from '@/lib/stripe/config';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
@@ -89,15 +89,42 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`[Stripe] Checkout completed for user ${userId}, tier ${tierId}`);
 
+  // Look up subscription to find overage item ID
+  let overageItemId: string | null = null;
+  const subscriptionId = session.subscription as string;
+  if (subscriptionId) {
+    try {
+      const sub = await getStripe().subscriptions.retrieve(subscriptionId);
+      const overagePriceId = process.env.STRIPE_PRICE_OVERAGE;
+      if (overagePriceId) {
+        const overageItem = sub.items.data.find(
+          (item) => item.price.id === overagePriceId
+        );
+        if (overageItem) {
+          overageItemId = overageItem.id;
+        }
+      }
+    } catch (err) {
+      console.error('[Stripe] Failed to retrieve subscription for overage item:', err);
+    }
+  }
+
   // Update merchant with subscription info
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: Record<string, any> = {
+    subscription_status: 'active',
+    subscription_tier: tierId,
+    stripe_customer_id: session.customer as string,
+    stripe_subscription_id: subscriptionId,
+    updated_at: new Date().toISOString(),
+  };
+  if (overageItemId) {
+    updateData.stripe_overage_item_id = overageItemId;
+  }
+
   await supabase
     .from('merchants')
-    .update({
-      subscription_status: 'active',
-      subscription_tier: tierId,
-      stripe_subscription_id: session.subscription as string,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', userId);
 }
 
@@ -132,8 +159,10 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   console.log(`[Stripe] Subscription updated for merchant ${merchant.id}: ${status}`);
 
-  // Get period end - handle different Stripe API versions
-  const periodEnd = (subscription as Stripe.Subscription & { current_period_end?: number }).current_period_end;
+  // Get period start/end - handle different Stripe API versions
+  const subAny = subscription as Stripe.Subscription & { current_period_start?: number; current_period_end?: number };
+  const periodStart = subAny.current_period_start;
+  const periodEnd = subAny.current_period_end;
 
   await supabase
     .from('merchants')
@@ -142,6 +171,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       subscription_tier: tier?.id || null,
       subscription_ends_at: periodEnd
         ? new Date(periodEnd * 1000).toISOString()
+        : null,
+      billing_period_start: periodStart
+        ? new Date(periodStart * 1000).toISOString()
         : null,
       updated_at: new Date().toISOString(),
     })

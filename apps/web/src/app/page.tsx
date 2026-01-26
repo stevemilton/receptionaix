@@ -7,6 +7,12 @@ export default function HomePage() {
         <div className="text-2xl font-bold text-primary-600">ReceptionAI</div>
         <div className="space-x-4">
           <Link
+            href="/pricing"
+            className="text-gray-600 hover:text-primary-600 transition-colors"
+          >
+            Pricing
+          </Link>
+          <Link
             href="/auth/login"
             className="text-gray-600 hover:text-primary-600 transition-colors"
           >
@@ -44,6 +50,20 @@ export default function HomePage() {
               See Demo
             </Link>
           </div>
+        </div>
+
+        {/* Pricing Teaser */}
+        <div className="mt-16 text-center">
+          <p className="text-gray-500 mb-2">Plans from</p>
+          <p className="text-3xl font-bold text-gray-900">
+            &pound;49<span className="text-lg font-normal text-gray-500">/month</span>
+          </p>
+          <Link
+            href="/pricing"
+            className="inline-block mt-3 text-primary-600 hover:text-primary-700 font-medium text-sm"
+          >
+            View all plans &rarr;
+          </Link>
         </div>
 
         <div className="mt-20 grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">

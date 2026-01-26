@@ -21,6 +21,9 @@ interface OnboardingData {
     answer: string;
   }>;
   twilioPhoneNumber: string | null;
+  forwardPhone?: string;
+  dataSharingConsent?: boolean;
+  marketingConsent?: boolean;
 }
 
 export async function POST(request: Request) {
@@ -77,9 +80,13 @@ export async function POST(request: Request) {
           address: data.address,
           phone: data.phone,
           twilio_phone_number: data.twilioPhoneNumber,
+          forward_phone: data.forwardPhone || data.phone || null,
           voice_id: data.voiceId,
           greeting: data.greeting,
           google_calendar_connected: data.googleCalendarConnected,
+          data_sharing_consent: data.dataSharingConsent || false,
+          marketing_consent: data.marketingConsent || false,
+          consent_updated_at: new Date().toISOString(),
           onboarding_completed: true,
           updated_at: new Date().toISOString(),
         })
@@ -101,9 +108,13 @@ export async function POST(request: Request) {
           address: data.address,
           phone: data.phone,
           twilio_phone_number: data.twilioPhoneNumber,
+          forward_phone: data.forwardPhone || data.phone || null,
           voice_id: data.voiceId,
           greeting: data.greeting,
           google_calendar_connected: data.googleCalendarConnected,
+          data_sharing_consent: data.dataSharingConsent || false,
+          marketing_consent: data.marketingConsent || false,
+          consent_updated_at: new Date().toISOString(),
           onboarding_completed: true,
         })
         .select()

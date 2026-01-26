@@ -9,20 +9,28 @@ export default function ConditionsPage() {
   const {
     termsAccepted,
     privacyAccepted,
+    dataSharingConsent,
+    marketingConsent,
     setTermsAccepted,
     setPrivacyAccepted,
+    setDataSharingConsent,
+    setMarketingConsent,
     markStepCompleted,
     setCurrentStep,
   } = useOnboardingStore();
 
   const [localTerms, setLocalTerms] = useState(termsAccepted);
   const [localPrivacy, setLocalPrivacy] = useState(privacyAccepted);
+  const [localDataSharing, setLocalDataSharing] = useState(dataSharingConsent);
+  const [localMarketing, setLocalMarketing] = useState(marketingConsent);
 
   const canContinue = localTerms && localPrivacy;
 
   const handleContinue = () => {
     setTermsAccepted(localTerms);
     setPrivacyAccepted(localPrivacy);
+    setDataSharingConsent(localDataSharing);
+    setMarketingConsent(localMarketing);
     markStepCompleted(7);
     setCurrentStep(8);
     router.push('/onboarding/complete');
@@ -96,6 +104,55 @@ export default function ConditionsPage() {
               I have read and agree to the Privacy Policy
             </span>
           </label>
+        </div>
+
+        {/* Data Sharing Preferences (Optional) */}
+        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+          <h2 className="font-semibold text-gray-900 mb-2">Data Sharing Preferences</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            These are optional. You can change these at any time from your dashboard settings.
+          </p>
+
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={localDataSharing}
+                onChange={(e) => setLocalDataSharing(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mt-0.5"
+              />
+              <div>
+                <span className="text-gray-700 font-medium">
+                  Help improve ReceptionAI for businesses like yours
+                </span>
+                <p className="text-sm text-gray-500 mt-1">
+                  Allow us to use anonymised, aggregated data from your knowledge base
+                  (such as service types and common questions) to improve suggestions
+                  for other businesses in your industry. Your business name and
+                  customer data are never shared.
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={localMarketing}
+                onChange={(e) => setLocalMarketing(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mt-0.5"
+              />
+              <div>
+                <span className="text-gray-700 font-medium">
+                  Receive product updates and tips
+                </span>
+                <p className="text-sm text-gray-500 mt-1">
+                  We&apos;ll occasionally send you emails about new features, best practices,
+                  and tips for getting the most from your AI receptionist.
+                  You can unsubscribe at any time.
+                </p>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
 

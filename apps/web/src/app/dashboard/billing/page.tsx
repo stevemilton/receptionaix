@@ -3,65 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-
-interface PricingTier {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  features: string[];
-  popular?: boolean;
-}
-
-const PRICING_TIERS: PricingTier[] = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    description: 'Perfect for small businesses just getting started',
-    price: 29,
-    features: [
-      'Up to 100 calls/month',
-      'Basic AI receptionist',
-      'Email support',
-      'Standard voice quality',
-      'Business hours only',
-    ],
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    description: 'For growing businesses that need more capacity',
-    price: 79,
-    features: [
-      'Up to 500 calls/month',
-      'Advanced AI with custom training',
-      'Priority email support',
-      'HD voice quality',
-      '24/7 availability',
-      'Google Calendar integration',
-      'Custom greeting message',
-    ],
-    popular: true,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    description: 'For high-volume businesses with premium needs',
-    price: 199,
-    features: [
-      'Unlimited calls',
-      'Premium AI with advanced features',
-      'Dedicated account manager',
-      'Premium HD voice',
-      '24/7 availability',
-      'All integrations included',
-      'Custom AI personality',
-      'Multi-location support',
-      'API access',
-      'White-label option',
-    ],
-  },
-];
+import { CLIENT_PRICING_TIERS, type ClientPricingTier } from '@/lib/stripe/pricing';
 
 interface SubscriptionInfo {
   status: string;
@@ -160,6 +102,7 @@ export default function BillingPage() {
 
   const isSuccess = searchParams.get('success') === 'true';
   const isCanceled = searchParams.get('canceled') === 'true';
+  const isExpired = searchParams.get('expired') === 'true';
 
   return (
     <div className="p-8">
@@ -168,7 +111,7 @@ export default function BillingPage() {
         <p className="text-gray-600">Manage your subscription and billing</p>
       </div>
 
-      {/* Success/Cancel Messages */}
+      {/* Success/Cancel/Expired Messages */}
       {isSuccess && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg">
           Payment successful! Your subscription is now active.
@@ -179,9 +122,15 @@ export default function BillingPage() {
           Checkout was canceled. You can try again when you&apos;re ready.
         </div>
       )}
+      {isExpired && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+          Your subscription has expired. Select a plan below to continue using ReceptionAI.
+          While your subscription is inactive, incoming calls will be forwarded to your personal phone number.
+        </div>
+      )}
 
       {/* Current Subscription */}
-      {subscription && subscription.status !== 'trial' && (
+      {subscription && subscription.status !== 'trial' && subscription.status !== 'cancelled' && subscription.status !== 'expired' && (
         <div className="mb-8 bg-white rounded-xl shadow-sm border p-6">
           <h2 className="text-lg font-semibold mb-4">Current Subscription</h2>
           <div className="flex items-center justify-between">
@@ -236,8 +185,9 @@ export default function BillingPage() {
 
       {/* Pricing Tiers */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {PRICING_TIERS.map((tier) => {
+        {CLIENT_PRICING_TIERS.map((tier) => {
           const isCurrentPlan = subscription?.tier === tier.id && subscription?.status === 'active';
+          const isEnterprise = tier.id === 'enterprise';
 
           return (
             <div
@@ -258,9 +208,24 @@ export default function BillingPage() {
               </div>
 
               <div className="mb-6">
-                <span className="text-4xl font-bold text-gray-900">£{tier.price}</span>
-                <span className="text-gray-500">/month</span>
+                {isEnterprise ? (
+                  <>
+                    <span className="text-4xl font-bold text-gray-900">£{tier.price}</span>
+                    <span className="text-gray-500">+/month</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold text-gray-900">£{tier.price}</span>
+                    <span className="text-gray-500">/month</span>
+                  </>
+                )}
               </div>
+
+              {tier.overageRate && (
+                <p className="text-xs text-gray-400 -mt-4 mb-6">
+                  + £{tier.overageRate.toFixed(2)}/call over limit
+                </p>
+              )}
 
               <ul className="space-y-3 mb-8 flex-1">
                 {tier.features.map((feature, index) => (
@@ -271,23 +236,32 @@ export default function BillingPage() {
                 ))}
               </ul>
 
-              <button
-                onClick={() => handleSelectPlan(tier.id)}
-                disabled={isCurrentPlan || checkoutLoading !== null}
-                className={`w-full py-3 rounded-lg font-medium transition-colors ${
-                  isCurrentPlan
-                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                    : tier.popular
-                    ? 'bg-primary-600 text-white hover:bg-primary-700'
-                    : 'bg-gray-900 text-white hover:bg-gray-800'
-                } disabled:opacity-50`}
-              >
-                {checkoutLoading === tier.id
-                  ? 'Processing...'
-                  : isCurrentPlan
-                  ? 'Current Plan'
-                  : 'Get Started'}
-              </button>
+              {isEnterprise ? (
+                <a
+                  href="mailto:enterprise@receptionai.com?subject=Enterprise%20Plan%20Enquiry"
+                  className="w-full py-3 rounded-lg font-medium text-center transition-colors bg-gray-900 text-white hover:bg-gray-800 block"
+                >
+                  Contact Us
+                </a>
+              ) : (
+                <button
+                  onClick={() => handleSelectPlan(tier.id)}
+                  disabled={isCurrentPlan || checkoutLoading !== null}
+                  className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                    isCurrentPlan
+                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                      : tier.popular
+                      ? 'bg-primary-600 text-white hover:bg-primary-700'
+                      : 'bg-gray-900 text-white hover:bg-gray-800'
+                  } disabled:opacity-50`}
+                >
+                  {checkoutLoading === tier.id
+                    ? 'Processing...'
+                    : isCurrentPlan
+                    ? 'Current Plan'
+                    : 'Get Started'}
+                </button>
+              )}
             </div>
           );
         })}
@@ -303,7 +277,11 @@ export default function BillingPage() {
           />
           <FAQ
             question="What happens when I exceed my call limit?"
-            answer="You'll receive a notification when you're approaching your limit. Additional calls are charged at £0.50 per call, or you can upgrade to a higher plan."
+            answer="When you reach your call limit, incoming calls are forwarded to your personal phone number. Additional AI-handled calls beyond your limit are charged at £0.50 per call."
+          />
+          <FAQ
+            question="What happens if my subscription expires?"
+            answer="All incoming calls will be forwarded to your personal phone number until you renew your subscription. No calls are lost."
           />
           <FAQ
             question="Is there a contract or commitment?"

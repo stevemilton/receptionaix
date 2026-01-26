@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { initRevenueCat } from './revenuecat';
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Initialize RevenueCat if already logged in
+      if (session?.user) {
+        initRevenueCat(session.user.id).catch((err) =>
+          console.error('[Auth] RevenueCat init error:', err)
+        );
+      }
     });
 
     // Listen for auth changes
@@ -31,6 +39,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        // Initialize RevenueCat when user logs in
+        if (session?.user) {
+          initRevenueCat(session.user.id).catch((err) =>
+            console.error('[Auth] RevenueCat init error:', err)
+          );
+        }
       }
     );
 

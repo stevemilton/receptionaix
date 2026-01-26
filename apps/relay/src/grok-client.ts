@@ -87,9 +87,12 @@ export async function connectToGrok(
 interface MerchantConfig {
   businessName: string;
   businessType: string;
+  address: string;
+  phone: string;
   knowledgeBase: string;
-  services: Array<{ name: string; duration: number; price: number }>;
+  services: Array<{ name: string; description?: string; duration: number; price: number }>;
   openingHours: Record<string, string>;
+  faqs: Array<{ question: string; answer: string }>;
   greeting?: string;
   voiceId?: string;
 }
@@ -149,6 +152,8 @@ function sendInitialGreeting(ws: WebSocket, config: MerchantConfig) {
   console.log('[Grok] Config business name:', config.businessName);
   console.log('[Grok] Opening hours:', JSON.stringify(config.openingHours));
   console.log('[Grok] Services count:', config.services.length);
+  console.log('[Grok] FAQs count:', config.faqs.length);
+  console.log('[Grok] Address:', config.address);
 
   // Create a response with the initial greeting
   ws.send(JSON.stringify({
@@ -168,26 +173,58 @@ function getTimeOfDay(): string {
 }
 
 function buildSystemPrompt(config: MerchantConfig): string {
-  return `You are a friendly, professional receptionist for ${config.businessName},
+  // Build services section with descriptions where available
+  const servicesText = config.services.length > 0
+    ? config.services.map((s) => {
+        const parts = [`- ${s.name}`];
+        if (s.duration) parts.push(`${s.duration} minutes`);
+        if (s.price) parts.push(`£${s.price}`);
+        if (s.description) parts.push(`(${s.description})`);
+        return parts.join(', ');
+      }).join('\n')
+    : '- No specific services listed. Ask the business owner for details.';
+
+  // Build opening hours section
+  const hoursText = Object.keys(config.openingHours).length > 0
+    ? Object.entries(config.openingHours)
+        .map(([day, hours]) => `- ${day}: ${hours}`)
+        .join('\n')
+    : '- Opening hours not specified. Offer to take a message if asked.';
+
+  // Build FAQs section
+  const faqsText = config.faqs.length > 0
+    ? config.faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
+    : '';
+
+  // Build business details section
+  const businessDetails: string[] = [];
+  if (config.address) businessDetails.push(`Address: ${config.address}`);
+  if (config.phone) businessDetails.push(`Business Phone: ${config.phone}`);
+  if (config.knowledgeBase) businessDetails.push(config.knowledgeBase);
+
+  const prompt = `You are a friendly, professional receptionist for ${config.businessName},
 a ${config.businessType} in the UK.
 
 YOUR CAPABILITIES:
 - Book appointments by checking calendar availability
 - Cancel or reschedule existing appointments
 - Take messages for the business owner
-- Answer questions about services and opening hours
+- Answer questions about services, opening hours, and the business
 - Transfer urgent calls to the owner's mobile
 
 BUSINESS INFORMATION:
-${config.knowledgeBase}
+${businessDetails.length > 0 ? businessDetails.join('\n') : 'No additional business details available.'}
 
 SERVICES OFFERED:
-${config.services.map((s) => `- ${s.name}: ${s.duration} minutes, £${s.price}`).join('\n')}
+${servicesText}
 
 OPENING HOURS:
-${Object.entries(config.openingHours)
-  .map(([day, hours]) => `- ${day}: ${hours}`)
-  .join('\n')}
+${hoursText}
+${faqsText ? `
+FREQUENTLY ASKED QUESTIONS:
+Use these to answer common questions callers may have:
+
+${faqsText}` : ''}
 
 CONVERSATION RULES:
 - Use British English
@@ -195,12 +232,22 @@ CONVERSATION RULES:
 - Always confirm booking details before creating
 - If you can't help, offer to take a message
 - For urgent matters, offer to transfer to the owner
+- When asked about services, prices, or hours, ALWAYS refer to the information above
+- If asked a question that matches an FAQ, use that answer
 
 HANDLING COMMON SCENARIOS:
 - New booking: Ask for name, service, preferred date/time
 - Cancellation: Confirm which appointment to cancel
 - Rescheduling: Cancel old, create new
-- Questions: Answer from knowledge base, or take message if unsure`;
+- Questions: Answer from the knowledge base above, or take a message if unsure`;
+
+  // Log the full prompt for debugging
+  console.log('[Grok] System prompt being sent:');
+  console.log('=== PROMPT START ===');
+  console.log(prompt);
+  console.log('=== PROMPT END ===');
+
+  return prompt;
 }
 
 // OpenAI Realtime API message types

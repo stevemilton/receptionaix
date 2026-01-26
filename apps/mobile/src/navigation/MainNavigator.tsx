@@ -1,13 +1,16 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CallsScreen } from '../screens/CallsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { SubscriptionScreen } from '../screens/SubscriptionScreen';
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
-export function MainNavigator() {
+function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -52,5 +55,26 @@ export function MainNavigator() {
         options={{ title: 'Settings' }}
       />
     </Tab.Navigator>
+  );
+}
+
+export function MainNavigator() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Tabs"
+        component={TabNavigator}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Subscription"
+        component={SubscriptionScreen}
+        options={{
+          title: 'Subscription',
+          headerStyle: { backgroundColor: '#fff' },
+          headerTitleStyle: { fontWeight: '600' },
+        }}
+      />
+    </Stack.Navigator>
   );
 }

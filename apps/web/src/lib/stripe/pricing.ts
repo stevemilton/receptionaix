@@ -1,54 +1,31 @@
-import Stripe from 'stripe';
+/**
+ * Client-safe pricing data.
+ * This file contains pricing tier information WITHOUT Stripe Price IDs or secrets.
+ * Import this in client components instead of config.ts.
+ */
 
-// Lazy initialization to avoid build-time errors when env vars aren't available
-let _stripe: Stripe | null = null;
-
-export function getStripe(): Stripe {
-  if (!_stripe) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('STRIPE_SECRET_KEY is not set');
-    }
-    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-12-15.clover',
-      typescript: true,
-    });
-  }
-  return _stripe;
-}
-
-// For backwards compatibility - use getStripe() instead
-export const stripe = {
-  get customers() { return getStripe().customers; },
-  get checkout() { return getStripe().checkout; },
-  get billingPortal() { return getStripe().billingPortal; },
-  get webhooks() { return getStripe().webhooks; },
-};
-
-export interface PricingTier {
+export interface ClientPricingTier {
   id: string;
   name: string;
   description: string;
   price: number;
-  priceId: string; // Stripe Price ID
   features: string[];
   limits: {
-    callsPerMonth: number;    // -1 for unlimited
-    minutesPerMonth: number;  // -1 for unlimited
+    callsPerMonth: number;
+    minutesPerMonth: number;
     knowledgeBaseSize: number;
     supportLevel: 'email' | 'priority' | 'dedicated';
   };
   popular?: boolean;
-  overageRate?: number; // Cost per call over limit, in GBP
+  overageRate?: number;
 }
 
-// Pricing tiers - Price IDs should be set via environment variables
-export const PRICING_TIERS: PricingTier[] = [
+export const CLIENT_PRICING_TIERS: ClientPricingTier[] = [
   {
     id: 'starter',
     name: 'Starter',
     description: 'Up to 20 calls a week',
     price: 49,
-    priceId: process.env.STRIPE_PRICE_STARTER || 'price_starter',
     features: [
       '80 calls/month (~200 minutes)',
       'AI receptionist with your knowledge base',
@@ -70,7 +47,6 @@ export const PRICING_TIERS: PricingTier[] = [
     name: 'Professional',
     description: 'Up to 100 calls a week',
     price: 149,
-    priceId: process.env.STRIPE_PRICE_PROFESSIONAL || 'price_professional',
     features: [
       '400 calls/month (~1,000 minutes)',
       'Advanced AI with custom training',
@@ -95,7 +71,6 @@ export const PRICING_TIERS: PricingTier[] = [
     name: 'Enterprise',
     description: 'Unlimited support for high-volume businesses',
     price: 399,
-    priceId: process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise',
     features: [
       'Unlimited calls and minutes',
       'Premium AI with advanced features',
@@ -109,18 +84,10 @@ export const PRICING_TIERS: PricingTier[] = [
       'White-label option',
     ],
     limits: {
-      callsPerMonth: -1, // unlimited
-      minutesPerMonth: -1, // unlimited
-      knowledgeBaseSize: -1, // unlimited
+      callsPerMonth: -1,
+      minutesPerMonth: -1,
+      knowledgeBaseSize: -1,
       supportLevel: 'dedicated',
     },
   },
 ];
-
-export function getTierById(tierId: string): PricingTier | undefined {
-  return PRICING_TIERS.find((tier) => tier.id === tierId);
-}
-
-export function getTierByPriceId(priceId: string): PricingTier | undefined {
-  return PRICING_TIERS.find((tier) => tier.priceId === priceId);
-}

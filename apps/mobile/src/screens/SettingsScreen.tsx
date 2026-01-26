@@ -9,8 +9,10 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { getCustomerInfo, hasActiveSubscription, getActiveTier } from '../lib/revenuecat';
 
 interface MerchantInfo {
   business_name: string;
@@ -22,12 +24,28 @@ interface MerchantInfo {
 
 export function SettingsScreen() {
   const { user, signOut } = useAuth();
+  const navigation = useNavigation<any>();
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [rcTier, setRcTier] = useState<string | null>(null);
+  const [rcActive, setRcActive] = useState(false);
 
   useEffect(() => {
     loadMerchant();
+    loadSubscription();
   }, []);
+
+  async function loadSubscription() {
+    try {
+      const info = await getCustomerInfo();
+      if (info) {
+        setRcActive(hasActiveSubscription(info));
+        setRcTier(getActiveTier(info));
+      }
+    } catch (e) {
+      // RevenueCat may not be initialized yet
+    }
+  }
 
   async function loadMerchant() {
     if (!user) return;
@@ -93,7 +111,7 @@ export function SettingsScreen() {
                 styles.statusBadge,
                 {
                   backgroundColor:
-                    merchant?.subscription_status === 'active'
+                    rcActive || merchant?.subscription_status === 'active'
                       ? '#D1FAE5'
                       : merchant?.subscription_status === 'trial'
                       ? '#DBEAFE'
@@ -106,7 +124,7 @@ export function SettingsScreen() {
                   styles.statusText,
                   {
                     color:
-                      merchant?.subscription_status === 'active'
+                      rcActive || merchant?.subscription_status === 'active'
                         ? '#065F46'
                         : merchant?.subscription_status === 'trial'
                         ? '#1E40AF'
@@ -114,10 +132,23 @@ export function SettingsScreen() {
                   },
                 ]}
               >
-                {merchant?.subscription_status || 'unknown'}
+                {rcTier
+                  ? `${rcTier.charAt(0).toUpperCase() + rcTier.slice(1)}`
+                  : merchant?.subscription_status || 'unknown'}
               </Text>
             </View>
           </View>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => navigation.navigate('Subscription')}
+          >
+            <View style={styles.menuIcon}>
+              <Ionicons name="card-outline" size={22} color="#4F46E5" />
+            </View>
+            <Text style={styles.menuLabel}>Manage Subscription</Text>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
       </View>
 

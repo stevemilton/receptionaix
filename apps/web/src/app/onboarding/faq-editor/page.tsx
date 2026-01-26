@@ -1,9 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, Input } from '@receptionalx/ui';
 import { useOnboardingStore, OnboardingFAQ } from '@/lib/onboarding-store';
+
+interface MasterFaqSuggestion {
+  questionPattern: string;
+  suggestedAnswer: string | null;
+}
 
 const SUGGESTED_QUESTIONS = [
   'What are your opening hours?',
@@ -18,11 +23,29 @@ const SUGGESTED_QUESTIONS = [
 
 export default function FAQEditorPage() {
   const router = useRouter();
-  const { faqs, businessName, setFaqs, markStepCompleted, markStepSkipped, setCurrentStep } = useOnboardingStore();
+  const { faqs, businessName, businessType, setFaqs, markStepCompleted, markStepSkipped, setCurrentStep } = useOnboardingStore();
 
   const [localFaqs, setLocalFaqs] = useState<OnboardingFAQ[]>(
     faqs.length > 0 ? faqs : [{ question: '', answer: '' }]
   );
+
+  // Fetch master KB FAQ suggestions for the business type
+  const [masterFaqSuggestions, setMasterFaqSuggestions] = useState<MasterFaqSuggestion[]>([]);
+
+  useEffect(() => {
+    if (businessType) {
+      fetch(`/api/master-kb/suggestions?businessType=${encodeURIComponent(businessType)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.suggestions?.faqs) {
+            setMasterFaqSuggestions(data.suggestions.faqs);
+          }
+        })
+        .catch(() => {
+          // Silently fail — suggestions are enhancement only
+        });
+    }
+  }, [businessType]);
 
   const handleAddFAQ = () => {
     setLocalFaqs([...localFaqs, { question: '', answer: '' }]);
@@ -45,14 +68,20 @@ export default function FAQEditorPage() {
     );
     if (exists) return;
 
+    // Check if there's a suggested answer from master KB
+    const masterSuggestion = masterFaqSuggestions.find(
+      (f) => f.questionPattern === question
+    );
+    const answer = masterSuggestion?.suggestedAnswer || '';
+
     // Find empty slot or add new
     const emptyIndex = localFaqs.findIndex((faq) => !faq.question.trim());
     if (emptyIndex >= 0) {
       const updated = [...localFaqs];
-      updated[emptyIndex] = { question, answer: '' };
+      updated[emptyIndex] = { question, answer };
       setLocalFaqs(updated);
     } else {
-      setLocalFaqs([...localFaqs, { question, answer: '' }]);
+      setLocalFaqs([...localFaqs, { question, answer }]);
     }
   };
 
@@ -78,7 +107,15 @@ export default function FAQEditorPage() {
     router.push('/onboarding/calendar-connect');
   };
 
-  const unusedSuggestions = SUGGESTED_QUESTIONS.filter(
+  // Merge master KB suggestions (business-type-specific) with hardcoded fallbacks
+  const masterQuestions = masterFaqSuggestions.map((f) => f.questionPattern);
+  const allSuggestedQuestions = [
+    ...masterQuestions,
+    ...SUGGESTED_QUESTIONS.filter(
+      (q) => !masterQuestions.some((mq) => mq.toLowerCase() === q.toLowerCase())
+    ),
+  ];
+  const unusedSuggestions = allSuggestedQuestions.filter(
     (q) => !localFaqs.some((faq) => faq.question.toLowerCase() === q.toLowerCase())
   );
 
@@ -99,15 +136,24 @@ export default function FAQEditorPage() {
             Click to add these common questions:
           </p>
           <div className="flex flex-wrap gap-2">
-            {unusedSuggestions.map((question) => (
-              <button
-                key={question}
-                onClick={() => handleAddSuggested(question)}
-                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
-              >
-                + {question}
-              </button>
-            ))}
+            {unusedSuggestions.map((question) => {
+              const isMasterKB = masterQuestions.some(
+                (mq) => mq.toLowerCase() === question.toLowerCase()
+              );
+              return (
+                <button
+                  key={question}
+                  onClick={() => handleAddSuggested(question)}
+                  className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                    isMasterKB
+                      ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  + {question}
+                </button>
+              );
+            })}
           </div>
         </Card>
       )}

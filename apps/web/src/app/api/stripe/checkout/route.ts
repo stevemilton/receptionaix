@@ -51,17 +51,23 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id);
     }
 
+    // Build line items: subscription + optional metered overage
+    const lineItems: Array<{ price: string; quantity?: number }> = [
+      { price: tier.priceId, quantity: 1 },
+    ];
+
+    // Add metered overage price for non-enterprise tiers
+    const overagePriceId = process.env.STRIPE_PRICE_OVERAGE;
+    if (overagePriceId && tier.overageRate) {
+      lineItems.push({ price: overagePriceId });
+    }
+
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price: tier.priceId,
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?canceled=true`,
       subscription_data: {

@@ -77,7 +77,7 @@ export default async function AdminOverviewPage() {
     return acc;
   }, {});
 
-  const topPeakHour = Object.entries(peakHours).sort((a, b) => b[1] - a[1])[0];
+  const topPeakHour = Object.entries(peakHours as Record<string, number>).sort((a, b) => b[1] - a[1])[0];
 
   // Get recent signups
   const { data: recentMerchants } = await supabaseAny
@@ -143,7 +143,7 @@ export default async function AdminOverviewPage() {
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <h2 className="text-lg font-semibold mb-4">Merchants by Business Type</h2>
           <div className="space-y-3">
-            {Object.entries(businessTypeBreakdown)
+            {Object.entries(businessTypeBreakdown as Record<string, number>)
               .sort((a, b) => b[1] - a[1])
               .slice(0, 8)
               .map(([type, count]) => {
@@ -200,7 +200,7 @@ export default async function AdminOverviewPage() {
           <div className="flex items-end space-x-1 h-20">
             {Array.from({ length: 24 }, (_, hour) => {
               const count = peakHours[hour] || 0;
-              const maxCount = Math.max(...Object.values(peakHours), 1);
+              const maxCount = Math.max(...Object.values(peakHours as Record<string, number>), 1);
               const height = (count / maxCount) * 100;
               return (
                 <div
@@ -338,13 +338,15 @@ async function ApiUsageSection({ supabase, totalMerchants }: { supabase: ReturnT
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   // Get API usage from daily aggregates
-  const { data: usageData } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: usageData } = await (supabase as any)
     .from('api_usage_daily')
     .select('api_name, total_requests, total_cost_gbp, successful_requests, failed_requests')
     .gte('date', thirtyDaysAgo.toISOString().split('T')[0]);
 
   // Aggregate by API
-  const apiStats = (usageData || []).reduce((acc: Record<string, { requests: number; cost: number; success: number; failed: number }>, row: {
+  type ApiStat = { requests: number; cost: number; success: number; failed: number };
+  const apiStats: Record<string, ApiStat> = (usageData || []).reduce((acc: Record<string, ApiStat>, row: {
     api_name: string;
     total_requests: number;
     total_cost_gbp: string;

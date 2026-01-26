@@ -8,7 +8,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@receptionalx/types": "workspace:*"
+    "@receptionalx/types": "workspace:*",
+    "@supabase/supabase-js": "^2.91.1"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

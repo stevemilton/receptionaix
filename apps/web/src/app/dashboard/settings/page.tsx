@@ -12,6 +12,8 @@ interface MerchantSettings {
   greeting: string | null;
   voice_id: string | null;
   google_calendar_connected: boolean;
+  data_sharing_consent: boolean;
+  marketing_consent: boolean;
 }
 
 const VOICE_OPTIONS = [
@@ -40,7 +42,7 @@ export default function SettingsPage() {
 
     const { data } = await supabase
       .from('merchants')
-      .select('business_name, business_type, address, phone, twilio_phone_number, greeting, voice_id, google_calendar_connected')
+      .select('business_name, business_type, address, phone, twilio_phone_number, greeting, voice_id, google_calendar_connected, data_sharing_consent, marketing_consent')
       .eq('id', user.id)
       .single();
 
@@ -67,6 +69,9 @@ export default function SettingsPage() {
         phone: settings.phone,
         greeting: settings.greeting,
         voice_id: settings.voice_id,
+        data_sharing_consent: settings.data_sharing_consent,
+        marketing_consent: settings.marketing_consent,
+        consent_updated_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id);
@@ -240,6 +245,53 @@ export default function SettingsPage() {
             >
               {settings.google_calendar_connected ? 'Disconnect' : 'Connect'}
             </button>
+          </div>
+        </section>
+
+        {/* Data & Privacy */}
+        <section className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-lg font-semibold mb-4">Data & Privacy</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Control how your data is used. Changes take effect when you save.
+          </p>
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.data_sharing_consent}
+                onChange={(e) => updateSetting('data_sharing_consent', e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-0.5"
+              />
+              <div>
+                <span className="text-gray-900 font-medium">
+                  Help improve ReceptionAI for businesses like yours
+                </span>
+                <p className="text-sm text-gray-500 mt-1">
+                  Allow us to use anonymised, aggregated data from your knowledge base
+                  (such as service types and common questions) to improve suggestions for
+                  other businesses in your industry. Your business name and customer data
+                  are never shared.
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.marketing_consent}
+                onChange={(e) => updateSetting('marketing_consent', e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-0.5"
+              />
+              <div>
+                <span className="text-gray-900 font-medium">
+                  Receive product updates and tips
+                </span>
+                <p className="text-sm text-gray-500 mt-1">
+                  Occasional emails about new features, best practices, and tips.
+                  You can unsubscribe at any time.
+                </p>
+              </div>
+            </label>
           </div>
         </section>
 
