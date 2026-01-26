@@ -32,13 +32,8 @@ export interface OnboardingData {
   greeting: string;
   voiceId: string;
 
-  // Step 4: Calendar
+  // Step 4: Calendar (tokens stored server-side only)
   googleCalendarConnected: boolean;
-  googleCalendarToken: {
-    accessToken: string;
-    refreshToken: string;
-    expiresAt: number;
-  } | null;
 
   // Step 5: FAQs
   faqs: OnboardingFAQ[];
@@ -70,7 +65,7 @@ interface OnboardingStore extends OnboardingData {
   setOpeningHours: (hours: Record<string, string>) => void;
   setGreeting: (greeting: string) => void;
   setVoiceId: (voiceId: string) => void;
-  setGoogleCalendar: (token: OnboardingData['googleCalendarToken']) => void;
+  setGoogleCalendar: (connected: boolean) => void;
   setFaqs: (faqs: OnboardingFAQ[]) => void;
   setTwilioPhone: (phone: string) => void;
   setForwardPhone: (phone: string) => void;
@@ -96,7 +91,6 @@ const initialState: OnboardingData = {
   greeting: "Hello! Thank you for calling {businessName}. How can I help you today?",
   voiceId: 'Ara',
   googleCalendarConnected: false,
-  googleCalendarToken: null,
   faqs: [],
   twilioPhoneNumber: null,
   forwardPhone: '',
@@ -127,9 +121,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
 
       setVoiceId: (voiceId) => set({ voiceId }),
 
-      setGoogleCalendar: (token) => set({
-        googleCalendarToken: token,
-        googleCalendarConnected: token !== null,
+      setGoogleCalendar: (connected) => set({
+        googleCalendarConnected: connected,
       }),
 
       setFaqs: (faqs) => set({ faqs }),

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -37,6 +38,16 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Get the authenticated user from the session cookie
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      const redirectUrl = new URL('/onboarding/calendar-connect', process.env.NEXT_PUBLIC_APP_URL);
+      redirectUrl.searchParams.set('error', 'Not authenticated');
+      return NextResponse.redirect(redirectUrl.toString());
+    }
+
     // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -60,17 +71,24 @@ export async function GET(request: Request) {
 
     const tokens: GoogleTokenResponse = await tokenResponse.json();
 
-    // Calculate expiration timestamp
+    // Save tokens server-side in the merchants table (never expose to client)
     const expiresAt = Date.now() + tokens.expires_in * 1000;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('merchants')
+      .update({
+        google_calendar_token: {
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token || null,
+          expires_at: expiresAt,
+        },
+        google_calendar_connected: true,
+      })
+      .eq('id', user.id);
 
-    // Redirect back to onboarding with tokens
+    // Redirect back with success flag only — no tokens in URL
     const redirectUrl = new URL('/onboarding/calendar-connect', process.env.NEXT_PUBLIC_APP_URL);
     redirectUrl.searchParams.set('success', 'true');
-    redirectUrl.searchParams.set('access_token', tokens.access_token);
-    if (tokens.refresh_token) {
-      redirectUrl.searchParams.set('refresh_token', tokens.refresh_token);
-    }
-    redirectUrl.searchParams.set('expires_at', expiresAt.toString());
 
     return NextResponse.redirect(redirectUrl.toString());
   } catch (err) {

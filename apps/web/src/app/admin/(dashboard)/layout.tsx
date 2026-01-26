@@ -9,8 +9,9 @@ export default async function AdminLayout({
 }) {
   const supabase = await createClient();
 
-  // DEV MODE: Skip auth check for local development
-  const isDev = process.env.NODE_ENV === 'development';
+  // DEV MODE: Skip auth only when explicitly opted in via env var
+  const isDev = process.env.NODE_ENV === 'development'
+    && process.env.ADMIN_DEV_BYPASS === 'true';
   let user = null;
   let adminUser = null;
 

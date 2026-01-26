@@ -19,24 +19,13 @@ function CalendarConnectContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Handle OAuth callback
+  // Handle OAuth callback — tokens are saved server-side, only success flag comes back
   useEffect(() => {
     const success = searchParams.get('success');
     const errorParam = searchParams.get('error');
 
     if (success === 'true') {
-      // Calendar was connected successfully
-      const accessToken = searchParams.get('access_token');
-      const refreshToken = searchParams.get('refresh_token');
-      const expiresAt = searchParams.get('expires_at');
-
-      if (accessToken && refreshToken && expiresAt) {
-        setGoogleCalendar({
-          accessToken,
-          refreshToken,
-          expiresAt: parseInt(expiresAt),
-        });
-      }
+      setGoogleCalendar(true);
     } else if (errorParam) {
       setError(decodeURIComponent(errorParam));
     }
@@ -49,7 +38,7 @@ function CalendarConnectContent() {
   };
 
   const handleDisconnect = () => {
-    setGoogleCalendar(null);
+    setGoogleCalendar(false);
   };
 
   const handleContinue = () => {

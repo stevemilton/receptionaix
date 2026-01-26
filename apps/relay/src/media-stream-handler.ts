@@ -15,10 +15,10 @@ interface CallSession {
   startedAt: Date;
 }
 
-export function handleMediaStream(twilioWs: WebSocket): void {
+export function handleMediaStream(twilioWs: WebSocket, verifiedMerchantId?: string): void {
   const session: CallSession = {
     streamSid: '',
-    merchantId: '',
+    merchantId: verifiedMerchantId || '',
     callerPhone: '',
     twilioWs,
     grokConnection: null,
@@ -71,7 +71,11 @@ async function handleStart(session: CallSession, message: TwilioStartMessage): P
   console.log('[MediaStream] Full start message:', JSON.stringify(message, null, 2));
 
   session.streamSid = message.start.streamSid;
-  session.merchantId = message.start.customParameters?.merchantId || '';
+  // Use pre-verified merchantId from signed token if available,
+  // fall back to customParameters for backward compatibility
+  if (!session.merchantId) {
+    session.merchantId = message.start.customParameters?.merchantId || '';
+  }
   session.callerPhone = message.start.customParameters?.callerPhone || '';
 
   console.log(`Call started: merchant=${session.merchantId}, caller=${session.callerPhone}`);

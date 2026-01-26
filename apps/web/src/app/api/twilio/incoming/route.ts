@@ -1,9 +1,43 @@
 import { NextResponse } from 'next/server';
+import { createHmac } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getTierById } from '@/lib/stripe/config';
 
 // Default call limit for trial merchants (Professional tier limits)
 const TRIAL_CALL_LIMIT = 400;
+
+/**
+ * Verify Twilio webhook signature (HMAC-SHA1).
+ * https://www.twilio.com/docs/usage/security#validating-requests
+ */
+function verifyTwilioSignature(
+  url: string,
+  params: Record<string, string>,
+  signature: string,
+  authToken: string
+): boolean {
+  // 1. Start with the full URL
+  let data = url;
+
+  // 2. Sort POST params alphabetically, append key+value
+  const sortedKeys = Object.keys(params).sort();
+  for (const key of sortedKeys) {
+    data += key + params[key];
+  }
+
+  // 3. HMAC-SHA1 with auth token, base64 encode
+  const expected = createHmac('sha1', authToken)
+    .update(data, 'utf-8')
+    .digest('base64');
+
+  // Constant-time comparison
+  if (expected.length !== signature.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) {
+    mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
 
 function twimlResponse(twiml: string) {
   return new NextResponse(
@@ -25,6 +59,29 @@ function unavailableMessage() {
 export async function POST(request: Request) {
   // Parse Twilio webhook data
   const formData = await request.formData();
+
+  // --- Twilio signature verification ---
+  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+  const twilioSignature = request.headers.get('x-twilio-signature') || '';
+
+  if (twilioAuthToken && process.env.NODE_ENV !== 'development') {
+    // Build params object from form data
+    const params: Record<string, string> = {};
+    formData.forEach((value, key) => {
+      params[key] = value.toString();
+    });
+
+    // Use the full request URL for verification
+    const requestUrl = request.url;
+
+    if (!verifyTwilioSignature(requestUrl, params, twilioSignature, twilioAuthToken)) {
+      console.error('[Twilio Incoming] Invalid signature — rejecting request');
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+  } else if (!twilioAuthToken) {
+    console.warn('[Twilio Incoming] TWILIO_AUTH_TOKEN not set — skipping signature verification');
+  }
+
   const to = formData.get('To') as string; // The Twilio number called
   const from = formData.get('From') as string; // The caller's number
 
@@ -103,8 +160,20 @@ export async function POST(request: Request) {
   // --- Subscription valid, under limit → connect to AI relay ---
   const relayUrl = process.env.RELAY_URL || 'wss://receptionai-relay.fly.dev/media-stream';
 
+  // Generate signed token for relay authentication
+  const relayServiceKey = process.env.RELAY_SERVICE_KEY;
+  const ts = Math.floor(Date.now() / 1000).toString();
+  let streamUrl = relayUrl;
+
+  if (relayServiceKey) {
+    const token = createHmac('sha256', relayServiceKey)
+      .update(`${merchant.id}:${ts}`)
+      .digest('hex');
+    streamUrl = `${relayUrl}?token=${token}&merchantId=${merchant.id}&ts=${ts}`;
+  }
+
   const twiml = `  <Connect>
-    <Stream url="${relayUrl}">
+    <Stream url="${streamUrl}">
       <Parameter name="merchantId" value="${merchant.id}" />
       <Parameter name="callerPhone" value="${from}" />
     </Stream>
