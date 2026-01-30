@@ -38,6 +38,10 @@ export function ReviewInfoScreen() {
     setCurrentStep,
   } = useOnboardingStore();
 
+  // Debug: Log what we received from the store
+  console.log('[ReviewInfo] Services from store:', services.length, JSON.stringify(services, null, 2));
+  console.log('[ReviewInfo] Opening hours from store:', JSON.stringify(openingHours, null, 2));
+
   const [localBusinessName, setLocalBusinessName] = useState(businessName);
   const [localBusinessType, setLocalBusinessType] = useState(businessType);
   const [localAddress, setLocalAddress] = useState(address);
@@ -90,6 +94,9 @@ export function ReviewInfoScreen() {
     });
 
     const validServices = localServices.filter((s) => s.name.trim() !== '');
+    console.log('[ReviewInfo] Saving services:', validServices.length, JSON.stringify(validServices, null, 2));
+    console.log('[ReviewInfo] Saving opening hours:', JSON.stringify(localHours, null, 2));
+
     setServices(validServices);
     setOpeningHours(localHours);
 

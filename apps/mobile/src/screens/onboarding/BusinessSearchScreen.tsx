@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -110,7 +111,12 @@ export function BusinessSearchScreen() {
       const businessType = selectedPlace.types?.[0]?.replace(/_/g, ' ') || 'business';
       const extracted = data.knowledgeBase?.extractedKnowledge || {};
 
-      setBusinessInfo({
+      console.log('[BusinessSearch] Extracted knowledge:', JSON.stringify(extracted, null, 2));
+      console.log('[BusinessSearch] Services count:', extracted.services?.length || 0);
+      console.log('[BusinessSearch] FAQs count:', extracted.faqs?.length || 0);
+      console.log('[BusinessSearch] Opening hours:', extracted.openingHours);
+
+      const businessInfo = {
         placeId: selectedPlace.placeId,
         businessName: selectedPlace.name,
         businessType: businessType,
@@ -120,10 +126,15 @@ export function BusinessSearchScreen() {
         services: extracted.services || [],
         openingHours: extracted.openingHours || {},
         faqs: extracted.faqs || [],
-      });
+      };
+
+      console.log('[BusinessSearch] Setting business info:', JSON.stringify(businessInfo, null, 2));
+
+      setBusinessInfo(businessInfo);
 
       markStepCompleted(1);
       setCurrentStep(2);
+      setGenerating(false);
       navigation.navigate('ReviewInfo');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to continue');
@@ -150,9 +161,28 @@ export function BusinessSearchScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
+    <>
+      {/* Full-screen loading overlay */}
+      <Modal
+        visible={generating}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#4F46E5" />
+            <Text style={styles.loadingTitle}>Creating your knowledge base</Text>
+            <Text style={styles.loadingText}>
+              We're analysing your business website to extract services, FAQs, and opening hours.
+            </Text>
+            <Text style={styles.loadingSubtext}>This may take a moment...</Text>
+          </View>
+        </View>
+      </Modal>
+
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        {/* Header */}
+        <View style={styles.header}>
         <Text style={styles.stepIndicator}>Step 1 of 8</Text>
         <Text style={styles.title}>Find your business</Text>
         <Text style={styles.subtitle}>
@@ -266,10 +296,46 @@ export function BusinessSearchScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    maxWidth: 320,
+    width: '100%',
+  },
+  loadingTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 12,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  loadingSubtext: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',

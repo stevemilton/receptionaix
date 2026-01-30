@@ -16,13 +16,13 @@ interface MerchantSettings {
   marketing_consent: boolean;
 }
 
+// Grok voice options - must match onboarding
 const VOICE_OPTIONS = [
-  { id: 'alloy', name: 'Alloy', description: 'Neutral and balanced' },
-  { id: 'echo', name: 'Echo', description: 'Warm and engaging' },
-  { id: 'fable', name: 'Fable', description: 'British accent' },
-  { id: 'onyx', name: 'Onyx', description: 'Deep and authoritative' },
-  { id: 'nova', name: 'Nova', description: 'Friendly and upbeat' },
-  { id: 'shimmer', name: 'Shimmer', description: 'Soft and pleasant' },
+  { id: 'Ara', name: 'Ara', description: 'Warm & friendly (Female)' },
+  { id: 'Rex', name: 'Rex', description: 'Professional & articulate (Male)' },
+  { id: 'Sal', name: 'Sal', description: 'Smooth & versatile (Neutral)' },
+  { id: 'Eve', name: 'Eve', description: 'Energetic & engaging (Female)' },
+  { id: 'Leo', name: 'Leo', description: 'Authoritative & commanding (Male)' },
 ];
 
 export default function SettingsPage() {

@@ -6,6 +6,13 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { CallsScreen } from '../screens/CallsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { SubscriptionScreen } from '../screens/SubscriptionScreen';
+import {
+  EditProfileScreen,
+  KnowledgeBaseScreen,
+  VoiceSettingsScreen,
+  ChangePasswordScreen,
+  CalendarSettingsScreen,
+} from '../screens/settings';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -60,7 +67,14 @@ function TabNavigator() {
 
 export function MainNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#fff' },
+        headerTitleStyle: { fontWeight: '600' },
+        headerBackTitleVisible: false,
+        headerTintColor: '#111827',
+      }}
+    >
       <Stack.Screen
         name="Tabs"
         component={TabNavigator}
@@ -69,11 +83,32 @@ export function MainNavigator() {
       <Stack.Screen
         name="Subscription"
         component={SubscriptionScreen}
-        options={{
-          title: 'Subscription',
-          headerStyle: { backgroundColor: '#fff' },
-          headerTitleStyle: { fontWeight: '600' },
-        }}
+        options={{ title: 'Subscription' }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ title: 'Business Profile' }}
+      />
+      <Stack.Screen
+        name="KnowledgeBase"
+        component={KnowledgeBaseScreen}
+        options={{ title: 'Knowledge Base' }}
+      />
+      <Stack.Screen
+        name="VoiceSettings"
+        component={VoiceSettingsScreen}
+        options={{ title: 'Voice & Greeting' }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: 'Change Password' }}
+      />
+      <Stack.Screen
+        name="CalendarSettings"
+        component={CalendarSettingsScreen}
+        options={{ title: 'Calendar' }}
       />
     </Stack.Navigator>
   );

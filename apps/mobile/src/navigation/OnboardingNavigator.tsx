@@ -27,17 +27,27 @@ export function OnboardingNavigator() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        gestureEnabled: true, // Enable swipe-to-go-back gesture
+        animation: 'slide_from_right', // Slide animation for consistency
       }}
       initialRouteName="BusinessSearch"
     >
-      <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} />
+      <Stack.Screen
+        name="BusinessSearch"
+        component={BusinessSearchScreen}
+        options={{ gestureEnabled: false }} // Can't go back from first screen
+      />
       <Stack.Screen name="ReviewInfo" component={ReviewInfoScreen} />
       <Stack.Screen name="AiGreeting" component={AiGreetingScreen} />
       <Stack.Screen name="CalendarConnect" component={CalendarConnectScreen} />
       <Stack.Screen name="FaqEditor" component={FaqEditorScreen} />
       <Stack.Screen name="PhoneSetup" component={PhoneSetupScreen} />
       <Stack.Screen name="Conditions" component={ConditionsScreen} />
-      <Stack.Screen name="Complete" component={CompleteScreen} />
+      <Stack.Screen
+        name="Complete"
+        component={CompleteScreen}
+        options={{ gestureEnabled: false }} // Can't go back from completion
+      />
     </Stack.Navigator>
   );
 }

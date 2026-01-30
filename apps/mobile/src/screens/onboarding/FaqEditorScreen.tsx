@@ -33,6 +33,9 @@ export function FaqEditorScreen() {
     setCurrentStep,
   } = useOnboardingStore();
 
+  // Debug: Log what we received from the store
+  console.log('[FaqEditor] FAQs from store:', faqs.length, JSON.stringify(faqs, null, 2));
+
   const [localFaqs, setLocalFaqs] = useState<OnboardingFAQ[]>(
     faqs.length > 0 ? faqs : [{ question: '', answer: '' }]
   );
@@ -75,6 +78,7 @@ export function FaqEditorScreen() {
     const validFaqs = localFaqs.filter(
       (faq) => faq.question.trim() && faq.answer.trim()
     );
+    console.log('[FaqEditor] Saving FAQs:', validFaqs.length, JSON.stringify(validFaqs, null, 2));
     setFaqs(validFaqs);
 
     markStepCompleted(5);

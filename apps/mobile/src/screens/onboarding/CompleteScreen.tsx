@@ -19,6 +19,7 @@ export function CompleteScreen() {
     businessName,
     businessType,
     address,
+    phone,
     services,
     openingHours,
     greeting,
@@ -57,26 +58,34 @@ export function CompleteScreen() {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
+      const payload = {
+        businessName,
+        businessType,
+        address,
+        phone,
+        services,
+        openingHours,
+        greeting,
+        voiceId,
+        googleCalendarConnected,
+        faqs,
+        twilioPhoneNumber,
+        forwardPhone,
+        termsAccepted,
+        privacyAccepted,
+        dataSharingConsent,
+        marketingConsent,
+      };
+
+      console.log('[CompleteScreen] Sending payload:', JSON.stringify(payload, null, 2));
+      console.log('[CompleteScreen] Services count:', services.length);
+      console.log('[CompleteScreen] FAQs count:', faqs.length);
+      console.log('[CompleteScreen] Opening hours keys:', Object.keys(openingHours));
+
       const response = await fetch(`${API_BASE_URL}/api/onboarding/complete`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          businessName,
-          businessType,
-          address,
-          services,
-          openingHours,
-          greeting,
-          voiceId,
-          googleCalendarConnected,
-          faqs,
-          twilioPhoneNumber,
-          forwardPhone,
-          termsAccepted,
-          privacyAccepted,
-          dataSharingConsent,
-          marketingConsent,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();

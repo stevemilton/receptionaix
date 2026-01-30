@@ -41,21 +41,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Get initial session with error handling
+    const initAuth = async () => {
+      try {
+        console.log('[Auth] Getting session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      // Check onboarding status and init RevenueCat if logged in
-      if (session?.user) {
-        await checkOnboardingStatus(session.user.id);
-        initRevenueCat(session.user.id).catch((err) =>
-          console.error('[Auth] RevenueCat init error:', err)
-        );
+        if (error) {
+          console.error('[Auth] getSession error:', error);
+        }
+
+        console.log('[Auth] Session:', session ? 'exists' : 'none');
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        // Check onboarding status and init RevenueCat if logged in
+        if (session?.user) {
+          try {
+            console.log('[Auth] Checking onboarding status...');
+            await checkOnboardingStatus(session.user.id);
+          } catch (e) {
+            console.error('[Auth] checkOnboardingStatus error:', e);
+          }
+          initRevenueCat(session.user.id).catch((err) =>
+            console.error('[Auth] RevenueCat init error:', err)
+          );
+        }
+      } catch (e) {
+        console.error('[Auth] Init error:', e);
+      } finally {
+        console.log('[Auth] Setting loading to false');
+        setLoading(false);
       }
+    };
 
-      setLoading(false);
-    });
+    initAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
