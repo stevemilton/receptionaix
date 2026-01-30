@@ -10,9 +10,18 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { getCustomerInfo, hasActiveSubscription, getActiveTier } from '../lib/revenuecat';
+
+// Support URLs - update these with your actual URLs
+const SUPPORT_URLS = {
+  helpCenter: 'https://receptionai.com/help',
+  contactSupport: 'mailto:support@receptionai.com',
+  termsOfService: 'https://receptionai.com/terms',
+  privacyPolicy: 'https://receptionai.com/privacy',
+};
 
 interface MerchantInfo {
   business_name: string;
@@ -20,6 +29,7 @@ interface MerchantInfo {
   phone: string | null;
   twilio_phone_number: string | null;
   subscription_status: string;
+  notifications_enabled: boolean;
 }
 
 export function SettingsScreen() {
@@ -27,6 +37,7 @@ export function SettingsScreen() {
   const navigation = useNavigation<any>();
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationLoading, setNotificationLoading] = useState(false);
   const [rcTier, setRcTier] = useState<string | null>(null);
   const [rcActive, setRcActive] = useState(false);
 
@@ -52,13 +63,40 @@ export function SettingsScreen() {
 
     const { data } = await supabase
       .from('merchants')
-      .select('business_name, business_type, phone, twilio_phone_number, subscription_status')
+      .select('business_name, business_type, phone, twilio_phone_number, subscription_status, notifications_enabled')
       .eq('id', user.id)
       .single();
 
     if (data) {
       setMerchant(data);
+      setNotificationsEnabled(data.notifications_enabled ?? true);
     }
+  }
+
+  async function handleNotificationToggle(enabled: boolean) {
+    if (!user || notificationLoading) return;
+
+    setNotificationLoading(true);
+    setNotificationsEnabled(enabled);
+
+    const { error } = await supabase
+      .from('merchants')
+      .update({ notifications_enabled: enabled })
+      .eq('id', user.id);
+
+    if (error) {
+      // Revert on error
+      setNotificationsEnabled(!enabled);
+      Alert.alert('Error', 'Failed to update notification settings. Please try again.');
+    }
+
+    setNotificationLoading(false);
+  }
+
+  function openURL(url: string) {
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Error', 'Unable to open link. Please try again.');
+    });
   }
 
   const handleSignOut = () => {
@@ -165,7 +203,8 @@ export function SettingsScreen() {
             </View>
             <Switch
               value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
+              onValueChange={handleNotificationToggle}
+              disabled={notificationLoading}
               trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
               thumbColor={notificationsEnabled ? '#4F46E5' : '#F3F4F6'}
             />
@@ -177,7 +216,10 @@ export function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.menuRow}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => openURL(SUPPORT_URLS.helpCenter)}
+          >
             <View style={styles.menuIcon}>
               <Ionicons name="help-circle-outline" size={22} color="#4F46E5" />
             </View>
@@ -185,7 +227,10 @@ export function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity style={styles.menuRow}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => openURL(SUPPORT_URLS.contactSupport)}
+          >
             <View style={styles.menuIcon}>
               <Ionicons name="mail-outline" size={22} color="#4F46E5" />
             </View>
@@ -193,7 +238,10 @@ export function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity style={styles.menuRow}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => openURL(SUPPORT_URLS.termsOfService)}
+          >
             <View style={styles.menuIcon}>
               <Ionicons name="document-text-outline" size={22} color="#4F46E5" />
             </View>
@@ -201,7 +249,10 @@ export function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity style={styles.menuRow}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => openURL(SUPPORT_URLS.privacyPolicy)}
+          >
             <View style={styles.menuIcon}>
               <Ionicons name="shield-outline" size={22} color="#4F46E5" />
             </View>

@@ -3,10 +3,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../lib/AuthContext';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
+import { OnboardingNavigator } from './OnboardingNavigator';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 export function RootNavigator() {
-  const { user, loading } = useAuth();
+  const { user, loading, onboardingCompleted } = useAuth();
 
   if (loading) {
     return (
@@ -18,7 +19,13 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {user ? <MainNavigator /> : <AuthNavigator />}
+      {!user ? (
+        <AuthNavigator />
+      ) : !onboardingCompleted ? (
+        <OnboardingNavigator />
+      ) : (
+        <MainNavigator />
+      )}
     </NavigationContainer>
   );
 }

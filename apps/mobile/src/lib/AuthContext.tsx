@@ -7,9 +7,12 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  onboardingCompleted: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  completeOnboarding: () => Promise<void>;
+  refreshOnboardingStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,33 +21,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+
+  // Check if user has completed onboarding
+  const checkOnboardingStatus = async (userId: string) => {
+    const { data } = await supabase
+      .from('merchants')
+      .select('onboarding_completed')
+      .eq('id', userId)
+      .single();
+
+    setOnboardingCompleted(data?.onboarding_completed ?? false);
+  };
+
+  const refreshOnboardingStatus = async () => {
+    if (user) {
+      await checkOnboardingStatus(user.id);
+    }
+  };
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
 
-      // Initialize RevenueCat if already logged in
+      // Check onboarding status and init RevenueCat if logged in
       if (session?.user) {
+        await checkOnboardingStatus(session.user.id);
         initRevenueCat(session.user.id).catch((err) =>
           console.error('[Auth] RevenueCat init error:', err)
         );
       }
+
+      setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Initialize RevenueCat when user logs in
+        // Check onboarding status and init RevenueCat when user logs in
         if (session?.user) {
+          await checkOnboardingStatus(session.user.id);
           initRevenueCat(session.user.id).catch((err) =>
             console.error('[Auth] RevenueCat init error:', err)
           );
+        } else {
+          setOnboardingCompleted(false);
         }
       }
     );
@@ -72,15 +98,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const completeOnboarding = async () => {
+    if (!user) return;
+
+    await supabase
+      .from('merchants')
+      .update({ onboarding_completed: true })
+      .eq('id', user.id);
+
+    setOnboardingCompleted(true);
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         session,
         loading,
+        onboardingCompleted,
         signIn,
         signUp,
         signOut,
+        completeOnboarding,
+        refreshOnboardingStatus,
       }}
     >
       {children}

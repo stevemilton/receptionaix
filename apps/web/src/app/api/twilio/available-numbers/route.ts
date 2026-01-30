@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthenticatedUser } from '@/lib/supabase/api-auth';
 
 interface TwilioNumber {
   phone_number: string;
@@ -12,9 +12,8 @@ interface TwilioResponse {
   available_phone_numbers?: TwilioNumber[];
 }
 
-export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export async function GET(request: Request) {
+  const { user } = await getAuthenticatedUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

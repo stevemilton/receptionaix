@@ -4,11 +4,10 @@ import {
   generateKnowledgeBaseFromPlace,
   generateKnowledgeBaseFromUrl,
 } from '@receptionalx/knowledge';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthenticatedUser } from '@/lib/supabase/api-auth';
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user } = await getAuthenticatedUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

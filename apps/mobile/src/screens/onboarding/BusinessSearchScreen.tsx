@@ -1,0 +1,441 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useOnboardingStore } from '../../lib/onboarding-store';
+import { useAuth } from '../../lib/AuthContext';
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://receptionai.vercel.app';
+
+interface PlaceResult {
+  placeId: string;
+  name: string;
+  address: string;
+  phone?: string;
+  website?: string;
+  types?: string[];
+  rating?: number;
+  userRatingsTotal?: number;
+}
+
+export function BusinessSearchScreen() {
+  const navigation = useNavigation<any>();
+  const { session } = useAuth();
+  const [query, setQuery] = useState('');
+  const [location, setLocation] = useState('');
+  const [results, setResults] = useState<PlaceResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
+  const [generating, setGenerating] = useState(false);
+
+  const { setBusinessInfo, markStepCompleted, setCurrentStep } = useOnboardingStore();
+
+  const handleSearch = async () => {
+    if (!query.trim()) {
+      setError('Please enter a business name');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResults([]);
+
+    try {
+      const params = new URLSearchParams({ q: query });
+      if (location.trim()) {
+        params.append('location', location);
+      }
+
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/knowledge/search?${params}`, { headers });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Search failed');
+      }
+
+      setResults(data.results || []);
+      if (data.results?.length === 0) {
+        setError('No businesses found. Try a different search term.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectPlace = (place: PlaceResult) => {
+    setSelectedPlace(place);
+  };
+
+  const handleContinue = async () => {
+    if (!selectedPlace) return;
+
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/knowledge/generate`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ placeId: selectedPlace.placeId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate knowledge base');
+      }
+
+      const businessType = selectedPlace.types?.[0]?.replace(/_/g, ' ') || 'business';
+      const extracted = data.knowledgeBase?.extractedKnowledge || {};
+
+      setBusinessInfo({
+        placeId: selectedPlace.placeId,
+        businessName: selectedPlace.name,
+        businessType: businessType,
+        address: selectedPlace.address,
+        phone: selectedPlace.phone || '',
+        website: selectedPlace.website || null,
+        services: extracted.services || [],
+        openingHours: extracted.openingHours || {},
+        faqs: extracted.faqs || [],
+      });
+
+      markStepCompleted(1);
+      setCurrentStep(2);
+      navigation.navigate('ReviewInfo');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to continue');
+      setGenerating(false);
+    }
+  };
+
+  const handleManualEntry = () => {
+    setBusinessInfo({
+      placeId: null,
+      businessName: '',
+      businessType: '',
+      address: '',
+      phone: '',
+      website: null,
+      services: [],
+      openingHours: {},
+      faqs: [],
+    });
+
+    markStepCompleted(1);
+    setCurrentStep(2);
+    navigation.navigate('ReviewInfo');
+  };
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.stepIndicator}>Step 1 of 8</Text>
+        <Text style={styles.title}>Find your business</Text>
+        <Text style={styles.subtitle}>
+          Search for your business to automatically import details, or enter them manually.
+        </Text>
+      </View>
+
+      {/* Search Form */}
+      <View style={styles.card}>
+        <Text style={styles.label}>Business name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Gielly Green Hair Salon"
+          value={query}
+          onChangeText={setQuery}
+          onSubmitEditing={handleSearch}
+          returnKeyType="search"
+        />
+
+        <Text style={styles.label}>Location (optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. London, UK"
+          value={location}
+          onChangeText={setLocation}
+          onSubmitEditing={handleSearch}
+          returnKeyType="search"
+        />
+        <Text style={styles.helperText}>Add a location to narrow down results</Text>
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleSearch}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Search</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Error */}
+      {error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {/* Results */}
+      {results.length > 0 && (
+        <View style={styles.resultsSection}>
+          <Text style={styles.resultsTitle}>Search Results</Text>
+          {results.map((place) => (
+            <TouchableOpacity
+              key={place.placeId}
+              style={[
+                styles.resultCard,
+                selectedPlace?.placeId === place.placeId && styles.resultCardSelected,
+              ]}
+              onPress={() => handleSelectPlace(place)}
+            >
+              <View style={styles.resultContent}>
+                <Text style={styles.resultName}>{place.name}</Text>
+                <Text style={styles.resultAddress}>{place.address}</Text>
+                {place.phone && (
+                  <Text style={styles.resultPhone}>{place.phone}</Text>
+                )}
+                {place.rating && (
+                  <View style={styles.ratingRow}>
+                    <Ionicons name="star" size={14} color="#EAB308" />
+                    <Text style={styles.ratingText}>
+                      {place.rating.toFixed(1)} ({place.userRatingsTotal} reviews)
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {selectedPlace?.placeId === place.placeId && (
+                <View style={styles.checkmark}>
+                  <Ionicons name="checkmark" size={16} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* Actions */}
+      <View style={styles.actions}>
+        <TouchableOpacity onPress={handleManualEntry}>
+          <Text style={styles.manualEntryLink}>Enter details manually instead</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.continueButton,
+            (!selectedPlace || generating) && styles.buttonDisabled,
+          ]}
+          onPress={handleContinue}
+          disabled={!selectedPlace || generating}
+        >
+          {generating ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Text style={styles.continueButtonText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  content: {
+    padding: 20,
+    paddingTop: 60,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  stepIndicator: {
+    fontSize: 14,
+    color: '#4F46E5',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    lineHeight: 22,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#111827',
+    marginBottom: 12,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 8,
+    padding: 14,
+    alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+  },
+  resultsSection: {
+    marginBottom: 16,
+  },
+  resultsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  resultCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resultCardSelected: {
+    borderColor: '#4F46E5',
+    backgroundColor: '#EEF2FF',
+  },
+  resultContent: {
+    flex: 1,
+  },
+  resultName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  resultAddress: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  resultPhone: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  ratingText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  checkmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    marginBottom: 40,
+  },
+  manualEntryLink: {
+    fontSize: 14,
+    color: '#6B7280',
+    textDecorationLine: 'underline',
+  },
+  continueButton: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  continueButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
