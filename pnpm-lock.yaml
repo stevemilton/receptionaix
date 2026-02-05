@@ -102,6 +102,9 @@ importers:
       '@receptionalx/grok':
         specifier: workspace:*
         version: link:../../packages/grok
+      '@receptionalx/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@receptionalx/types':
         specifier: workspace:*
         version: link:../../packages/types

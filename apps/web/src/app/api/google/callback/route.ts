@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { encryptToken } from '@receptionalx/shared';
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -74,15 +75,20 @@ export async function GET(request: Request) {
 
     // Save tokens server-side in the merchants table (never expose to client)
     const expiresAt = Date.now() + tokens.expires_in * 1000;
+    const tokenPayload = {
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token || null,
+      expires_at: expiresAt,
+    };
+
+    // Encrypt tokens at rest if TOKEN_ENCRYPTION_KEY is configured
+    const encrypted = encryptToken(tokenPayload);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
       .from('merchants')
       .update({
-        google_calendar_token: {
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token || null,
-          expires_at: expiresAt,
-        },
+        google_calendar_token: encrypted ?? tokenPayload,
         google_calendar_connected: true,
       })
       .eq('id', user.id);

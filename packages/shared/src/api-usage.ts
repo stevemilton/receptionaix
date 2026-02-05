@@ -26,8 +26,8 @@ let supabaseClient: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient | null {
   if (supabaseClient) return supabaseClient;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env['NEXT_PUBLIC_SUPABASE_URL'];
+  const key = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
   if (!url || !key) {
     console.warn('[API Usage] Supabase URL or SERVICE_ROLE_KEY not configured, usage tracking disabled');

@@ -138,10 +138,10 @@ function parseExtractedJson(content: string): ExtractedKnowledge {
     // Validate and sanitize the response
     return {
       businessDescription: typeof parsed.businessDescription === 'string'
-        ? parsed.businessDescription
+        ? parsed.businessDescription.slice(0, 1000)
         : null,
-      services: validateServices(parsed.services),
-      faqs: validateFaqs(parsed.faqs),
+      services: validateServices(parsed.services).slice(0, 50),
+      faqs: validateFaqs(parsed.faqs).slice(0, 50),
       openingHours: validateOpeningHours(parsed.openingHours),
     };
   } catch (error) {
@@ -156,8 +156,8 @@ function validateServices(services: unknown): ExtractedService[] {
   return services
     .filter((s): s is Record<string, unknown> => typeof s === 'object' && s !== null)
     .map((s) => ({
-      name: String(s.name || 'Unknown Service'),
-      description: s.description ? String(s.description) : undefined,
+      name: String(s.name || 'Unknown Service').slice(0, 200),
+      description: s.description ? String(s.description).slice(0, 500) : undefined,
       duration: typeof s.duration === 'number' ? s.duration : undefined,
       price: typeof s.price === 'number' ? s.price : undefined,
     }))
@@ -170,8 +170,8 @@ function validateFaqs(faqs: unknown): ExtractedFAQ[] {
   return faqs
     .filter((f): f is Record<string, unknown> => typeof f === 'object' && f !== null)
     .map((f) => ({
-      question: String(f.question || ''),
-      answer: String(f.answer || ''),
+      question: String(f.question || '').slice(0, 500),
+      answer: String(f.answer || '').slice(0, 2000),
     }))
     .filter((f) => f.question && f.answer);
 }
@@ -186,7 +186,7 @@ function validateOpeningHours(hours: unknown): Record<string, string> | null {
   for (const day of validDays) {
     const value = (hours as Record<string, unknown>)[day];
     if (typeof value === 'string' && value.trim()) {
-      result[day] = value.trim();
+      result[day] = value.trim().slice(0, 100);
       hasAnyHours = true;
     }
   }

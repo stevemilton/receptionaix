@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 // Map RevenueCat product IDs to our tier IDs
 const PRODUCT_TIER_MAP: Record<string, string> = {
@@ -39,6 +41,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const supabase = getSupabase();
+  if (!supabase) {
+    console.error('[RevenueCat] Supabase not configured');
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
+
   try {
     const payload: RevenueCatWebhookPayload = await request.json();
     const { event } = payload;
@@ -46,6 +54,24 @@ export async function POST(request: NextRequest) {
     console.log(`[RevenueCat] Event: ${event.type} for user ${event.app_user_id}`);
 
     const merchantId = event.app_user_id;
+
+    if (!merchantId || typeof merchantId !== 'string') {
+      console.error('[RevenueCat] Missing or invalid app_user_id');
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    // Verify merchant exists before updating
+    const { data: existingMerchant } = await supabase
+      .from('merchants')
+      .select('id')
+      .eq('id', merchantId)
+      .single();
+
+    if (!existingMerchant) {
+      console.error(`[RevenueCat] No merchant found for app_user_id: ${merchantId}`);
+      return NextResponse.json({ received: true }); // Ack but ignore
+    }
+
     const tierId = event.product_id ? PRODUCT_TIER_MAP[event.product_id] || null : null;
 
     switch (event.type) {

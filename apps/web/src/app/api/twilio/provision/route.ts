@@ -8,9 +8,24 @@ interface TwilioIncomingNumber {
 }
 
 export async function POST(request: Request) {
-  const { user } = await getAuthenticatedUser(request);
+  const { user, supabase } = await getAuthenticatedUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limit: each merchant may only provision one phone number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: merchant } = await (supabase as any)
+    .from('merchants')
+    .select('twilio_phone_number')
+    .eq('id', user.id)
+    .single();
+
+  if (merchant?.twilio_phone_number) {
+    return NextResponse.json(
+      { error: 'A phone number has already been provisioned for this account' },
+      { status: 429 }
+    );
   }
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID;

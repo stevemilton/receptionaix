@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './supabase-client.js';
+import { decryptToken, isEncrypted } from '@receptionalx/shared';
 
 /** Validate that a param is a non-empty string. */
 function requireString(params: Record<string, unknown>, key: string): string | null {
@@ -117,7 +118,13 @@ async function checkAvailability(
     };
   }
 
-  // TODO: Integrate with Google Calendar API
+  // Decrypt token if encrypted, otherwise use as-is
+  const rawToken = merchant.google_calendar_token;
+  const _calendarToken = isEncrypted(rawToken)
+    ? decryptToken<{ access_token: string; refresh_token: string | null; expires_at: number }>(rawToken)
+    : rawToken;
+
+  // TODO: Integrate with Google Calendar API using _calendarToken
   return {
     slots: [
       `${date}T09:00:00`,
