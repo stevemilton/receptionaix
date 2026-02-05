@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@receptionalx/knowledge": "workspace:*",
+    "@receptionalx/shared": "workspace:*",
     "@receptionalx/types": "workspace:*",
     "@receptionalx/ui": "workspace:*",
     "@supabase/ssr": "^0.1.0",

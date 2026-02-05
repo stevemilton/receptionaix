@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe, getTierById } from '@/lib/stripe/config';
+import { validateCsrfOrigin, csrfForbiddenResponse } from '@/lib/csrf';
 
 export async function POST(request: NextRequest) {
+  if (!validateCsrfOrigin(request)) {
+    return csrfForbiddenResponse();
+  }
+
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();

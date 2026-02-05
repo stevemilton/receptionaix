@@ -7,10 +7,18 @@ import { usageWarningEmail } from '@/lib/email/templates/usage-warning';
 import { usageExceededEmail } from '@/lib/email/templates/usage-exceeded';
 import { getTierById } from '@/lib/stripe/config';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-init to avoid build-time crash when env vars are absent
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _supabase: any = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+}
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://receptionai.vercel.app';
 
@@ -42,7 +50,7 @@ export async function GET(request: NextRequest) {
     const in3Days = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     const in1Day = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
 
-    const { data: trialMerchants } = await supabase
+    const { data: trialMerchants } = await getSupabase()
       .from('merchants')
       .select('id, email, business_name, subscription_ends_at')
       .eq('subscription_status', 'trial')
@@ -106,7 +114,7 @@ export async function GET(request: NextRequest) {
     }
 
     // --- Usage warnings (80%+ of call limit) ---
-    const { data: activeMerchants } = await supabase
+    const { data: activeMerchants } = await getSupabase()
       .from('merchants')
       .select('id, email, business_name, subscription_tier, billing_period_start')
       .in('subscription_status', ['active', 'trial'])
@@ -121,7 +129,7 @@ export async function GET(request: NextRequest) {
         const callLimit = tier ? tier.limits.callsPerMonth : 400;
         if (callLimit === -1) continue; // Unlimited
 
-        const { data: usage } = await supabase
+        const { data: usage } = await getSupabase()
           .rpc('get_merchant_call_count', {
             p_merchant_id: merchant.id,
             p_period_start: merchant.billing_period_start,
@@ -189,7 +197,7 @@ export async function GET(request: NextRequest) {
 async function shouldNotify(merchantId: string, notificationType: string): Promise<boolean> {
   const billingPeriod = new Date().toISOString().slice(0, 7); // e.g. '2026-01'
 
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('notification_log')
     .select('id')
     .eq('merchant_id', merchantId)
@@ -203,7 +211,7 @@ async function shouldNotify(merchantId: string, notificationType: string): Promi
 async function logNotification(merchantId: string, notificationType: string): Promise<void> {
   const billingPeriod = new Date().toISOString().slice(0, 7);
 
-  await supabase
+  await getSupabase()
     .from('notification_log')
     .upsert(
       {

@@ -1,7 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { validateCsrfOrigin, csrfForbiddenResponse } from '@/lib/csrf';
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!validateCsrfOrigin(request)) {
+    return csrfForbiddenResponse();
+  }
+
   const supabase = await createClient();
   await supabase.auth.signOut();
 

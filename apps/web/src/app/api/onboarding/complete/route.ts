@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/api-auth';
 import { createClient } from '@supabase/supabase-js';
+import { validateCsrfOrigin, csrfForbiddenResponse } from '@/lib/csrf';
 
-// Service role client for server-side operations that bypass RLS
-const serviceSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-init service role client to avoid crashing at build time when env vars are absent
+function getServiceSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 interface OnboardingData {
   businessName: string;
@@ -34,6 +37,10 @@ interface OnboardingData {
 }
 
 export async function POST(request: Request) {
+  if (!validateCsrfOrigin(request)) {
+    return csrfForbiddenResponse();
+  }
+
   const { user, supabase } = await getAuthenticatedUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -172,7 +179,7 @@ export async function POST(request: Request) {
 
     // Save knowledge base to separate table using service role to bypass RLS
     // First check if KB exists for this merchant
-    const { data: existingKb } = await serviceSupabase
+    const { data: existingKb } = await getServiceSupabase()
       .from('knowledge_bases')
       .select('id')
       .eq('merchant_id', user.id)
@@ -193,7 +200,7 @@ export async function POST(request: Request) {
 
     if (existingKb) {
       // Update existing knowledge base
-      const { data: updated, error: updateKbError } = await serviceSupabase
+      const { data: updated, error: updateKbError } = await getServiceSupabase()
         .from('knowledge_bases')
         .update(kbPayload)
         .eq('merchant_id', user.id)
@@ -203,7 +210,7 @@ export async function POST(request: Request) {
       kbError = updateKbError;
     } else {
       // Insert new knowledge base
-      const { data: created, error: createKbError } = await serviceSupabase
+      const { data: created, error: createKbError } = await getServiceSupabase()
         .from('knowledge_bases')
         .insert({
           merchant_id: user.id,

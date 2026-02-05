@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/api-auth';
+import { validateCsrfOrigin, csrfForbiddenResponse } from '@/lib/csrf';
 
 interface TwilioIncomingNumber {
   sid: string;
@@ -8,6 +9,10 @@ interface TwilioIncomingNumber {
 }
 
 export async function POST(request: Request) {
+  if (!validateCsrfOrigin(request)) {
+    return csrfForbiddenResponse();
+  }
+
   const { user, supabase } = await getAuthenticatedUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

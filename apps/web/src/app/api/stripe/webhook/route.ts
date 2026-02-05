@@ -4,11 +4,18 @@ import { stripe, getStripe, getTierByPriceId } from '@/lib/stripe/config';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-// Use service role for webhook - no user context
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-init to avoid build-time crash when env vars are absent
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _supabase: any = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -94,7 +101,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   // Verify the merchant exists before updating
-  const { data: existingMerchant } = await supabase
+  const { data: existingMerchant } = await getSupabase()
     .from('merchants')
     .select('id')
     .eq('id', userId)
@@ -140,7 +147,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     updateData.stripe_overage_item_id = overageItemId;
   }
 
-  await supabase
+  await getSupabase()
     .from('merchants')
     .update(updateData)
     .eq('id', userId);
@@ -150,7 +157,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
 
   // Find merchant by Stripe customer ID
-  const { data: merchant } = await supabase
+  const { data: merchant } = await getSupabase()
     .from('merchants')
     .select('id')
     .eq('stripe_customer_id', customerId)
@@ -182,7 +189,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const periodStart = subAny.current_period_start;
   const periodEnd = subAny.current_period_end;
 
-  await supabase
+  await getSupabase()
     .from('merchants')
     .update({
       subscription_status: status,
@@ -201,7 +208,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
 
-  const { data: merchant } = await supabase
+  const { data: merchant } = await getSupabase()
     .from('merchants')
     .select('id')
     .eq('stripe_customer_id', customerId)
@@ -214,7 +221,7 @@ async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
 
   console.log(`[Stripe] Subscription cancelled for merchant ${merchant.id}`);
 
-  await supabase
+  await getSupabase()
     .from('merchants')
     .update({
       subscription_status: 'cancelled',
@@ -231,7 +238,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   const customerId = invoice.customer as string;
 
-  const { data: merchant } = await supabase
+  const { data: merchant } = await getSupabase()
     .from('merchants')
     .select('id')
     .eq('stripe_customer_id', customerId)
@@ -242,7 +249,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   console.log(`[Stripe] Invoice paid for merchant ${merchant.id}`);
 
   // Ensure status is active after successful payment
-  await supabase
+  await getSupabase()
     .from('merchants')
     .update({
       subscription_status: 'active',
@@ -258,7 +265,7 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice) {
 
   const customerId = invoice.customer as string;
 
-  const { data: merchant } = await supabase
+  const { data: merchant } = await getSupabase()
     .from('merchants')
     .select('id')
     .eq('stripe_customer_id', customerId)
@@ -268,7 +275,7 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice) {
 
   console.log(`[Stripe] Invoice failed for merchant ${merchant.id}`);
 
-  await supabase
+  await getSupabase()
     .from('merchants')
     .update({
       subscription_status: 'past_due',

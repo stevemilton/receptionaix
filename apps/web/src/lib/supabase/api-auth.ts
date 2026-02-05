@@ -30,7 +30,8 @@ export async function getAuthenticatedUser(request: Request): Promise<{ user: Us
       }
     );
     const { data: { user: tokenUser } } = await tokenSupabase.auth.getUser(token);
-    return { user: tokenUser, supabase: tokenSupabase };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { user: tokenUser, supabase: tokenSupabase as any };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

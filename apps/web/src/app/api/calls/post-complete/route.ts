@@ -3,11 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 import { getTierById } from '@/lib/stripe/config';
 import { reportOverageUsage } from '@/lib/stripe/overage';
 
-// Service role client for server-to-server calls
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-init to avoid build-time crash when env vars are absent
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 /**
  * Called by the relay server after a call completes.
@@ -28,6 +30,8 @@ export async function POST(request: NextRequest) {
     if (!merchantId) {
       return NextResponse.json({ error: 'merchantId required' }, { status: 400 });
     }
+
+    const supabase = getSupabase();
 
     // Fetch merchant subscription data
     const { data: merchant, error: merchantError } = await supabase

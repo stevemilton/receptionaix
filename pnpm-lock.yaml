@@ -136,6 +136,9 @@ importers:
       '@receptionalx/knowledge':
         specifier: workspace:*
         version: link:../../packages/knowledge
+      '@receptionalx/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@receptionalx/types':
         specifier: workspace:*
         version: link:../../packages/types
