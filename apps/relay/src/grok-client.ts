@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { getMerchantConfig } from './supabase-client.js';
+import { getMerchantConfig, type MerchantConfig } from './supabase-client.js';
 import { RECEPTION_TOOLS } from '@receptionalx/grok';
 
 export interface GrokConnectionOptions {
@@ -86,19 +86,6 @@ export async function connectToGrok(
       console.log(`[Grok] Connection closed: ${code} - ${reason.toString()}`);
     });
   });
-}
-
-interface MerchantConfig {
-  businessName: string;
-  businessType: string;
-  address: string;
-  phone: string;
-  knowledgeBase: string;
-  services: Array<{ name: string; description?: string; duration: number; price: number }>;
-  openingHours: Record<string, string>;
-  faqs: Array<{ question: string; answer: string }>;
-  greeting?: string;
-  voiceId?: string;
 }
 
 // OpenAI Realtime API format for session configuration

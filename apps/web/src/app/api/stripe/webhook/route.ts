@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { stripe, getStripe, getTierByPriceId } from '@/lib/stripe/config';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import Stripe from 'stripe';
 
 // Lazy-init to avoid build-time crash when env vars are absent
@@ -9,10 +9,7 @@ import Stripe from 'stripe';
 let _supabase: any = null;
 function getSupabase() {
   if (!_supabase) {
-    _supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    _supabase = createAdminClient();
   }
   return _supabase;
 }

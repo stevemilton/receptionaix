@@ -13,7 +13,7 @@ export const supabaseAdmin = createClient<any>(
   }
 );
 
-interface MerchantConfig {
+export interface MerchantConfig {
   businessName: string;
   businessType: string;
   address: string;

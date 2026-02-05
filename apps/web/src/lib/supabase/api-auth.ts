@@ -2,18 +2,22 @@ import { createClient } from './server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { User } from '@supabase/supabase-js';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnySupabaseClient = any;
+
 /**
- * Get authenticated user from either cookie session (web) or Bearer token (mobile)
- * Returns null if not authenticated
+ * Get authenticated user from either cookie session (web) or Bearer token (mobile).
+ * Returns an untyped Supabase client because the hand-written Database type
+ * doesn't satisfy the PostgREST generic constraints in supabase-js v2.91.
+ * Callers must cast or use `any` until database.ts is regenerated via `supabase gen types`.
  */
-export async function getAuthenticatedUser(request: Request): Promise<{ user: User | null; supabase: ReturnType<typeof createSupabaseClient> }> {
+export async function getAuthenticatedUser(request: Request): Promise<{ user: User | null; supabase: AnySupabaseClient }> {
   // Try cookie-based auth first (web)
   const cookieSupabase = await createClient();
   const { data: { user: cookieUser } } = await cookieSupabase.auth.getUser();
 
   if (cookieUser) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return { user: cookieUser, supabase: cookieSupabase as any };
+    return { user: cookieUser, supabase: cookieSupabase };
   }
 
   // Try Bearer token (mobile)
@@ -30,10 +34,8 @@ export async function getAuthenticatedUser(request: Request): Promise<{ user: Us
       }
     );
     const { data: { user: tokenUser } } = await tokenSupabase.auth.getUser(token);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return { user: tokenUser, supabase: tokenSupabase as any };
+    return { user: tokenUser, supabase: tokenSupabase };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { user: null, supabase: cookieSupabase as any };
+  return { user: null, supabase: cookieSupabase };
 }

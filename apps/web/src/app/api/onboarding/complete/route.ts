@@ -1,15 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/api-auth';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { validateCsrfOrigin, csrfForbiddenResponse } from '@/lib/csrf';
-
-// Lazy-init service role client to avoid crashing at build time when env vars are absent
-function getServiceSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 interface OnboardingData {
   businessName: string;
@@ -103,14 +95,11 @@ export async function POST(request: Request) {
     }
 
     // Check for existing merchant
-    interface MerchantRow {
-      id: string;
-    }
     const { data: existingMerchant, error: checkError } = await supabase
       .from('merchants')
       .select('id')
       .eq('id', user.id)
-      .single<MerchantRow>();
+      .single();
 
     if (checkError && checkError.code !== 'PGRST116') {
       // PGRST116 = row not found, which is fine
@@ -119,13 +108,9 @@ export async function POST(request: Request) {
 
     let merchantResult;
 
-    // Cast to any to work around Supabase types not being regenerated
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabaseAny = supabase as any;
-
     if (existingMerchant) {
       // Update existing merchant
-      const { data: updated, error: updateError } = await supabaseAny
+      const { data: updated, error: updateError } = await supabase
         .from('merchants')
         .update({
           business_name: data.businessName,
@@ -151,7 +136,7 @@ export async function POST(request: Request) {
       merchantResult = updated;
     } else {
       // Create new merchant
-      const { data: created, error: createError } = await supabaseAny
+      const { data: created, error: createError } = await supabase
         .from('merchants')
         .insert({
           id: user.id,
@@ -178,8 +163,11 @@ export async function POST(request: Request) {
     }
 
     // Save knowledge base to separate table using service role to bypass RLS
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const adminClient: any = createAdminClient();
+
     // First check if KB exists for this merchant
-    const { data: existingKb } = await getServiceSupabase()
+    const { data: existingKb } = await adminClient
       .from('knowledge_bases')
       .select('id')
       .eq('merchant_id', user.id)
@@ -200,7 +188,7 @@ export async function POST(request: Request) {
 
     if (existingKb) {
       // Update existing knowledge base
-      const { data: updated, error: updateKbError } = await getServiceSupabase()
+      const { data: updated, error: updateKbError } = await adminClient
         .from('knowledge_bases')
         .update(kbPayload)
         .eq('merchant_id', user.id)
@@ -210,7 +198,7 @@ export async function POST(request: Request) {
       kbError = updateKbError;
     } else {
       // Insert new knowledge base
-      const { data: created, error: createKbError } = await getServiceSupabase()
+      const { data: created, error: createKbError } = await adminClient
         .from('knowledge_bases')
         .insert({
           merchant_id: user.id,

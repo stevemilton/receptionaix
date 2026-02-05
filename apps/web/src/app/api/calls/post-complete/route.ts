@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getTierById } from '@/lib/stripe/config';
 import { reportOverageUsage } from '@/lib/stripe/overage';
-
-// Lazy-init to avoid build-time crash when env vars are absent
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 /**
  * Called by the relay server after a call completes.
@@ -31,7 +23,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'merchantId required' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase: any = createAdminClient();
 
     // Fetch merchant subscription data
     const { data: merchant, error: merchantError } = await supabase
