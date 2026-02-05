@@ -38,6 +38,8 @@ See `/docs/PRD.md` for full business requirements.
     /shared           # Shared utilities (API usage tracking)
   /docs
     /PRD.md           # Product Requirements Document
+    /status.md        # Current issue backlog & project status
+    /handoff.md       # Developer handoff guide
   CLAUDE.md           # This file
   .env.example        # Environment template
 ```
@@ -91,7 +93,9 @@ Phase 4: Onboarding ──→ Phase 5: Voice Agent ──→ Phase 6: Dashboard 
 Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 ```
 
-### Current Phase: [Phase 9 Complete - All Core Features Implemented]
+### Current Phase: Post-Build — Security Hardening & Production Readiness
+
+All 9 build phases are complete. See `docs/status.md` for the full issue backlog and `docs/handoff.md` for developer onboarding.
 
 ---
 
@@ -198,6 +202,41 @@ Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 
 ---
 
+## ⚠️ Security Issues (Reviewed 2026-02-05)
+
+**Full details in `docs/status.md`. Fix these before any production deployment.**
+
+### CRITICAL — Must Fix Immediately
+
+| Issue | File | Line(s) |
+|-------|------|---------|
+| Unprotected merchant impersonation — `?impersonate=` param not validated against admin role | `apps/web/src/app/admin/(dashboard)/merchants/[id]/page.tsx` | 241-251 |
+| Relay falls back to unverified `customParameters` when HMAC fails | `apps/relay/src/media-stream-handler.ts` | 76-79 |
+| `callerPhone` hardcoded to `''` in token verification | `apps/relay/src/server.ts` | 56 |
+
+### HIGH — Fix Before Production
+
+| Issue | File | Line(s) |
+|-------|------|---------|
+| Stripe webhook metadata not validated against user ownership | `apps/web/src/app/api/stripe/webhook/route.ts` | 81-129 |
+| Grok WebSocket not closed on error (resource leak) | `apps/relay/src/grok-client.ts` | 74-79 |
+| Twilio error handler doesn't close Grok connection | `apps/relay/src/media-stream-handler.ts` | 64-66 |
+| Env var auth checks fail open if vars unset (`CRON_SECRET`, `RELAY_SERVICE_KEY`) | Multiple API routes | — |
+| User input interpolated into Supabase `.or()` filter | `apps/web/src/app/admin/(dashboard)/merchants/page.tsx` | 37-39 |
+| No input validation on multiple API routes (search, generate, checkout, onboarding) | Multiple | — |
+
+### Coding Standards Debt
+
+| Issue | Scope |
+|-------|-------|
+| `any` type casting in 10+ files to bypass Supabase types | Regenerate types with `pnpm db:types` |
+| Dual type systems (`database.ts` vs `models.ts`) with inconsistent definitions | Unify in `packages/types` |
+| No request timeouts on external fetch() calls | All packages using Firecrawl, Anthropic, Google APIs |
+| No runtime validation on relay tool parameters | `apps/relay/src/tool-handlers.ts` — consider zod |
+| Unsafe JSON parsing of Claude API response | `packages/knowledge/src/extractor.ts:126-150` |
+
+---
+
 ## Known Gaps & TODOs
 
 ### Google Calendar Integration
@@ -209,6 +248,19 @@ Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 - Mobile app registers push tokens with Expo
 - Tokens stored in `merchants.push_token`
 - TODO: Backend service to send notifications via Expo Push API
+
+### Mobile Testing & Deployment
+- iOS simulator and Android emulator testing not completed
+- `app.json` has placeholder EAS project ID
+- No deeplink configuration for password reset flow
+- RevenueCat subscription status not synced back to Supabase
+
+### Production Hardening
+- No test suite (test runner not configured)
+- No rate limiting on cost-sensitive endpoints (Twilio provisioning, knowledge search)
+- No CSRF protection on web state-changing routes
+- Google Calendar OAuth tokens stored unencrypted in DB
+- Admin dev bypass (`ADMIN_DEV_BYPASS=true`) must never reach production
 
 ---
 
@@ -611,6 +663,11 @@ pnpm deploy:relay     # Deploy to Fly.io
 1. Use components from `packages/ui`
 2. Follow design system in PRD Section 8
 3. Mobile-first (test at 375px width)
+
+### When Picking Up This Project:
+1. Read `docs/handoff.md` for orientation
+2. Read `docs/status.md` for the current issue backlog
+3. Fix critical security issues before any deployment
 
 ### When Stuck:
 1. Check PRD for requirements
