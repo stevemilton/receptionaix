@@ -29,11 +29,13 @@ export function useToast() {
   return context;
 }
 
+let toastCounter = 0;
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
-    const id = Math.random().toString(36).substring(2, 9);
+    const id = `toast-${++toastCounter}`;
     const newToast: Toast = { ...toast, id };
 
     setToasts((prev) => [...prev, newToast]);

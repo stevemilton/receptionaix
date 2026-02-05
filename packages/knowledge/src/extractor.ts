@@ -111,17 +111,6 @@ export async function extractKnowledgeWithClaude(
 }
 
 /**
- * @deprecated Use extractKnowledgeWithClaude instead
- */
-export async function extractKnowledgeWithGrok(
-  markdown: string,
-  apiKey: string
-): Promise<ExtractedKnowledge> {
-  console.warn('extractKnowledgeWithGrok is deprecated, use extractKnowledgeWithClaude');
-  return getEmptyKnowledge();
-}
-
-/**
  * Parse and validate the extracted JSON
  */
 function parseExtractedJson(content: string): ExtractedKnowledge {

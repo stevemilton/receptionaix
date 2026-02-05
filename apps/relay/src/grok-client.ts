@@ -26,6 +26,9 @@ export async function connectToGrok(
 
   console.log('[Grok] Connecting to:', wsUrl);
 
+  // Per-connection flag so we log the first audio chunk of each call
+  let audioLogged = false;
+
   const ws = new WebSocket(wsUrl, {
     headers: {
       Authorization: `Bearer ${process.env['GROK_API_KEY']}`,
@@ -52,7 +55,7 @@ export async function connectToGrok(
         const message = JSON.parse(data.toString());
         console.log('[Grok] Received:', message.type);
 
-        await handleGrokMessage(ws, message, options);
+        await handleGrokMessage(ws, message, options, () => audioLogged, () => { audioLogged = true; });
 
         // Session created = connection ready
         if (message.type === 'session.created' || message.type === 'session.updated') {
@@ -288,7 +291,9 @@ interface RealtimeMessage {
 async function handleGrokMessage(
   ws: WebSocket,
   message: RealtimeMessage,
-  options: GrokConnectionOptions
+  options: GrokConnectionOptions,
+  isAudioLogged: () => boolean,
+  markAudioLogged: () => void
 ): Promise<void> {
   switch (message.type) {
     case 'session.created':
@@ -305,13 +310,12 @@ async function handleGrokMessage(
       // The audio might be in message.delta or message.audio depending on API version
       const audioData = message.delta || message.audio;
       if (audioData) {
-        // Log first audio chunk to verify format (use a module-level flag)
-        const g = global as Record<string, unknown>;
-        if (!g['_audioLogged']) {
+        // Log first audio chunk per connection to verify format
+        if (!isAudioLogged()) {
           console.log('[Grok] Full audio.delta message keys:', Object.keys(message));
           console.log('[Grok] First audio sample (first 100 chars):', audioData.substring(0, 100));
           console.log('[Grok] Audio length:', audioData.length);
-          g['_audioLogged'] = true;
+          markAudioLogged();
         }
         options.onAudio(audioData);
       }

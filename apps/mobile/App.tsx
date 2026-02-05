@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Subscription } from 'expo-notifications';
 import { AuthProvider, useAuth } from './src/lib/AuthContext';
-import { RootNavigator } from './src/navigation/RootNavigator';
+import { RootNavigator, navigationRef } from './src/navigation/RootNavigator';
 import {
   registerForPushNotifications,
   addNotificationReceivedListener,
@@ -32,12 +32,13 @@ function AppContent() {
     responseListener.current = addNotificationResponseReceivedListener(
       (response) => {
         console.log('Notification tapped:', response);
-        // Handle notification tap - navigate to appropriate screen
         const data = response.notification.request.content.data;
-        if (data?.type === 'call') {
-          // Navigate to calls screen
-        } else if (data?.type === 'message') {
-          // Navigate to messages
+        if (navigationRef.isReady()) {
+          if (data?.type === 'call') {
+            (navigationRef as any).navigate('Tabs', { screen: 'Calls' });
+          } else if (data?.type === 'message') {
+            (navigationRef as any).navigate('Tabs', { screen: 'Calls' });
+          }
         }
       }
     );

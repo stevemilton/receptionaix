@@ -1,10 +1,12 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { useAuth } from '../lib/AuthContext';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+
+export const navigationRef = createNavigationContainerRef();
 
 export function RootNavigator() {
   const { user, loading, onboardingCompleted } = useAuth();
@@ -18,7 +20,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {!user ? (
         <AuthNavigator />
       ) : !onboardingCompleted ? (
