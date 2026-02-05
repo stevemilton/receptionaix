@@ -93,7 +93,7 @@ export function convertTwilioToGrok(base64Audio: string): string {
     return pcm16Buffer.toString('base64');
   } catch (error) {
     console.error('[AudioUtils] Twilio->Grok conversion error:', error);
-    return base64Audio; // Return original if conversion fails
+    return ''; // Return empty — wrong-format audio would produce garbled output
   }
 }
 
@@ -133,6 +133,6 @@ export function convertGrokToTwilio(base64Audio: string): string {
     return mulawBuffer.toString('base64');
   } catch (error) {
     console.error('[AudioUtils] Grok->Twilio conversion error:', error);
-    return base64Audio; // Return original if conversion fails
+    return ''; // Return empty — wrong-format audio would produce garbled output
   }
 }

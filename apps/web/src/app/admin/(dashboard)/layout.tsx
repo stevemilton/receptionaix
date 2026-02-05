@@ -9,14 +9,17 @@ export default async function AdminLayout({
 }) {
   const supabase = await createClient();
 
-  // DEV MODE: Skip auth only when explicitly opted in via env var
-  const isDev = process.env.NODE_ENV === 'development'
+  // DEV MODE: Skip auth only in local development with explicit opt-in.
+  // Double-check: VERCEL_ENV is always set on Vercel (preview / production).
+  const isDeployedEnvironment = !!process.env.VERCEL_ENV || process.env.NODE_ENV === 'production';
+  const isDev = !isDeployedEnvironment
+    && process.env.NODE_ENV === 'development'
     && process.env.ADMIN_DEV_BYPASS === 'true';
   let user = null;
   let adminUser = null;
 
   if (isDev) {
-    // Mock admin user for local dev
+    // Mock admin user for local dev only
     adminUser = { email: 'dev@localhost', role: 'admin' };
   } else {
     const { data: { user: authUser } } = await supabase.auth.getUser();

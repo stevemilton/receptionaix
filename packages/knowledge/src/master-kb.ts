@@ -56,41 +56,63 @@ export async function getBusinessTypeTemplates(
 ): Promise<BusinessTypeInsights | null> {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  // Sanitize businessType to prevent PostgREST filter injection
+  const sanitized = businessType.replace(/[%_\\(),.\"']/g, '');
+  if (!sanitized || sanitized.length > 100) {
+    return null;
+  }
+
   // Get business type ID
-  const { data: typeData } = await supabase
+  const { data: typeData, error: typeError } = await supabase
     .from('business_types')
     .select('*')
-    .or(`slug.ilike.%${businessType}%,display_name.ilike.%${businessType}%`)
+    .or(`slug.ilike.%${sanitized}%,display_name.ilike.%${sanitized}%`)
     .limit(1)
     .single();
+
+  if (typeError && typeError.code !== 'PGRST116') {
+    console.error('[MasterKB] Error fetching business type:', typeError.message);
+  }
 
   if (!typeData) {
     return null;
   }
 
   // Get top services
-  const { data: services } = await supabase
+  const { data: services, error: servicesError } = await supabase
     .from('master_service_templates')
     .select('*')
     .eq('business_type_id', typeData.id)
     .order('frequency', { ascending: false })
     .limit(10);
 
+  if (servicesError) {
+    console.error('[MasterKB] Error fetching services:', servicesError.message);
+  }
+
   // Get top FAQs
-  const { data: faqs } = await supabase
+  const { data: faqs, error: faqsError } = await supabase
     .from('master_faq_patterns')
     .select('*')
     .eq('business_type_id', typeData.id)
     .order('frequency', { ascending: false })
     .limit(10);
 
+  if (faqsError) {
+    console.error('[MasterKB] Error fetching FAQs:', faqsError.message);
+  }
+
   // Get top greetings
-  const { data: greetings } = await supabase
+  const { data: greetings, error: greetingsError } = await supabase
     .from('master_greeting_patterns')
     .select('*')
     .eq('business_type_id', typeData.id)
     .order('usage_count', { ascending: false })
     .limit(5);
+
+  if (greetingsError) {
+    console.error('[MasterKB] Error fetching greetings:', greetingsError.message);
+  }
 
   return {
     businessType: typeData.slug,
