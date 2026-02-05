@@ -20,14 +20,48 @@ export default async function DashboardLayout({
     redirect('/auth/login');
   }
 
+  // Handle admin impersonation: validate the user is actually an admin
+  const { headers } = await import('next/headers');
+  const headersList = await headers();
+  const requestUrl = headersList.get('x-url') || '';
+  let impersonateId: string | null = null;
+  try {
+    impersonateId = requestUrl ? new URL(requestUrl).searchParams.get('impersonate') : null;
+  } catch {
+    // Invalid URL, ignore
+  }
+
+  let merchantId = user.id;
+  let isImpersonating = false;
+
+  if (impersonateId) {
+    // Verify the current user is an admin before allowing impersonation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: adminUser } = await (supabase as any)
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (adminUser) {
+      merchantId = impersonateId;
+      isImpersonating = true;
+    }
+    // If not admin, ignore the impersonate param and show their own dashboard
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: merchant } = await (supabase as any)
     .from('merchants')
     .select('id, business_name, onboarding_completed')
-    .eq('id', user.id)
+    .eq('id', merchantId)
     .single();
 
   if (!merchant?.onboarding_completed) {
+    if (isImpersonating) {
+      // Don't redirect admin to onboarding for a merchant that hasn't completed it
+      redirect('/admin/merchants');
+    }
     redirect('/onboarding');
   }
 
@@ -43,7 +77,15 @@ export default async function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Impersonation banner */}
+      {isImpersonating && (
+        <div className="bg-yellow-400 text-yellow-900 text-center text-sm py-2 font-medium">
+          Impersonating: {merchant.business_name} ({merchantId}) —{' '}
+          <a href="/admin/merchants" className="underline">Exit</a>
+        </div>
+      )}
+      <div className="flex flex-1">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-6 border-b border-gray-200">
@@ -87,6 +129,7 @@ export default async function DashboardLayout({
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+      </div>
     </div>
   );
 }

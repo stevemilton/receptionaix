@@ -17,12 +17,13 @@ server.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOSt
 function verifyRelayToken(url: URL): { merchantId: string; callerPhone: string } | null {
   const serviceKey = process.env['RELAY_SERVICE_KEY'];
   if (!serviceKey) {
-    console.warn('[Relay] RELAY_SERVICE_KEY not set — skipping token verification');
-    return null; // Will fall back to customParameters
+    console.error('[Relay] RELAY_SERVICE_KEY not set — rejecting connection. Set this env var to enable relay authentication.');
+    return null;
   }
 
   const token = url.searchParams.get('token');
   const merchantId = url.searchParams.get('merchantId');
+  const callerPhone = url.searchParams.get('callerPhone') || '';
   const ts = url.searchParams.get('ts');
 
   if (!token || !merchantId || !ts) {
@@ -38,9 +39,9 @@ function verifyRelayToken(url: URL): { merchantId: string; callerPhone: string }
     return null;
   }
 
-  // Verify HMAC signature
+  // Verify HMAC signature (payload includes callerPhone)
   const expected = createHmac('sha256', serviceKey)
-    .update(`${merchantId}:${ts}`)
+    .update(`${merchantId}:${callerPhone}:${ts}`)
     .digest('hex');
 
   if (expected.length !== token.length) return null;
@@ -53,7 +54,7 @@ function verifyRelayToken(url: URL): { merchantId: string; callerPhone: string }
     return null;
   }
 
-  return { merchantId, callerPhone: '' };
+  return { merchantId, callerPhone };
 }
 
 // WebSocket endpoint for Twilio Media Streams
@@ -62,13 +63,13 @@ server.get('/media-stream', { websocket: true }, (connection, request) => {
   const fullUrl = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
   const verified = verifyRelayToken(fullUrl);
 
-  if (process.env['RELAY_SERVICE_KEY'] && !verified) {
+  if (!verified) {
     console.error('[Relay] Unauthorized WebSocket connection — closing');
     connection.socket.close(4401, 'Unauthorized');
     return;
   }
 
-  handleMediaStream(connection.socket, verified?.merchantId);
+  handleMediaStream(connection.socket, verified.merchantId, verified.callerPhone);
 });
 
 const port = parseInt(process.env['PORT'] || '8080');

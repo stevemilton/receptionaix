@@ -105,5 +105,8 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Forward request URL to server components (used for impersonation param)
+  supabaseResponse.headers.set('x-url', request.url);
+
   return supabaseResponse;
 }

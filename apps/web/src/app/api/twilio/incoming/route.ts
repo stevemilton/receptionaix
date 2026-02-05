@@ -167,9 +167,9 @@ export async function POST(request: Request) {
 
   if (relayServiceKey) {
     const token = createHmac('sha256', relayServiceKey)
-      .update(`${merchant.id}:${ts}`)
+      .update(`${merchant.id}:${from}:${ts}`)
       .digest('hex');
-    streamUrl = `${relayUrl}?token=${token}&merchantId=${merchant.id}&ts=${ts}`;
+    streamUrl = `${relayUrl}?token=${token}&merchantId=${merchant.id}&callerPhone=${encodeURIComponent(from)}&ts=${ts}`;
   }
 
   const twiml = `  <Connect>
