@@ -37,6 +37,7 @@ export async function GET(request: Request) {
         Authorization:
           'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
       },
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!response.ok) {

@@ -1,5 +1,17 @@
 import { supabaseAdmin } from './supabase-client.js';
 
+/** Validate that a param is a non-empty string. */
+function requireString(params: Record<string, unknown>, key: string): string | null {
+  const val = params[key];
+  return typeof val === 'string' && val.length > 0 ? val : null;
+}
+
+/** Read an optional string param. */
+function optionalString(params: Record<string, unknown>, key: string): string | undefined {
+  const val = params[key];
+  return typeof val === 'string' && val.length > 0 ? val : undefined;
+}
+
 export async function executeToolCall(
   merchantId: string,
   toolName: string,
@@ -8,24 +20,38 @@ export async function executeToolCall(
   console.log(`Executing tool: ${toolName}`, params);
 
   switch (toolName) {
-    case 'lookupCustomer':
-      return await lookupCustomer(merchantId, params['phone'] as string);
+    case 'lookupCustomer': {
+      const phone = requireString(params, 'phone');
+      if (!phone) return { error: 'Missing required parameter: phone' };
+      return await lookupCustomer(merchantId, phone);
+    }
 
-    case 'checkAvailability':
-      return await checkAvailability(
-        merchantId,
-        params['date'] as string,
-        params['service'] as string | undefined
-      );
+    case 'checkAvailability': {
+      const date = requireString(params, 'date');
+      if (!date) return { error: 'Missing required parameter: date' };
+      return await checkAvailability(merchantId, date, optionalString(params, 'service'));
+    }
 
-    case 'createBooking':
+    case 'createBooking': {
+      if (!requireString(params, 'customerPhone') || !requireString(params, 'service') || !requireString(params, 'dateTime')) {
+        return { error: 'Missing required parameters: customerPhone, service, dateTime' };
+      }
       return await createBooking(merchantId, params);
+    }
 
-    case 'cancelBooking':
+    case 'cancelBooking': {
+      if (!requireString(params, 'customerPhone')) {
+        return { error: 'Missing required parameter: customerPhone' };
+      }
       return await cancelBooking(merchantId, params);
+    }
 
-    case 'takeMessage':
+    case 'takeMessage': {
+      if (!requireString(params, 'callerPhone') || !requireString(params, 'message')) {
+        return { error: 'Missing required parameters: callerPhone, message' };
+      }
       return await takeMessage(merchantId, params);
+    }
 
     default:
       return { error: `Unknown tool: ${toolName}` };

@@ -1,5 +1,7 @@
 import type { PlaceResult } from './types';
 
+const FETCH_TIMEOUT_MS = 15_000;
+
 interface PlacesTextSearchResponse {
   places?: Array<{
     id: string;
@@ -45,6 +47,7 @@ export async function searchBusiness(
           languageCode: 'en',
           regionCode: 'GB',
         }),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       }
     );
 
@@ -92,6 +95,7 @@ export async function getPlaceDetails(
           'X-Goog-FieldMask':
             'id,displayName,formattedAddress,nationalPhoneNumber,websiteUri,rating,userRatingCount,types,regularOpeningHours',
         },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       }
     );
 

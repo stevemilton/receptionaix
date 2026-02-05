@@ -64,6 +64,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: params,
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!response.ok) {

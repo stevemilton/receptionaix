@@ -61,6 +61,7 @@ export async function GET(request: Request) {
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!tokenResponse.ok) {

@@ -3,6 +3,30 @@ import websocket from '@fastify/websocket';
 import { createHmac } from 'crypto';
 import { handleMediaStream } from './media-stream-handler.js';
 
+// --- Startup env var validation ---
+const REQUIRED_ENV = ['RELAY_SERVICE_KEY', 'GROK_API_KEY'] as const;
+const REQUIRED_SUPABASE_ENV = ['SUPABASE_SERVICE_ROLE_KEY'] as const;
+
+for (const key of REQUIRED_ENV) {
+  if (!process.env[key]) {
+    console.error(`[Relay] FATAL: Required env var ${key} is not set. Exiting.`);
+    process.exit(1);
+  }
+}
+
+const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'] || process.env['SUPABASE_URL'];
+if (!supabaseUrl) {
+  console.error('[Relay] FATAL: Neither NEXT_PUBLIC_SUPABASE_URL nor SUPABASE_URL is set. Exiting.');
+  process.exit(1);
+}
+
+for (const key of REQUIRED_SUPABASE_ENV) {
+  if (!process.env[key]) {
+    console.error(`[Relay] FATAL: Required env var ${key} is not set. Exiting.`);
+    process.exit(1);
+  }
+}
+
 const server = Fastify({ logger: true });
 
 await server.register(websocket);

@@ -1,5 +1,7 @@
 import type { ScrapedContent } from './types';
 
+const FETCH_TIMEOUT_MS = 30_000;
+
 interface FirecrawlResponse {
   success: boolean;
   data?: {
@@ -30,6 +32,7 @@ export async function scrapeWebsite(
         url,
         formats: ['markdown'],
       }),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -79,6 +82,7 @@ export async function crawlWebsite(
           formats: ['markdown'],
         },
       }),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!startResponse.ok) {
@@ -101,6 +105,7 @@ export async function crawlWebsite(
           headers: {
             Authorization: `Bearer ${apiKey}`,
           },
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         }
       );
 

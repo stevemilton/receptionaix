@@ -16,8 +16,13 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://receptionai.vercel.a
 
 export async function GET(request: NextRequest) {
   // Verify cron secret (Vercel Cron sends this header)
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error('[Cron] CRON_SECRET not set — rejecting request');
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

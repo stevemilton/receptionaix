@@ -85,6 +85,7 @@ export async function extractKnowledgeWithClaude(
           },
         ],
       }),
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (!response.ok) {
