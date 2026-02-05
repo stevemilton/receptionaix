@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     const { tierId } = await request.json();
 
-    if (!tierId) {
+    if (!tierId || typeof tierId !== 'string') {
       return NextResponse.json({ error: 'Tier ID is required' }, { status: 400 });
     }
 

@@ -93,6 +93,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
+  // Verify the merchant exists before updating
+  const { data: existingMerchant } = await supabase
+    .from('merchants')
+    .select('id')
+    .eq('id', userId)
+    .single();
+
+  if (!existingMerchant) {
+    console.error(`[Stripe] No merchant found for user_id in metadata: ${userId}`);
+    return;
+  }
+
   console.log(`[Stripe] Checkout completed for user ${userId}, tier ${tierId}`);
 
   // Look up subscription to find overage item ID

@@ -16,7 +16,21 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { businessName, location, placeId, websiteUrl, useMock } = body;
 
-    // Validate input - need at least one of these
+    // Validate input types and lengths
+    if (businessName && (typeof businessName !== 'string' || businessName.length > 200)) {
+      return NextResponse.json({ error: 'Invalid businessName' }, { status: 400 });
+    }
+    if (websiteUrl && (typeof websiteUrl !== 'string' || websiteUrl.length > 500)) {
+      return NextResponse.json({ error: 'Invalid websiteUrl' }, { status: 400 });
+    }
+    if (websiteUrl && !/^https?:\/\/.+/.test(websiteUrl)) {
+      return NextResponse.json({ error: 'websiteUrl must be a valid HTTP(S) URL' }, { status: 400 });
+    }
+    if (placeId && (typeof placeId !== 'string' || placeId.length > 100)) {
+      return NextResponse.json({ error: 'Invalid placeId' }, { status: 400 });
+    }
+
+    // Need at least one of these
     if (!businessName && !placeId && !websiteUrl) {
       return NextResponse.json(
         { error: 'Provide businessName, placeId, or websiteUrl' },

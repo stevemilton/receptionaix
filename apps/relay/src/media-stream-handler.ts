@@ -63,6 +63,7 @@ export function handleMediaStream(twilioWs: WebSocket, verifiedMerchantId: strin
 
   twilioWs.on('error', (error) => {
     console.error('Twilio WebSocket error:', error);
+    session.grokConnection?.close();
   });
 }
 
@@ -119,6 +120,7 @@ async function handleStop(session: CallSession): Promise<void> {
   console.log(`Call ended: ${session.streamSid}`);
 
   session.grokConnection?.close();
+  session.grokConnection = null;
 
   const durationSeconds = Math.floor((Date.now() - session.startedAt.getTime()) / 1000);
 
@@ -157,6 +159,7 @@ function notifyCallComplete(merchantId: string): void {
       'Authorization': `Bearer ${serviceKey}`,
     },
     body: JSON.stringify({ merchantId }),
+    signal: AbortSignal.timeout(10_000),
   })
     .then((res) => {
       if (!res.ok) console.error(`[MediaStream] Post-complete failed: ${res.status}`);

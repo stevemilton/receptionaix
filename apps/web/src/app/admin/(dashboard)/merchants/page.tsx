@@ -33,9 +33,12 @@ export default async function MerchantsPage({
     query = query.eq('subscription_status', searchParams.status);
   }
 
-  // Apply search filter
+  // Apply search filter (sanitize to prevent PostgREST filter injection)
   if (searchParams.search) {
-    query = query.or(`business_name.ilike.%${searchParams.search}%,email.ilike.%${searchParams.search}%`);
+    const sanitized = searchParams.search.replace(/[%_\\(),."']/g, '');
+    if (sanitized.length > 0 && sanitized.length <= 100) {
+      query = query.or(`business_name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`);
+    }
   }
 
   const { data: merchants } = await query;

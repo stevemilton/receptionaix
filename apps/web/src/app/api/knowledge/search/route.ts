@@ -12,9 +12,16 @@ export async function GET(request: Request) {
   const query = searchParams.get('q');
   const location = searchParams.get('location') || undefined;
 
-  if (!query) {
+  if (!query || query.length > 200) {
     return NextResponse.json(
-      { error: 'Query parameter "q" is required' },
+      { error: 'Query parameter "q" is required and must be under 200 characters' },
+      { status: 400 }
+    );
+  }
+
+  if (location && location.length > 200) {
+    return NextResponse.json(
+      { error: 'Location must be under 200 characters' },
       { status: 400 }
     );
   }

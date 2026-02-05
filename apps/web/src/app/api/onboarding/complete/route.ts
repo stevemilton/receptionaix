@@ -59,15 +59,40 @@ export async function POST(request: Request) {
     console.log('[Onboarding Complete] Full openingHours:', JSON.stringify(data.openingHours, null, 2));
 
     // Validate required fields
-    if (!data.businessName || !data.twilioPhoneNumber) {
-      console.log('[Onboarding Complete] Validation failed - missing fields:', {
-        businessName: !!data.businessName,
-        twilioPhoneNumber: !!data.twilioPhoneNumber
-      });
+    if (!data.businessName || typeof data.businessName !== 'string' || !data.twilioPhoneNumber || typeof data.twilioPhoneNumber !== 'string') {
       return NextResponse.json(
         { error: 'Business name and phone number are required' },
         { status: 400 }
       );
+    }
+
+    // Length limits
+    if (data.businessName.length > 200 || data.twilioPhoneNumber.length > 20) {
+      return NextResponse.json(
+        { error: 'Invalid field lengths' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize arrays — cap sizes and strip unexpected fields
+    if (Array.isArray(data.services)) {
+      data.services = data.services.slice(0, 50).map(s => ({
+        name: String(s.name || '').slice(0, 200),
+        description: s.description ? String(s.description).slice(0, 500) : undefined,
+        duration: typeof s.duration === 'number' ? s.duration : undefined,
+        price: typeof s.price === 'number' ? s.price : undefined,
+      }));
+    } else {
+      data.services = [];
+    }
+
+    if (Array.isArray(data.faqs)) {
+      data.faqs = data.faqs.slice(0, 50).map(f => ({
+        question: String(f.question || '').slice(0, 500),
+        answer: String(f.answer || '').slice(0, 2000),
+      }));
+    } else {
+      data.faqs = [];
     }
 
     // Check for existing merchant

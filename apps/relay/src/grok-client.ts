@@ -74,6 +74,7 @@ export async function connectToGrok(
     ws.on('error', (error) => {
       console.error('[Grok] WebSocket error:', error);
       clearTimeout(timeout);
+      ws.close();
       options.onError(error);
       reject(error);
     });
