@@ -34,7 +34,7 @@ See `/docs/PRD.md` for full business requirements.
     /ui               # Shared UI components (Button, Card, etc.)
     /grok             # Grok client, types, tool definitions
     /knowledge        # Knowledge base generation (Firecrawl + Places API)
-    /types            # Shared TypeScript interfaces
+    /types            # Database types + row type aliases (MerchantRow, CallRow, etc.)
     /shared           # Shared utilities (API usage tracking)
   /docs
     /PRD.md           # Product Requirements Document
@@ -93,9 +93,9 @@ Phase 4: Onboarding ──→ Phase 5: Voice Agent ──→ Phase 6: Dashboard 
 Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 ```
 
-### Current Phase: Post-Build — Security Hardening & Production Readiness
+### Current Phase: Post-Build — Production Readiness
 
-All 9 build phases are complete. See `docs/status.md` for the full issue backlog and `docs/handoff.md` for developer onboarding.
+All 9 build phases are complete. Security hardening is substantially complete (8 batches, commits `97440b7`–`d294feb`). See `docs/status.md` for the detailed hardening checklist and `docs/handoff.md` for developer onboarding.
 
 ---
 
@@ -202,38 +202,30 @@ All 9 build phases are complete. See `docs/status.md` for the full issue backlog
 
 ---
 
-## ⚠️ Security Issues (Reviewed 2026-02-05)
+## Security Hardening (Completed 2026-02-05)
 
-**Full details in `docs/status.md`. Fix these before any production deployment.**
+Eight hardening batches have been completed. **All critical and high-priority security issues are resolved.** See `docs/status.md` for the full checklist with commit references.
 
-### CRITICAL — Must Fix Immediately
+### What's Been Fixed
+- Merchant impersonation privilege escalation
+- Relay HMAC token bypass and callerPhone attribution
+- WebSocket resource leaks (Grok + Twilio cleanup)
+- SQL injection in admin merchant search
+- Stripe webhook metadata validation
+- Env var fail-closed validation on all routes
+- Input validation on all API routes
+- OAuth token encryption at rest
+- CSRF origin validation on cookie-auth routes
+- Rate limiting on cost-sensitive endpoints
+- Request timeouts on all external API calls
+- Runtime param validation on relay tool handlers
 
-| Issue | File | Line(s) |
-|-------|------|---------|
-| Unprotected merchant impersonation — `?impersonate=` param not validated against admin role | `apps/web/src/app/admin/(dashboard)/merchants/[id]/page.tsx` | 241-251 |
-| Relay falls back to unverified `customParameters` when HMAC fails | `apps/relay/src/media-stream-handler.ts` | 76-79 |
-| `callerPhone` hardcoded to `''` in token verification | `apps/relay/src/server.ts` | 56 |
-
-### HIGH — Fix Before Production
-
-| Issue | File | Line(s) |
-|-------|------|---------|
-| Stripe webhook metadata not validated against user ownership | `apps/web/src/app/api/stripe/webhook/route.ts` | 81-129 |
-| Grok WebSocket not closed on error (resource leak) | `apps/relay/src/grok-client.ts` | 74-79 |
-| Twilio error handler doesn't close Grok connection | `apps/relay/src/media-stream-handler.ts` | 64-66 |
-| Env var auth checks fail open if vars unset (`CRON_SECRET`, `RELAY_SERVICE_KEY`) | Multiple API routes | — |
-| User input interpolated into Supabase `.or()` filter | `apps/web/src/app/admin/(dashboard)/merchants/page.tsx` | 37-39 |
-| No input validation on multiple API routes (search, generate, checkout, onboarding) | Multiple | — |
-
-### Coding Standards Debt
+### Remaining Technical Debt
 
 | Issue | Scope |
 |-------|-------|
-| `any` type casting in 10+ files to bypass Supabase types | Regenerate types with `pnpm db:types` |
-| Dual type systems (`database.ts` vs `models.ts`) with inconsistent definitions | Unify in `packages/types` |
-| No request timeouts on external fetch() calls | All packages using Firecrawl, Anthropic, Google APIs |
-| No runtime validation on relay tool parameters | `apps/relay/src/tool-handlers.ts` — consider zod |
-| Unsafe JSON parsing of Claude API response | `packages/knowledge/src/extractor.ts:126-150` |
+| `as any` casts (~35 occurrences) on Supabase queries | Regenerate `database.ts` via `supabase gen types typescript` |
+| Missing tables in `database.ts` (`api_usage_daily`, `notification_log`, etc.) | Same fix — `supabase gen types` |
 
 ---
 
@@ -255,12 +247,10 @@ All 9 build phases are complete. See `docs/status.md` for the full issue backlog
 - No deeplink configuration for password reset flow
 - RevenueCat subscription status not synced back to Supabase
 
-### Production Hardening
+### Production Readiness
 - No test suite (test runner not configured)
-- No rate limiting on cost-sensitive endpoints (Twilio provisioning, knowledge search)
-- No CSRF protection on web state-changing routes
-- Google Calendar OAuth tokens stored unencrypted in DB
 - Admin dev bypass (`ADMIN_DEV_BYPASS=true`) must never reach production
+- `database.ts` needs regeneration via `supabase gen types` to eliminate `as any` casts
 
 ---
 
@@ -666,8 +656,8 @@ pnpm deploy:relay     # Deploy to Fly.io
 
 ### When Picking Up This Project:
 1. Read `docs/handoff.md` for orientation
-2. Read `docs/status.md` for the current issue backlog
-3. Fix critical security issues before any deployment
+2. Read `docs/status.md` for remaining issues
+3. Run `supabase gen types typescript` to fix all `as any` casts
 
 ### When Stuck:
 1. Check PRD for requirements
@@ -704,8 +694,13 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `apps/relay/src/media-stream-handler.ts` | Twilio bridge with audio conversion |
 | `apps/relay/src/tool-handlers.ts` | Backend execution for 5 reception tools |
 | `apps/relay/src/audio-utils.ts` | Audio codec conversion (μ-law ↔ PCM16) |
+| `apps/web/src/lib/supabase/admin.ts` | Service-role Supabase client (typed with Database) |
+| `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
+| `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |
 | `packages/knowledge/src/pipeline.ts` | KB generation orchestration |
 | `packages/knowledge/src/extractor.ts` | Claude-based knowledge extraction |
+| `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
+| `packages/types/src/database.ts` | Supabase table types (hand-written, needs regeneration) |
 
 ---
 
