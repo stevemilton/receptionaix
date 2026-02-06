@@ -134,10 +134,14 @@ export async function POST(request: Request) {
     streamUrl = `${relayUrl}?token=${token}&merchantId=${merchant.id}&callerPhone=${encodeURIComponent(from)}&ts=${ts}`;
   }
 
+  // Escape for XML — & must become &amp; in TwiML attributes
+  const xmlSafeStreamUrl = streamUrl.replace(/&/g, '&amp;');
+  const xmlSafeFrom = (from || '').replace(/&/g, '&amp;');
+
   const twiml = `  <Connect>
-    <Stream url="${streamUrl}">
+    <Stream url="${xmlSafeStreamUrl}">
       <Parameter name="merchantId" value="${merchant.id}" />
-      <Parameter name="callerPhone" value="${from}" />
+      <Parameter name="callerPhone" value="${xmlSafeFrom}" />
     </Stream>
   </Connect>`;
 
