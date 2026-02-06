@@ -71,10 +71,13 @@ export async function POST(request: Request) {
       params[key] = value.toString();
     });
 
-    // Use the full request URL for verification
-    const requestUrl = request.url;
+    // Use the public URL for verification — on Vercel, request.url may
+    // differ from the URL Twilio signed against (e.g. internal hostname).
+    const publicUrl = process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/incoming`
+      : request.url;
 
-    if (!verifyTwilioSignature(requestUrl, params, twilioSignature, twilioAuthToken)) {
+    if (!verifyTwilioSignature(publicUrl, params, twilioSignature, twilioAuthToken)) {
       console.error('[Twilio Incoming] Invalid signature — rejecting request');
       return new NextResponse('Forbidden', { status: 403 });
     }
