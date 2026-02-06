@@ -55,25 +55,16 @@ function unavailableMessage() {
 }
 
 export async function POST(request: Request) {
-  console.log('[Twilio Incoming] === REQUEST START ===');
-  console.log('[Twilio Incoming] request.url:', request.url);
-  console.log('[Twilio Incoming] NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL || 'NOT SET');
-  console.log('[Twilio Incoming] TWILIO_AUTH_TOKEN set:', !!process.env.TWILIO_AUTH_TOKEN);
-  console.log('[Twilio Incoming] SUPABASE_SERVICE_ROLE_KEY set:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-  console.log('[Twilio Incoming] SUPABASE_SERVICE_ROLE_KEY starts with eyJ:', process.env.SUPABASE_SERVICE_ROLE_KEY?.startsWith('eyJ') || false);
-  console.log('[Twilio Incoming] NODE_ENV:', process.env.NODE_ENV);
+  console.log('[Twilio Incoming] === REQUEST START (v2 - Parameter auth) ===');
+  console.log('[Twilio Incoming] RELAY_SERVICE_KEY set:', !!process.env.RELAY_SERVICE_KEY);
 
   // Parse Twilio webhook data
   const formData = await request.formData();
 
   // --- Twilio signature verification ---
-  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioSignature = request.headers.get('x-twilio-signature') || '';
-
   // TODO: Re-enable signature verification after debugging
-  // Temporarily disabled to diagnose call routing issues
-  console.log('[Twilio Incoming] Signature verification TEMPORARILY DISABLED for debugging');
-  console.log('[Twilio Incoming] twilioSignature present:', !!twilioSignature);
+  // const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+  // const twilioSignature = request.headers.get('x-twilio-signature') || '';
 
   const to = formData.get('To') as string; // The Twilio number called
   const from = formData.get('From') as string; // The caller's number
@@ -81,12 +72,9 @@ export async function POST(request: Request) {
   console.log(`[Twilio Incoming] Call from ${from} to ${to}`);
 
   // Use admin client to bypass RLS since this is an external webhook
-  console.log('[Twilio Incoming] Creating admin Supabase client...');
-  console.log('[Twilio Incoming] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET');
   const supabase = createAdminClient();
 
   // Fetch merchant — use only columns guaranteed to exist
-  console.log('[Twilio Incoming] Querying merchants for twilio_phone_number:', to);
   const { data: merchant, error } = await supabase
     .from('merchants')
     .select('id, business_name, plan_status, phone, voice_id, greeting')
