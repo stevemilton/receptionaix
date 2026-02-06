@@ -81,8 +81,9 @@ export function SettingsScreen() {
         .single();
 
       if (data) {
-        setMerchant(data as MerchantInfo);
-        setNotificationsEnabled(data.notifications_enabled ?? true);
+        const merchant = data as any as MerchantInfo;
+        setMerchant(merchant);
+        setNotificationsEnabled(merchant.notifications_enabled ?? true);
       }
     } catch (e) {
       console.error('Error loading merchant:', e);
@@ -100,7 +101,7 @@ export function SettingsScreen() {
 
     const { error } = await supabase
       .from('merchants')
-      .update({ notifications_enabled: enabled })
+      .update({ notifications_enabled: enabled } as any)
       .eq('id', user.id);
 
     if (error) {

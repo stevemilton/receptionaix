@@ -16,10 +16,10 @@ import { useAuth } from '../lib/AuthContext';
 interface Call {
   id: string;
   caller_phone: string;
-  started_at: string;
+  started_at: string | null;
   ended_at: string | null;
   duration_seconds: number | null;
-  outcome: string;
+  outcome: string | null;
   transcript: string | null;
   summary: string | null;
 }
@@ -68,7 +68,7 @@ export function CallsScreen() {
       <View style={styles.callContent}>
         <Text style={styles.callPhone}>{formatPhone(item.caller_phone)}</Text>
         <Text style={styles.callTime}>
-          {new Date(item.started_at).toLocaleString('en-GB', {
+          {new Date(item.started_at || '').toLocaleString('en-GB', {
             weekday: 'short',
             day: 'numeric',
             month: 'short',
@@ -141,7 +141,7 @@ export function CallsScreen() {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Date</Text>
                 <Text style={styles.detailValue}>
-                  {new Date(selectedCall.started_at).toLocaleString('en-GB', {
+                  {new Date(selectedCall.started_at || '').toLocaleString('en-GB', {
                     weekday: 'long',
                     day: 'numeric',
                     month: 'long',

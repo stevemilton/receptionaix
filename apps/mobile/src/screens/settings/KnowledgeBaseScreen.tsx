@@ -74,9 +74,9 @@ export function KnowledgeBaseScreen() {
       console.log('[KnowledgeBaseScreen] FAQs from DB:', data.faqs);
       console.log('[KnowledgeBaseScreen] Hours from DB:', data.opening_hours);
 
-      setServices(Array.isArray(data.services) ? data.services : []);
-      setFaqs(Array.isArray(data.faqs) ? data.faqs : []);
-      setOpeningHours(data.opening_hours || DEFAULT_HOURS);
+      setServices(Array.isArray(data.services) ? data.services as unknown as Service[] : []);
+      setFaqs(Array.isArray(data.faqs) ? data.faqs as unknown as FAQ[] : []);
+      setOpeningHours((data.opening_hours as Record<string, string>) || DEFAULT_HOURS);
     } else {
       console.log('[KnowledgeBaseScreen] No KB data found for user');
     }
@@ -91,9 +91,9 @@ export function KnowledgeBaseScreen() {
       .from('knowledge_bases')
       .upsert({
         merchant_id: user.id,
-        services,
-        faqs,
-        opening_hours: openingHours,
+        services: services as any,
+        faqs: faqs as any,
+        opening_hours: openingHours as any,
         updated_at: new Date().toISOString(),
       }, {
         onConflict: 'merchant_id',

@@ -71,7 +71,7 @@ export function MainNavigator() {
       screenOptions={{
         headerStyle: { backgroundColor: '#fff' },
         headerTitleStyle: { fontWeight: '600' },
-        headerBackTitleVisible: false,
+        headerBackButtonDisplayMode: 'minimal',
         headerTintColor: '#111827',
       }}
     >

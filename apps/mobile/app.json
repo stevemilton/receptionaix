@@ -18,7 +18,8 @@
       "bundleIdentifier": "com.receptionai.app",
       "infoPlist": {
         "NSCameraUsageDescription": "ReceptionAI needs camera access for profile photos",
-        "NSPhotoLibraryUsageDescription": "ReceptionAI needs photo library access for profile photos"
+        "NSPhotoLibraryUsageDescription": "ReceptionAI needs photo library access for profile photos",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -46,8 +47,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3"
       }
-    }
+    },
+    "owner": "stevemilton"
   }
 }

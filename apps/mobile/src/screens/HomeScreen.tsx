@@ -19,9 +19,9 @@ interface Stats {
 interface RecentCall {
   id: string;
   caller_phone: string;
-  started_at: string;
+  started_at: string | null;
   duration_seconds: number | null;
-  outcome: string;
+  outcome: string | null;
 }
 
 export function HomeScreen() {
@@ -80,7 +80,7 @@ export function HomeScreen() {
           .gte('start_time', today.toISOString())
           .lt('start_time', new Date(today.getTime() + 86400000).toISOString()),
         supabase
-          .from('messages')
+          .from('messages' as any)
           .select('*', { count: 'exact', head: true })
           .eq('merchant_id', user.id)
           .eq('read', false),
@@ -137,7 +137,7 @@ export function HomeScreen() {
               <View>
                 <Text style={styles.callPhone}>{formatPhone(call.caller_phone)}</Text>
                 <Text style={styles.callTime}>
-                  {new Date(call.started_at).toLocaleString('en-GB', {
+                  {new Date(call.started_at || '').toLocaleString('en-GB', {
                     day: 'numeric',
                     month: 'short',
                     hour: '2-digit',

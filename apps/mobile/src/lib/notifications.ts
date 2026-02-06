@@ -70,7 +70,7 @@ async function savePushToken(userId: string, token: string): Promise<void> {
     .update({
       push_token: token,
       push_token_updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq('id', userId);
 }
 
