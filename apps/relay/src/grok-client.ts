@@ -20,9 +20,8 @@ export async function connectToGrok(
 ): Promise<GrokConnection> {
   const config = await getMerchantConfig(merchantId);
 
-  // Grok Voice Agent API uses OpenAI Realtime API format
-  // Connect with model query param as per xAI docs
-  const wsUrl = process.env['GROK_REALTIME_URL'] || 'wss://api.x.ai/v1/realtime?model=grok-2-public';
+  // xAI Grok Voice Agent API
+  const wsUrl = process.env['GROK_REALTIME_URL'] || 'wss://api.x.ai/v1/realtime';
 
   console.log('[Grok] Connecting to:', wsUrl);
 
@@ -32,7 +31,7 @@ export async function connectToGrok(
   const ws = new WebSocket(wsUrl, {
     headers: {
       Authorization: `Bearer ${process.env['GROK_API_KEY']}`,
-      'OpenAI-Beta': 'realtime=v1',
+      'Content-Type': 'application/json',
     },
   });
 
@@ -45,8 +44,9 @@ export async function connectToGrok(
     ws.on('open', () => {
       console.log('[Grok] WebSocket connected, sending session.update');
 
-      // Send session configuration using OpenAI Realtime API format
+      // Send session configuration using xAI Grok Voice Agent format
       const sessionUpdate = createSessionUpdate(config);
+      console.log('[Grok] Session update:', JSON.stringify(sessionUpdate, null, 2));
       ws.send(JSON.stringify(sessionUpdate));
     });
 
@@ -57,7 +57,7 @@ export async function connectToGrok(
 
         await handleGrokMessage(ws, message, options, () => audioLogged, () => { audioLogged = true; });
 
-        // Session created = connection ready
+        // Session updated = connection ready (Grok sends session.updated after our session.update)
         if (message.type === 'session.created' || message.type === 'session.updated') {
           clearTimeout(timeout);
 
@@ -88,49 +88,57 @@ export async function connectToGrok(
   });
 }
 
-// OpenAI Realtime API format for session configuration
+/**
+ * xAI Grok Voice Agent API session configuration.
+ *
+ * Key design decision: We use audio/pcmu (G.711 μ-law) at 8kHz which is
+ * Twilio's native format. This means NO audio conversion is needed in the
+ * relay — μ-law bytes pass straight through from Twilio to Grok and back.
+ *
+ * Docs: https://docs.x.ai/docs/guides/voice/agent
+ */
 function createSessionUpdate(config: MerchantConfig) {
-  // Convert tools to OpenAI function format
+  // Convert tools to Grok function format
   const tools = RECEPTION_TOOLS.map(tool => ({
-    type: 'function',
+    type: 'function' as const,
     name: tool.name,
     description: tool.description,
     parameters: tool.parameters,
   }));
 
-  // Map user-friendly voice names to xAI voice IDs
-  // xAI supports: alloy, ash, ballad, coral, echo, sage, shimmer, verse
+  // xAI native voice names: Ara, Rex, Sal, Eve, Leo
   const voiceMap: Record<string, string> = {
-    'ara': 'alloy',
-    'rex': 'echo',
-    'sal': 'shimmer',
-    'eve': 'coral',
-    'leo': 'ash',
+    'ara': 'Ara',
+    'rex': 'Rex',
+    'sal': 'Sal',
+    'eve': 'Eve',
+    'leo': 'Leo',
   };
-  const voice = voiceMap[config.voiceId?.toLowerCase() || 'ara'] || 'alloy';
+  const voice = voiceMap[config.voiceId?.toLowerCase() || 'ara'] || 'Ara';
 
-  // xAI Grok uses PCM16 at 24kHz - NOT g711_ulaw
-  // We must convert between Twilio's μ-law 8kHz and Grok's PCM16 24kHz
   return {
     type: 'session.update',
     session: {
-      modalities: ['text', 'audio'],
       instructions: buildSystemPrompt(config),
       voice,
-      input_audio_format: 'pcm16',
-      output_audio_format: 'pcm16',
-      input_audio_transcription: {
-        model: 'grok-2',
-      },
       turn_detection: {
         type: 'server_vad',
-        threshold: 0.5,
-        prefix_padding_ms: 300,
-        silence_duration_ms: 1200,
+      },
+      audio: {
+        input: {
+          format: {
+            type: 'audio/pcmu',
+            rate: 8000,
+          },
+        },
+        output: {
+          format: {
+            type: 'audio/pcmu',
+            rate: 8000,
+          },
+        },
       },
       tools,
-      tool_choice: 'auto',
-      temperature: 0.8,
     },
   };
 }
@@ -141,16 +149,13 @@ function sendInitialGreeting(ws: WebSocket, config: MerchantConfig) {
 
   console.log('[Grok] Sending initial greeting:', greeting);
   console.log('[Grok] Config business name:', config.businessName);
-  console.log('[Grok] Opening hours:', JSON.stringify(config.openingHours));
   console.log('[Grok] Services count:', config.services.length);
   console.log('[Grok] FAQs count:', config.faqs.length);
-  console.log('[Grok] Address:', config.address);
 
   // Create a response with the initial greeting
   ws.send(JSON.stringify({
     type: 'response.create',
     response: {
-      modalities: ['text', 'audio'],
       instructions: `Say exactly: "${greeting}"`,
     },
   }));
@@ -233,15 +238,12 @@ HANDLING COMMON SCENARIOS:
 - Questions: Answer from the knowledge base above, or take a message if unsure`;
 
   // Log the full prompt for debugging
-  console.log('[Grok] System prompt being sent:');
-  console.log('=== PROMPT START ===');
-  console.log(prompt);
-  console.log('=== PROMPT END ===');
+  console.log('[Grok] System prompt length:', prompt.length, 'chars');
 
   return prompt;
 }
 
-// OpenAI Realtime API message types
+// Grok Voice Agent API message types
 interface RealtimeMessage {
   type: string;
   event_id?: string;
@@ -292,16 +294,15 @@ async function handleGrokMessage(
       console.log('[Grok] Session updated:', JSON.stringify(message.session || message, null, 2));
       break;
 
-    case 'response.audio.delta': {
-      // Audio chunk received - send to Twilio
-      // The audio might be in message.delta or message.audio depending on API version
-      const audioData = message.delta || message.audio;
+    // Grok uses 'response.output_audio.delta' for audio chunks
+    case 'response.output_audio.delta': {
+      const audioData = message.delta;
       if (audioData) {
         // Log first audio chunk per connection to verify format
         if (!isAudioLogged()) {
-          console.log('[Grok] Full audio.delta message keys:', Object.keys(message));
-          console.log('[Grok] First audio sample (first 100 chars):', audioData.substring(0, 100));
-          console.log('[Grok] Audio length:', audioData.length);
+          console.log('[Grok] First audio chunk received, keys:', Object.keys(message));
+          console.log('[Grok] Audio sample (first 100 chars):', audioData.substring(0, 100));
+          console.log('[Grok] Audio chunk length:', audioData.length);
           markAudioLogged();
         }
         options.onAudio(audioData);
@@ -309,8 +310,8 @@ async function handleGrokMessage(
       break;
     }
 
-    case 'response.audio_transcript.delta':
-      // Assistant transcript chunk
+    // Grok uses 'response.output_audio_transcript.delta' for assistant transcripts
+    case 'response.output_audio_transcript.delta':
       if (message.delta) {
         options.onTranscript(message.delta, 'assistant');
       }
@@ -332,6 +333,30 @@ async function handleGrokMessage(
       console.log('[Grok] Response completed');
       break;
 
+    case 'response.created':
+      console.log('[Grok] Response started');
+      break;
+
+    case 'conversation.created':
+      console.log('[Grok] Conversation created');
+      break;
+
+    case 'conversation.item.added':
+      // Item added to conversation history — no action needed
+      break;
+
+    case 'response.output_item.added':
+      // Output item added — no action needed
+      break;
+
+    case 'response.output_audio.done':
+      console.log('[Grok] Audio generation complete');
+      break;
+
+    case 'response.output_audio_transcript.done':
+      // Full transcript available — no action needed
+      break;
+
     case 'input_audio_buffer.speech_started':
       console.log('[Grok] User started speaking');
       break;
@@ -340,16 +365,19 @@ async function handleGrokMessage(
       console.log('[Grok] User stopped speaking');
       break;
 
+    case 'input_audio_buffer.cleared':
+    case 'input_audio_buffer.committed':
+      // Buffer management events — no action needed
+      break;
+
     case 'error':
       console.error('[Grok] Error:', message.error);
       options.onError(new Error(message.error?.message || 'Unknown Grok error'));
       break;
 
     default:
-      // Log unknown message types for debugging
-      if (!message.type.startsWith('response.') && !message.type.startsWith('input_audio_buffer')) {
-        console.log('[Grok] Unhandled message type:', message.type);
-      }
+      // Log any truly unknown message types for debugging
+      console.log('[Grok] Unhandled message type:', message.type, JSON.stringify(message).substring(0, 200));
   }
 }
 
@@ -368,7 +396,7 @@ async function handleToolCall(
     const params = argsString ? JSON.parse(argsString) : {};
     const result = await options.onToolCall(name, params);
 
-    // Send tool result using OpenAI format
+    // Send tool result back to Grok
     ws.send(JSON.stringify({
       type: 'conversation.item.create',
       item: {
@@ -401,7 +429,6 @@ async function handleToolCall(
 function sendAudioToGrok(ws: WebSocket, audioBase64: string): void {
   if (ws.readyState !== WebSocket.OPEN) return;
 
-  // OpenAI Realtime API format for audio input
   ws.send(JSON.stringify({
     type: 'input_audio_buffer.append',
     audio: audioBase64,

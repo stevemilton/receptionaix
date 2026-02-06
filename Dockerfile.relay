@@ -6,22 +6,25 @@ WORKDIR /app
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy workspace files and tsconfig
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.json ./
+# Copy workspace files, tsconfig, and .npmrc (needed for shamefully-hoist)
+COPY .npmrc pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.json ./
 COPY apps/relay/package.json apps/relay/tsconfig.json ./apps/relay/
 COPY packages/grok/package.json packages/grok/tsconfig.json ./packages/grok/
 COPY packages/types/package.json packages/types/tsconfig.json ./packages/types/
+COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
 
-# Install dependencies
+# Install dependencies (shamefully-hoist via .npmrc hoists all deps to root)
 RUN pnpm install --frozen-lockfile
 
 # Copy source files
 COPY apps/relay ./apps/relay
 COPY packages/grok ./packages/grok
 COPY packages/types ./packages/types
+COPY packages/shared ./packages/shared
 
-# Build packages first (types, then grok), then relay
+# Build packages first (types, then shared + grok), then relay
 RUN pnpm --filter @receptionalx/types build
+RUN pnpm --filter @receptionalx/shared build
 RUN pnpm --filter @receptionalx/grok build
 RUN pnpm --filter @receptionalx/relay build
 
@@ -30,22 +33,24 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install pnpm for running
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Copy built files and dependencies
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/pnpm-workspace.yaml ./
-COPY --from=builder /app/pnpm-lock.yaml ./
+# Copy all node_modules (shamefully-hoisted to root) + built packages
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
 COPY --from=builder /app/apps/relay/package.json ./apps/relay/
 COPY --from=builder /app/apps/relay/dist ./apps/relay/dist
-COPY --from=builder /app/apps/relay/node_modules ./apps/relay/node_modules
 COPY --from=builder /app/packages/grok/package.json ./packages/grok/
 COPY --from=builder /app/packages/grok/dist ./packages/grok/dist
-COPY --from=builder /app/packages/grok/node_modules ./packages/grok/node_modules
 COPY --from=builder /app/packages/types/package.json ./packages/types/
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+
+# Create workspace package symlinks (pnpm puts these in apps/relay/node_modules
+# but Docker COPY doesn't preserve symlinks, so we recreate them)
+RUN mkdir -p apps/relay/node_modules/@receptionalx && \
+    ln -s ../../../../packages/grok apps/relay/node_modules/@receptionalx/grok && \
+    ln -s ../../../../packages/shared apps/relay/node_modules/@receptionalx/shared && \
+    ln -s ../../../../packages/types apps/relay/node_modules/@receptionalx/types
 
 # Set environment
 ENV NODE_ENV=production

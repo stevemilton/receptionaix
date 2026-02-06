@@ -3,7 +3,8 @@ import { connectToGrok, type GrokConnection } from './grok-client.js';
 import { connectToMockGrok, isMockModeEnabled } from './mock-grok-client.js';
 import { executeToolCall } from './tool-handlers.js';
 import { saveCallRecord } from './supabase-client.js';
-import { convertTwilioToGrok, convertGrokToTwilio } from './audio-utils.js';
+// Audio conversion is no longer needed — Grok now uses audio/pcmu (μ-law 8kHz)
+// which is Twilio's native format. Audio passes straight through.
 
 interface CallSession {
   streamSid: string;
@@ -80,9 +81,8 @@ async function handleStart(session: CallSession, message: TwilioStartMessage): P
   try {
     const connectionOptions = {
       onAudio: (audioBase64: string) => {
-        // Convert Grok's PCM16 24kHz to Twilio's μ-law 8kHz
-        const convertedAudio = convertGrokToTwilio(audioBase64);
-        sendToTwilio(session, convertedAudio);
+        // μ-law passthrough — Grok outputs audio/pcmu which Twilio accepts directly
+        sendToTwilio(session, audioBase64);
       },
       onToolCall: async (toolName: string, params: Record<string, unknown>) => {
         return await executeToolCall(session.merchantId, toolName, params);
@@ -111,9 +111,8 @@ async function handleStart(session: CallSession, message: TwilioStartMessage): P
 function handleMedia(session: CallSession, message: TwilioMediaMessage): void {
   if (!session.grokConnection) return;
 
-  // Convert Twilio's μ-law 8kHz to Grok's PCM16 24kHz
-  const convertedAudio = convertTwilioToGrok(message.media.payload);
-  session.grokConnection.sendAudio(convertedAudio);
+  // μ-law passthrough — Twilio's native format matches Grok's audio/pcmu input
+  session.grokConnection.sendAudio(message.media.payload);
 }
 
 async function handleStop(session: CallSession): Promise<void> {
