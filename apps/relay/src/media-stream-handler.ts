@@ -3,6 +3,7 @@ import { connectToGrok, type GrokConnection } from './grok-client.js';
 import { connectToMockGrok, isMockModeEnabled } from './mock-grok-client.js';
 import { executeToolCall } from './tool-handlers.js';
 import { saveCallRecord } from './supabase-client.js';
+import { verifyRelayToken } from './auth.js';
 // Audio conversion is no longer needed — Grok now uses audio/pcmu (μ-law 8kHz)
 // which is Twilio's native format. Audio passes straight through.
 
@@ -10,17 +11,25 @@ interface CallSession {
   streamSid: string;
   merchantId: string;
   callerPhone: string;
+  verified: boolean;
   twilioWs: WebSocket;
   grokConnection: GrokConnection | null;
   transcript: Array<{ speaker: 'user' | 'assistant'; text: string; timestamp: Date }>;
   startedAt: Date;
 }
 
-export function handleMediaStream(twilioWs: WebSocket, verifiedMerchantId: string, verifiedCallerPhone: string): void {
+/**
+ * Handle a Twilio Media Stream WebSocket connection.
+ *
+ * Auth happens in the 'start' event because Twilio strips query params
+ * from the <Stream> URL and sends them as customParameters instead.
+ */
+export function handleMediaStream(twilioWs: WebSocket): void {
   const session: CallSession = {
     streamSid: '',
-    merchantId: verifiedMerchantId,
-    callerPhone: verifiedCallerPhone,
+    merchantId: '',
+    callerPhone: '',
+    verified: false,
     twilioWs,
     grokConnection: null,
     transcript: [],
@@ -33,7 +42,7 @@ export function handleMediaStream(twilioWs: WebSocket, verifiedMerchantId: strin
 
       switch (message.event) {
         case 'connected':
-          console.log('Twilio connected');
+          console.log('[MediaStream] Twilio connected');
           break;
 
         case 'start':
@@ -49,34 +58,51 @@ export function handleMediaStream(twilioWs: WebSocket, verifiedMerchantId: strin
           break;
 
         case 'mark':
-          console.log(`Mark received: ${message.mark.name}`);
+          console.log(`[MediaStream] Mark received: ${message.mark?.name}`);
           break;
       }
     } catch (error) {
-      console.error('Error handling Twilio message:', error);
+      console.error('[MediaStream] Error handling Twilio message:', error);
     }
   });
 
   twilioWs.on('close', () => {
-    console.log('Twilio disconnected');
+    console.log('[MediaStream] Twilio disconnected');
     session.grokConnection?.close();
   });
 
   twilioWs.on('error', (error) => {
-    console.error('Twilio WebSocket error:', error);
+    console.error('[MediaStream] Twilio WebSocket error:', error);
     session.grokConnection?.close();
   });
 }
 
 async function handleStart(session: CallSession, message: TwilioStartMessage): Promise<void> {
-  // Log the full start message to debug parameter passing
-  console.log('[MediaStream] Full start message:', JSON.stringify(message, null, 2));
+  console.log('[MediaStream] Start event received');
+  console.log('[MediaStream] customParameters:', JSON.stringify(message.start.customParameters));
 
   session.streamSid = message.start.streamSid;
-  // merchantId and callerPhone are already set from the verified HMAC token.
-  // Do NOT fall back to unverified customParameters.
 
-  console.log(`Call started: merchant=${session.merchantId}, caller=${session.callerPhone}`);
+  // Verify HMAC token from customParameters (sent as <Parameter> elements in TwiML)
+  const params = message.start.customParameters || {};
+  const verified = verifyRelayToken({
+    token: params.token,
+    merchantId: params.merchantId,
+    callerPhone: params.callerPhone,
+    ts: params.ts,
+  });
+
+  if (!verified) {
+    console.error('[MediaStream] Token verification failed — closing connection');
+    session.twilioWs.close(4401, 'Unauthorized');
+    return;
+  }
+
+  session.merchantId = verified.merchantId;
+  session.callerPhone = verified.callerPhone;
+  session.verified = true;
+
+  console.log(`[MediaStream] Call started: merchant=${session.merchantId}, caller=${session.callerPhone}`);
 
   try {
     const connectionOptions = {
@@ -91,7 +117,7 @@ async function handleStart(session: CallSession, message: TwilioStartMessage): P
         session.transcript.push({ speaker, text, timestamp: new Date() });
       },
       onError: (error: Error) => {
-        console.error('Grok error:', error);
+        console.error('[MediaStream] Grok error:', error);
       },
     };
 
@@ -104,22 +130,24 @@ async function handleStart(session: CallSession, message: TwilioStartMessage): P
       session.grokConnection = await connectToGrok(session.merchantId, connectionOptions);
     }
   } catch (error) {
-    console.error('Failed to connect to Grok:', error);
+    console.error('[MediaStream] Failed to connect to Grok:', error);
   }
 }
 
 function handleMedia(session: CallSession, message: TwilioMediaMessage): void {
-  if (!session.grokConnection) return;
+  if (!session.grokConnection || !session.verified) return;
 
   // μ-law passthrough — Twilio's native format matches Grok's audio/pcmu input
   session.grokConnection.sendAudio(message.media.payload);
 }
 
 async function handleStop(session: CallSession): Promise<void> {
-  console.log(`Call ended: ${session.streamSid}`);
+  console.log(`[MediaStream] Call ended: ${session.streamSid}`);
 
   session.grokConnection?.close();
   session.grokConnection = null;
+
+  if (!session.verified || !session.merchantId) return;
 
   const durationSeconds = Math.floor((Date.now() - session.startedAt.getTime()) / 1000);
 
@@ -135,7 +163,7 @@ async function handleStop(session: CallSession): Promise<void> {
       durationSeconds,
     });
   } catch (error) {
-    console.error('Failed to save call record:', error);
+    console.error('[MediaStream] Failed to save call record:', error);
   }
 
   // Fire-and-forget: notify web app for overage tracking
@@ -143,7 +171,7 @@ async function handleStop(session: CallSession): Promise<void> {
 }
 
 function notifyCallComplete(merchantId: string): void {
-  const appUrl = process.env['APP_URL'] || 'https://receptionai.vercel.app';
+  const appUrl = process.env['APP_URL'] || 'https://receptionaix-relay.vercel.app';
   const serviceKey = process.env['RELAY_SERVICE_KEY'];
 
   if (!serviceKey) {
@@ -190,6 +218,8 @@ interface TwilioStartMessage {
     customParameters?: {
       merchantId?: string;
       callerPhone?: string;
+      token?: string;
+      ts?: string;
     };
   };
 }
