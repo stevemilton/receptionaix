@@ -123,6 +123,7 @@ function createSessionUpdate(config: MerchantConfig) {
       voice,
       turn_detection: {
         type: 'server_vad',
+        silence_duration_ms: 1200,
       },
       audio: {
         input: {

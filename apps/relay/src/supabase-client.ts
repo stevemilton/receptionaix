@@ -154,7 +154,7 @@ export async function saveCallRecord(record: CallRecord): Promise<void> {
     ended_at: record.endedAt.toISOString(),
     transcript: record.transcript,
     duration_seconds: record.durationSeconds,
-    outcome: 'completed',
+    outcome: 'answered',
   });
 
   if (error) {
