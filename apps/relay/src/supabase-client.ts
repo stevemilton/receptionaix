@@ -144,6 +144,8 @@ interface CallRecord {
   endedAt: Date;
   transcript: string;
   durationSeconds: number;
+  /** Valid values: missed, booking, message, transfer, cancellation */
+  outcome: string;
 }
 
 export async function saveCallRecord(record: CallRecord): Promise<void> {
@@ -154,7 +156,7 @@ export async function saveCallRecord(record: CallRecord): Promise<void> {
     ended_at: record.endedAt.toISOString(),
     transcript: record.transcript,
     duration_seconds: record.durationSeconds,
-    outcome: 'answered',
+    outcome: record.outcome,
   });
 
   if (error) {

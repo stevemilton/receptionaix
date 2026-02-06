@@ -231,14 +231,27 @@ function MetricCard({ title, value, highlight }: { title: string; value: string 
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
+    booking: 'bg-green-100 text-green-800',
+    message: 'bg-blue-100 text-blue-800',
+    cancellation: 'bg-orange-100 text-orange-800',
+    transfer: 'bg-purple-100 text-purple-800',
+    missed: 'bg-red-100 text-red-800',
+    // Legacy values (kept for backwards compat)
     completed: 'bg-green-100 text-green-800',
     answered: 'bg-green-100 text-green-800',
-    missed: 'bg-red-100 text-red-800',
-    in_progress: 'bg-blue-100 text-blue-800',
+  };
+  const labels: Record<string, string> = {
+    booking: 'Booking',
+    message: 'Message',
+    cancellation: 'Cancellation',
+    transfer: 'Transfer',
+    missed: 'Missed',
+    completed: 'Completed',
+    answered: 'Answered',
   };
   return (
     <span className={`text-xs px-2 py-1 rounded-full ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
-      {status}
+      {labels[status] || status}
     </span>
   );
 }

@@ -7,6 +7,9 @@ import { verifyRelayToken } from './auth.js';
 // Audio conversion is no longer needed — Grok now uses audio/pcmu (μ-law 8kHz)
 // which is Twilio's native format. Audio passes straight through.
 
+/** Valid outcome values accepted by the calls_outcome_check constraint in Supabase */
+type CallOutcome = 'missed' | 'booking' | 'message' | 'transfer' | 'cancellation';
+
 interface CallSession {
   streamSid: string;
   merchantId: string;
@@ -16,6 +19,7 @@ interface CallSession {
   grokConnection: GrokConnection | null;
   transcript: Array<{ speaker: 'user' | 'assistant'; text: string; timestamp: Date }>;
   startedAt: Date;
+  toolsCalled: Set<string>;
 }
 
 /**
@@ -34,6 +38,7 @@ export function handleMediaStream(twilioWs: WebSocket): void {
     grokConnection: null,
     transcript: [],
     startedAt: new Date(),
+    toolsCalled: new Set<string>(),
   };
 
   twilioWs.on('message', async (data: Buffer) => {
@@ -111,6 +116,7 @@ async function handleStart(session: CallSession, message: TwilioStartMessage): P
         sendToTwilio(session, audioBase64);
       },
       onToolCall: async (toolName: string, params: Record<string, unknown>) => {
+        session.toolsCalled.add(toolName);
         return await executeToolCall(session.merchantId, toolName, params);
       },
       onTranscript: (text: string, speaker: 'user' | 'assistant') => {
@@ -141,6 +147,19 @@ function handleMedia(session: CallSession, message: TwilioMediaMessage): void {
   session.grokConnection.sendAudio(message.media.payload);
 }
 
+/**
+ * Derive call outcome from tools called during the conversation.
+ * Priority: booking > cancellation > message > transfer > message (default)
+ * The DB constraint only allows: missed, booking, message, transfer, cancellation
+ */
+function deriveOutcome(toolsCalled: Set<string>): CallOutcome {
+  if (toolsCalled.has('createBooking')) return 'booking';
+  if (toolsCalled.has('cancelBooking')) return 'cancellation';
+  if (toolsCalled.has('takeMessage')) return 'message';
+  // Default for any answered call where no specific tool was used
+  return 'message';
+}
+
 async function handleStop(session: CallSession): Promise<void> {
   console.log(`[MediaStream] Call ended: ${session.streamSid}`);
 
@@ -150,6 +169,8 @@ async function handleStop(session: CallSession): Promise<void> {
   if (!session.verified || !session.merchantId) return;
 
   const durationSeconds = Math.floor((Date.now() - session.startedAt.getTime()) / 1000);
+  const outcome = deriveOutcome(session.toolsCalled);
+  console.log(`[MediaStream] Call outcome: ${outcome} (tools: ${[...session.toolsCalled].join(', ') || 'none'})`);
 
   try {
     await saveCallRecord({
@@ -161,6 +182,7 @@ async function handleStop(session: CallSession): Promise<void> {
         .map((t) => `${t.speaker}: ${t.text}`)
         .join('\n'),
       durationSeconds,
+      outcome,
     });
   } catch (error) {
     console.error('[MediaStream] Failed to save call record:', error);

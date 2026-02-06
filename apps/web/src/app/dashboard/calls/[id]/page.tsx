@@ -162,18 +162,27 @@ function parseTranscript(transcript: string): TranscriptEntry[] {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const getStyle = (s: string) => {
-    switch (s) {
-      case 'completed':
-      case 'answered': return 'bg-green-100 text-green-800';
-      case 'missed': return 'bg-red-100 text-red-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const styles: Record<string, string> = {
+    booking: 'bg-green-100 text-green-800',
+    message: 'bg-blue-100 text-blue-800',
+    cancellation: 'bg-orange-100 text-orange-800',
+    transfer: 'bg-purple-100 text-purple-800',
+    missed: 'bg-red-100 text-red-800',
+    completed: 'bg-green-100 text-green-800',
+    answered: 'bg-green-100 text-green-800',
+  };
+  const labels: Record<string, string> = {
+    booking: 'Booking',
+    message: 'Message',
+    cancellation: 'Cancellation',
+    transfer: 'Transfer',
+    missed: 'Missed',
+    completed: 'Completed',
+    answered: 'Answered',
   };
   return (
-    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStyle(status)}`}>
-      {status.replace('_', ' ')}
+    <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
+      {labels[status] || status}
     </span>
   );
 }
