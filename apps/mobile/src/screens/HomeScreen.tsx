@@ -21,7 +21,7 @@ interface RecentCall {
   caller_phone: string;
   started_at: string;
   duration_seconds: number | null;
-  status: string;
+  outcome: string;
 }
 
 export function HomeScreen() {
@@ -156,16 +156,16 @@ export function HomeScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    { backgroundColor: call.status === 'completed' ? '#D1FAE5' : '#FEE2E2' },
+                    { backgroundColor: call.outcome === 'completed' ? '#D1FAE5' : '#FEE2E2' },
                   ]}
                 >
                   <Text
                     style={[
                       styles.statusText,
-                      { color: call.status === 'completed' ? '#065F46' : '#991B1B' },
+                      { color: call.outcome === 'completed' ? '#065F46' : '#991B1B' },
                     ]}
                   >
-                    {call.status}
+                    {call.outcome}
                   </Text>
                 </View>
               </View>

@@ -80,9 +80,9 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('merchants')
           .update({
-            subscription_status: 'active',
-            subscription_tier: tierId,
-            subscription_ends_at: event.expiration_at_ms
+            plan_status: 'active',
+            plan_tier: tierId,
+            trial_ends_at: event.expiration_at_ms
               ? new Date(event.expiration_at_ms).toISOString()
               : null,
             billing_period_start: new Date(event.event_timestamp_ms).toISOString(),
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('merchants')
           .update({
-            subscription_status: event.expiration_at_ms && event.expiration_at_ms > Date.now()
+            plan_status: event.expiration_at_ms && event.expiration_at_ms > Date.now()
               ? 'active' // Still in paid period
               : 'cancelled',
             updated_at: new Date().toISOString(),
@@ -114,8 +114,8 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('merchants')
           .update({
-            subscription_status: 'expired',
-            subscription_ends_at: new Date().toISOString(),
+            plan_status: 'expired',
+            trial_ends_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq('id', merchantId);
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('merchants')
           .update({
-            subscription_status: 'past_due',
+            plan_status: 'past_due',
             updated_at: new Date().toISOString(),
           })
           .eq('id', merchantId);
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('merchants')
           .update({
-            subscription_tier: tierId,
+            plan_tier: tierId,
             updated_at: new Date().toISOString(),
           })
           .eq('id', merchantId);

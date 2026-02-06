@@ -5,14 +5,11 @@ interface AppointmentRecord {
   service_name: string;
   start_time: string;
   end_time: string;
-  status: string;
+  status: string | null;
   notes: string | null;
-  customers: {
-    id: string;
-    name: string | null;
-    phone: string;
-    email: string | null;
-  } | null;
+  created_at: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  customers: any;
 }
 
 export default async function AppointmentsPage() {
@@ -21,15 +18,15 @@ export default async function AppointmentsPage() {
 
   if (!user) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: appointments } = await (supabase as any)
+  const { data: appointments } = await supabase
     .from('appointments')
     .select('*, customers(id, name, phone, email)')
     .eq('merchant_id', user.id)
     .order('start_time', { ascending: true });
 
   // Group appointments by date
-  const groupedAppointments = groupByDate(appointments || []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const groupedAppointments = groupByDate((appointments || []) as any as AppointmentRecord[]);
   const today = new Date().toDateString();
 
   return (
@@ -82,7 +79,7 @@ export default async function AppointmentsPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <StatusBadge status={apt.status} />
+                          <StatusBadge status={apt.status || 'pending'} />
                           <button className="text-gray-400 hover:text-gray-600">
                             <MoreIcon className="w-5 h-5" />
                           </button>

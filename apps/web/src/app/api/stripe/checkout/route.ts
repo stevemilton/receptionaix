@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get or create Stripe customer
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: merchant } = await (supabase as any)
+    const { data: merchant } = await supabase
       .from('merchants')
       .select('stripe_customer_id, email, business_name')
       .eq('id', user.id)
@@ -49,8 +48,7 @@ export async function POST(request: NextRequest) {
       customerId = customer.id;
 
       // Save customer ID
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
+      await supabase
         .from('merchants')
         .update({ stripe_customer_id: customerId })
         .eq('id', user.id);

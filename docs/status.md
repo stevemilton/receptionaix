@@ -1,7 +1,7 @@
 # ReceptionAI - Project Status
 
-**Last updated:** 2026-02-05
-**Phase:** Post Phase 9 — Security hardening substantially complete, pre-production polish remaining
+**Last updated:** 2026-02-06
+**Phase:** Post Phase 9 — Security hardening complete, type system regenerated, pre-production polish remaining
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## Security Hardening Progress
 
-Six hardening batches have been completed across commits `97440b7` through `d294feb`:
+Nine hardening batches have been completed across commits `97440b7` through current:
 
 ### Batch 1: Critical Vulnerabilities (commit `97440b7`)
 - [x] **Merchant impersonation** — Dashboard layout validates admin role before honoring `?impersonate=` param
@@ -72,20 +72,42 @@ Six hardening batches have been completed across commits `97440b7` through `d294
 - [x] Standardized service-role routes to use `createAdminClient()`
 - [x] Fixed `api-auth.ts` return type to reduce inline `as any` casts
 
+### Batch 9: Type System Regeneration & Column Alignment (2026-02-06)
+- [x] Regenerated `packages/types/src/database.ts` via `supabase gen types typescript`
+- [x] Added missing columns to types: `billing_period_start`, `stripe_overage_item_id`, `website` (from unapplied migration 007)
+- [x] Fixed column name mismatches vs live DB:
+  - `subscription_status` → `plan_status` (~17 files)
+  - `subscription_tier` → `plan_tier` (~10 files)
+  - `subscription_ends_at` → `trial_ends_at` (~12 files)
+  - `calls.status` → `calls.outcome` (6 files across web, mobile, relay)
+- [x] Removed ~30 `as any` casts from Supabase queries (admin, dashboard, API routes)
+- [x] Fixed nullable type safety across all dashboard and admin pages
+- [x] Upgraded `@supabase/ssr` from `0.1.0` → `0.8.0` (required for `supabase-js@2.91.1` type compatibility)
+- [x] Updated `api-auth.ts` return type from `AnySupabaseClient` to `TypedSupabaseClient`
+- [x] Added build-safe placeholder env vars for SSG in Supabase client creation
+
 ---
 
 ## Remaining Issues
 
-### Type System — `as any` Casts (~35 occurrences)
-- **Root cause:** Hand-written `packages/types/src/database.ts` lacks the `Relationships`, `CompositeTypes`, and other structures that `@supabase/supabase-js` v2.91 requires for typed PostgREST queries. All queries return `never` without `as any`.
-- **Fix:** Regenerate `database.ts` via `supabase gen types typescript` against the live project. This will resolve all ~35 occurrences in one shot.
-- **Workaround in place:** `api-auth.ts` returns `AnySupabaseClient` (typed as `any`), and service-role routes use `any`-typed lazy-init variables. The pattern is consistent and documented.
+### Justified `as any` Casts (~12 remaining)
+These casts are **intentional** — they query tables that exist in the live DB but are not included in the generated `database.ts` types. They will resolve when these tables are added to the DB schema or the types are extended.
 
-### Missing Tables in `database.ts`
-- `api_usage_daily`, `notification_log`, `business_types`, `master_*` tables are referenced in code but not defined in the hand-written type file. These will also be resolved by `supabase gen types`.
+| Table | Used In |
+|-------|---------|
+| `admin_users` | admin/login, dashboard/layout, admin/layout |
+| `messages` | dashboard/page |
+| `call_errors` | admin/health |
+| `api_usage_daily` | admin/page |
+| `notification_log` | cron/notifications |
 
-### Mobile `as any` Casts (2 occurrences)
-- `apps/mobile/src/screens/settings/KnowledgeBaseScreen.tsx` — Same root cause as web. Will be fixed when `database.ts` is regenerated.
+Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in the generated types (the RPC function `get_merchant_call_count` exists in the DB but isn't exposed in the generated types).
+
+### Unapplied Migration
+- Migration `007_billing_enforcement.sql` adds `billing_period_start` and `stripe_overage_item_id` columns. These were added to `database.ts` manually but the migration has **not been applied to the live Supabase DB**. Run `pnpm db:push` to apply.
+
+### `styled-jsx` Build Warning
+- 404/500 error pages fail during SSG due to a React version conflict in `styled-jsx`. This is a pre-existing dependency issue unrelated to the type system work. All actual app routes build correctly.
 
 ---
 

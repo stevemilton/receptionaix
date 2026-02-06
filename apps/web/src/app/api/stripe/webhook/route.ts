@@ -134,8 +134,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Update merchant with subscription info
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateData: Record<string, any> = {
-    subscription_status: 'active',
-    subscription_tier: tierId,
+    plan_status: 'active',
+    plan_tier: tierId,
     stripe_customer_id: session.customer as string,
     stripe_subscription_id: subscriptionId,
     updated_at: new Date().toISOString(),
@@ -189,9 +189,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   await getSupabase()
     .from('merchants')
     .update({
-      subscription_status: status,
-      subscription_tier: tier?.id || null,
-      subscription_ends_at: periodEnd
+      plan_status: status,
+      plan_tier: tier?.id || null,
+      trial_ends_at: periodEnd
         ? new Date(periodEnd * 1000).toISOString()
         : null,
       billing_period_start: periodStart
@@ -221,8 +221,8 @@ async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
   await getSupabase()
     .from('merchants')
     .update({
-      subscription_status: 'cancelled',
-      subscription_ends_at: new Date().toISOString(),
+      plan_status: 'cancelled',
+      trial_ends_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', merchant.id);
@@ -249,7 +249,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   await getSupabase()
     .from('merchants')
     .update({
-      subscription_status: 'active',
+      plan_status: 'active',
       updated_at: new Date().toISOString(),
     })
     .eq('id', merchant.id);
@@ -275,7 +275,7 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice) {
   await getSupabase()
     .from('merchants')
     .update({
-      subscription_status: 'past_due',
+      plan_status: 'past_due',
       updated_at: new Date().toISOString(),
     })
     .eq('id', merchant.id);

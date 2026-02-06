@@ -34,7 +34,7 @@ interface MerchantInfo {
   forward_phone: string | null;
   greeting: string | null;
   voice_id: string | null;
-  subscription_status: string;
+  plan_status: string;
   notifications_enabled: boolean;
   google_calendar_connected: boolean;
 }
@@ -76,7 +76,7 @@ export function SettingsScreen() {
     try {
       const { data } = await supabase
         .from('merchants')
-        .select('business_name, business_type, address, phone, twilio_phone_number, forward_phone, greeting, voice_id, subscription_status, notifications_enabled, google_calendar_connected')
+        .select('business_name, business_type, address, phone, twilio_phone_number, forward_phone, greeting, voice_id, plan_status, notifications_enabled, google_calendar_connected')
         .eq('id', user.id)
         .single();
 
@@ -134,16 +134,16 @@ export function SettingsScreen() {
     if (rcTier) {
       return rcTier.charAt(0).toUpperCase() + rcTier.slice(1);
     }
-    if (merchant?.subscription_status === 'active') return 'Active';
-    if (merchant?.subscription_status === 'trial') return 'Trial';
+    if (merchant?.plan_status === 'active') return 'Active';
+    if (merchant?.plan_status === 'trial') return 'Trial';
     return 'Inactive';
   };
 
   const getStatusColor = () => {
-    if (rcActive || merchant?.subscription_status === 'active') {
+    if (rcActive || merchant?.plan_status === 'active') {
       return { bg: '#D1FAE5', text: '#065F46' };
     }
-    if (merchant?.subscription_status === 'trial') {
+    if (merchant?.plan_status === 'trial') {
       return { bg: '#DBEAFE', text: '#1E40AF' };
     }
     return { bg: '#FEE2E2', text: '#991B1B' };

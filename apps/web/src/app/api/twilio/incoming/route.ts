@@ -91,10 +91,9 @@ export async function POST(request: Request) {
   const supabase = createAdminClient();
 
   // Fetch merchant with subscription + billing fields
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: merchant, error } = await (supabase as any)
+  const { data: merchant, error } = await supabase
     .from('merchants')
-    .select('id, business_name, subscription_status, subscription_tier, subscription_ends_at, forward_phone, phone, billing_period_start')
+    .select('id, business_name, plan_status, plan_tier, trial_ends_at, forward_phone, phone, billing_period_start')
     .eq('twilio_phone_number', to)
     .single();
 
@@ -105,12 +104,12 @@ export async function POST(request: Request) {
     );
   }
 
-  console.log(`[Twilio Incoming] Merchant found: ${merchant.business_name} (${merchant.id}), status: ${merchant.subscription_status}`);
+  console.log(`[Twilio Incoming] Merchant found: ${merchant.business_name} (${merchant.id}), status: ${merchant.plan_status}`);
 
   const fallbackPhone = merchant.forward_phone || merchant.phone;
 
   // --- Subscription validity check ---
-  const status = merchant.subscription_status as string;
+  const status = merchant.plan_status as string;
 
   // Cancelled or expired → forward immediately
   if (status === 'cancelled' || status === 'expired') {
@@ -120,8 +119,8 @@ export async function POST(request: Request) {
   }
 
   // Trial with expired end date → forward
-  if (status === 'trial' && merchant.subscription_ends_at) {
-    const trialEnd = new Date(merchant.subscription_ends_at);
+  if (status === 'trial' && merchant.trial_ends_at) {
+    const trialEnd = new Date(merchant.trial_ends_at);
     if (trialEnd < new Date()) {
       console.log(`[Twilio Incoming] Trial expired — forwarding to ${fallbackPhone || 'unavailable'}`);
       if (fallbackPhone) return forwardCall(fallbackPhone);
@@ -132,7 +131,7 @@ export async function POST(request: Request) {
   // past_due → allow (grace period), active/trial → continue to limit check
 
   // --- Call limit check ---
-  const tier = merchant.subscription_tier ? getTierById(merchant.subscription_tier) : null;
+  const tier = merchant.plan_tier ? getTierById(merchant.plan_tier) : null;
   const callLimit = tier ? tier.limits.callsPerMonth : TRIAL_CALL_LIMIT;
   const isUnlimited = callLimit === -1;
 

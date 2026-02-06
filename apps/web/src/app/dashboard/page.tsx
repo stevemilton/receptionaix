@@ -9,35 +9,33 @@ export default async function DashboardPage() {
     return null; // Layout handles redirect
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any;
-
   // Fetch merchant data
-  const { data: merchant } = await supabaseAny
+  const { data: merchant } = await supabase
     .from('merchants')
     .select('id, business_name')
     .eq('id', user.id)
     .single();
 
   // Fetch subscription info for usage widget
-  const { data: merchantSub } = await supabaseAny
+  const { data: merchantSub } = await supabase
     .from('merchants')
-    .select('subscription_status, subscription_tier, billing_period_start')
+    .select('plan_status, plan_tier, billing_period_start')
     .eq('id', user.id)
     .single();
 
   // Fetch metrics
   const [callsResult, appointmentsResult, messagesResult] = await Promise.all([
-    supabaseAny
+    supabase
       .from('calls')
       .select('id, duration_seconds', { count: 'exact' })
       .eq('merchant_id', user.id),
-    supabaseAny
+    supabase
       .from('appointments')
       .select('id', { count: 'exact' })
       .eq('merchant_id', user.id)
       .eq('status', 'confirmed'),
-    supabaseAny
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
       .from('messages')
       .select('id', { count: 'exact' })
       .eq('merchant_id', user.id)
@@ -49,7 +47,7 @@ export default async function DashboardPage() {
   const unreadMessages = messagesResult.count || 0;
 
   // Calculate average call duration
-  const callDurations = callsResult.data?.map((c: { duration_seconds: number }) => c.duration_seconds || 0) || [];
+  const callDurations = callsResult.data?.map((c: { duration_seconds: number | null }) => c.duration_seconds || 0) || [];
   const avgDuration = callDurations.length > 0
     ? Math.round(callDurations.reduce((a: number, b: number) => a + b, 0) / callDurations.length)
     : 0;
@@ -60,7 +58,8 @@ export default async function DashboardPage() {
   let billingCalls = 0;
   let billingCallLimit = 0;
   if (merchantSub?.billing_period_start) {
-    const { data: billingUsage } = await supabaseAny
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: billingUsage } = await (supabase as any)
       .rpc('get_merchant_call_count', {
         p_merchant_id: user.id,
         p_period_start: merchantSub.billing_period_start,
@@ -71,21 +70,21 @@ export default async function DashboardPage() {
     }
   }
   // Determine limit based on tier
-  if (merchantSub?.subscription_tier === 'starter') billingCallLimit = 80;
-  else if (merchantSub?.subscription_tier === 'professional') billingCallLimit = 400;
-  else if (merchantSub?.subscription_tier === 'enterprise') billingCallLimit = -1;
+  if (merchantSub?.plan_tier === 'starter') billingCallLimit = 80;
+  else if (merchantSub?.plan_tier === 'professional') billingCallLimit = 400;
+  else if (merchantSub?.plan_tier === 'enterprise') billingCallLimit = -1;
   else billingCallLimit = 400; // trial default
 
   // Fetch recent calls
-  const { data: recentCalls } = await supabaseAny
+  const { data: recentCalls } = await supabase
     .from('calls')
-    .select('id, caller_phone, started_at, duration_seconds, status')
+    .select('id, caller_phone, started_at, duration_seconds, outcome')
     .eq('merchant_id', user.id)
     .order('started_at', { ascending: false })
     .limit(5);
 
   // Fetch upcoming appointments
-  const { data: upcomingAppointments } = await supabaseAny
+  const { data: upcomingAppointments } = await supabase
     .from('appointments')
     .select('id, service_name, start_time, customers(name, phone)')
     .eq('merchant_id', user.id)
@@ -157,11 +156,11 @@ export default async function DashboardPage() {
                 <div key={call.id} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
                     <p className="font-medium text-gray-900">{formatPhone(call.caller_phone)}</p>
-                    <p className="text-sm text-gray-500">{formatDate(call.started_at)}</p>
+                    <p className="text-sm text-gray-500">{formatDate(call.started_at || '')}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-600">{formatDuration(call.duration_seconds)}</p>
-                    <StatusBadge status={call.status} />
+                    <StatusBadge status={call.outcome || 'unknown'} />
                   </div>
                 </div>
               ))}
@@ -181,7 +180,8 @@ export default async function DashboardPage() {
           </div>
           {upcomingAppointments && upcomingAppointments.length > 0 ? (
             <div className="space-y-3">
-              {upcomingAppointments.map((apt: AppointmentRecord) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {upcomingAppointments.map((apt: any) => (
                 <div key={apt.id} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
                     <p className="font-medium text-gray-900">{apt.service_name}</p>
@@ -208,9 +208,9 @@ export default async function DashboardPage() {
 interface CallRecord {
   id: string;
   caller_phone: string;
-  started_at: string;
+  started_at: string | null;
   duration_seconds: number | null;
-  status: string;
+  outcome: string | null;
 }
 
 interface AppointmentRecord {

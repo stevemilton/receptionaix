@@ -2,6 +2,7 @@ import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import type { Database } from '@receptionalx/types';
 
 // SecureStore adapter for native platforms (iOS/Android)
 const ExpoSecureStoreAdapter = {
@@ -44,7 +45,7 @@ const storageAdapter = Platform.OS === 'web' ? WebStorageAdapter : ExpoSecureSto
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: storageAdapter,
     autoRefreshToken: true,

@@ -95,7 +95,7 @@ Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 
 ### Current Phase: Post-Build — Production Readiness
 
-All 9 build phases are complete. Security hardening is substantially complete (8 batches, commits `97440b7`–`d294feb`). See `docs/status.md` for the detailed hardening checklist and `docs/handoff.md` for developer onboarding.
+All 9 build phases are complete. Security hardening is complete (9 batches). Type system has been regenerated from the live DB and all column mismatches resolved. See `docs/status.md` for the detailed hardening checklist and `docs/handoff.md` for developer onboarding.
 
 ---
 
@@ -202,9 +202,9 @@ All 9 build phases are complete. Security hardening is substantially complete (8
 
 ---
 
-## Security Hardening (Completed 2026-02-05)
+## Security Hardening (Completed 2026-02-06)
 
-Eight hardening batches have been completed. **All critical and high-priority security issues are resolved.** See `docs/status.md` for the full checklist with commit references.
+Nine hardening batches have been completed. **All critical and high-priority security issues are resolved.** See `docs/status.md` for the full checklist with commit references.
 
 ### What's Been Fixed
 - Merchant impersonation privilege escalation
@@ -219,13 +219,15 @@ Eight hardening batches have been completed. **All critical and high-priority se
 - Rate limiting on cost-sensitive endpoints
 - Request timeouts on all external API calls
 - Runtime param validation on relay tool handlers
+- Type system regenerated from live DB; column mismatches fixed
+- `@supabase/ssr` upgraded to 0.8.0 for type compatibility
 
 ### Remaining Technical Debt
 
 | Issue | Scope |
 |-------|-------|
-| `as any` casts (~35 occurrences) on Supabase queries | Regenerate `database.ts` via `supabase gen types typescript` |
-| Missing tables in `database.ts` (`api_usage_daily`, `notification_log`, etc.) | Same fix — `supabase gen types` |
+| `as any` casts (~12 justified) | Queries to tables not in generated types (`admin_users`, `messages`, `call_errors`, `api_usage_daily`, `notification_log`) |
+| Unapplied migration 007 | Run `pnpm db:push` to add `billing_period_start` and `stripe_overage_item_id` columns to live DB |
 
 ---
 
@@ -250,7 +252,7 @@ Eight hardening batches have been completed. **All critical and high-priority se
 ### Production Readiness
 - No test suite (test runner not configured)
 - Admin dev bypass (`ADMIN_DEV_BYPASS=true`) must never reach production
-- `database.ts` needs regeneration via `supabase gen types` to eliminate `as any` casts
+- Migration 007 must be applied to live DB (`pnpm db:push`)
 
 ---
 
@@ -657,7 +659,7 @@ pnpm deploy:relay     # Deploy to Fly.io
 ### When Picking Up This Project:
 1. Read `docs/handoff.md` for orientation
 2. Read `docs/status.md` for remaining issues
-3. Run `supabase gen types typescript` to fix all `as any` casts
+3. Run `pnpm db:push` to apply pending migration 007
 
 ### When Stuck:
 1. Check PRD for requirements
@@ -700,7 +702,7 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `packages/knowledge/src/pipeline.ts` | KB generation orchestration |
 | `packages/knowledge/src/extractor.ts` | Claude-based knowledge extraction |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
-| `packages/types/src/database.ts` | Supabase table types (hand-written, needs regeneration) |
+| `packages/types/src/database.ts` | Supabase table types (generated via `supabase gen types typescript`) |
 
 ---
 

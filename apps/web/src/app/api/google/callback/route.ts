@@ -84,8 +84,7 @@ export async function GET(request: Request) {
     // Encrypt tokens at rest if TOKEN_ENCRYPTION_KEY is configured
     const encrypted = encryptToken(tokenPayload);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    await supabase
       .from('merchants')
       .update({
         google_calendar_token: encrypted ?? tokenPayload,

@@ -13,7 +13,7 @@
     "@receptionalx/shared": "workspace:*",
     "@receptionalx/types": "workspace:*",
     "@receptionalx/ui": "workspace:*",
-    "@supabase/ssr": "^0.1.0",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.39.0",
     "clsx": "^2.1.0",
     "lucide-react": "^0.344.0",

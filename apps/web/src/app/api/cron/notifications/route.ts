@@ -49,13 +49,13 @@ export async function GET(request: NextRequest) {
 
     const { data: trialMerchants } = await getSupabase()
       .from('merchants')
-      .select('id, email, business_name, subscription_ends_at')
-      .eq('subscription_status', 'trial')
-      .not('subscription_ends_at', 'is', null);
+      .select('id, email, business_name, trial_ends_at')
+      .eq('plan_status', 'trial')
+      .not('trial_ends_at', 'is', null);
 
     if (trialMerchants) {
       for (const merchant of trialMerchants) {
-        const endDate = new Date(merchant.subscription_ends_at);
+        const endDate = new Date(merchant.trial_ends_at);
         const daysUntilEnd = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
         if (daysUntilEnd <= 0) {
@@ -113,14 +113,14 @@ export async function GET(request: NextRequest) {
     // --- Usage warnings (80%+ of call limit) ---
     const { data: activeMerchants } = await getSupabase()
       .from('merchants')
-      .select('id, email, business_name, subscription_tier, billing_period_start')
-      .in('subscription_status', ['active', 'trial'])
+      .select('id, email, business_name, plan_tier, billing_period_start')
+      .in('plan_status', ['active', 'trial'])
       .not('billing_period_start', 'is', null);
 
     if (activeMerchants) {
       for (const merchant of activeMerchants) {
-        const tier = merchant.subscription_tier
-          ? getTierById(merchant.subscription_tier)
+        const tier = merchant.plan_tier
+          ? getTierById(merchant.plan_tier)
           : null;
 
         const callLimit = tier ? tier.limits.callsPerMonth : 400;

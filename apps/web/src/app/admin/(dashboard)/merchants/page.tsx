@@ -8,9 +8,9 @@ interface Merchant {
   business_type: string | null;
   phone: string | null;
   twilio_phone_number: string | null;
-  subscription_status: string;
-  subscription_ends_at: string | null;
-  created_at: string;
+  plan_status: string | null;
+  trial_ends_at: string | null;
+  created_at: string | null;
 }
 
 export default async function MerchantsPage({
@@ -19,18 +19,16 @@ export default async function MerchantsPage({
   searchParams: { status?: string; search?: string };
 }) {
   const supabase = await createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any;
 
   // Build query
-  let query = supabaseAny
+  let query = supabase
     .from('merchants')
     .select('*')
     .order('created_at', { ascending: false });
 
   // Apply status filter
   if (searchParams.status && searchParams.status !== 'all') {
-    query = query.eq('subscription_status', searchParams.status);
+    query = query.eq('plan_status', searchParams.status);
   }
 
   // Apply search filter (sanitize to prevent PostgREST filter injection)
@@ -50,10 +48,10 @@ export default async function MerchantsPage({
     { count: activeCount },
     { count: cancelledCount },
   ] = await Promise.all([
-    supabaseAny.from('merchants').select('*', { count: 'exact', head: true }),
-    supabaseAny.from('merchants').select('*', { count: 'exact', head: true }).eq('subscription_status', 'trial'),
-    supabaseAny.from('merchants').select('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
-    supabaseAny.from('merchants').select('*', { count: 'exact', head: true }).eq('subscription_status', 'cancelled'),
+    supabase.from('merchants').select('*', { count: 'exact', head: true }),
+    supabase.from('merchants').select('*', { count: 'exact', head: true }).eq('plan_status', 'trial'),
+    supabase.from('merchants').select('*', { count: 'exact', head: true }).eq('plan_status', 'active'),
+    supabase.from('merchants').select('*', { count: 'exact', head: true }).eq('plan_status', 'cancelled'),
   ]);
 
   const currentStatus = searchParams.status || 'all';
@@ -142,19 +140,21 @@ export default async function MerchantsPage({
                     </p>
                   </td>
                   <td className="px-6 py-4">
-                    <StatusBadge status={merchant.subscription_status} />
-                    {merchant.subscription_ends_at && (
+                    <StatusBadge status={merchant.plan_status || 'unknown'} />
+                    {merchant.trial_ends_at && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Ends: {new Date(merchant.subscription_ends_at).toLocaleDateString('en-GB')}
+                        Ends: {new Date(merchant.trial_ends_at).toLocaleDateString('en-GB')}
                       </p>
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {new Date(merchant.created_at).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+                    {merchant.created_at
+                      ? new Date(merchant.created_at).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : 'N/A'}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <Link

@@ -27,18 +27,17 @@ export default function BillingPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from('merchants')
-      .select('subscription_status, subscription_tier, subscription_ends_at')
+      .select('plan_status, plan_tier, trial_ends_at')
       .eq('id', user.id)
       .single();
 
     if (data) {
       setSubscription({
-        status: data.subscription_status,
-        tier: data.subscription_tier,
-        ends_at: data.subscription_ends_at,
+        status: data.plan_status || 'trial',
+        tier: data.plan_tier,
+        ends_at: data.trial_ends_at,
       });
     }
     setLoading(false);

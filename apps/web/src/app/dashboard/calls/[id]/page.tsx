@@ -5,12 +5,12 @@ import { notFound } from 'next/navigation';
 interface CallRecord {
   id: string;
   caller_phone: string;
-  started_at: string;
+  started_at: string | null;
   ended_at: string | null;
   duration_seconds: number | null;
   transcript: string | null;
   summary: string | null;
-  status: string;
+  outcome: string | null;
   recording_url: string | null;
 }
 
@@ -25,8 +25,7 @@ export default async function CallDetailPage({
 
   if (!user) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: call, error } = await (supabase as any)
+  const { data: call, error } = await supabase
     .from('calls')
     .select('*')
     .eq('id', id)
@@ -54,7 +53,7 @@ export default async function CallDetailPage({
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Call Details</h1>
         <p className="text-gray-600">
-          {formatPhone(typedCall.caller_phone)} • {formatDateTime(typedCall.started_at)}
+          {formatPhone(typedCall.caller_phone)} • {formatDateTime(typedCall.started_at || '')}
         </p>
       </div>
 
@@ -70,7 +69,7 @@ export default async function CallDetailPage({
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Date & Time</dt>
-                <dd className="text-sm font-medium text-gray-900">{formatDateTime(typedCall.started_at)}</dd>
+                <dd className="text-sm font-medium text-gray-900">{formatDateTime(typedCall.started_at || '')}</dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Duration</dt>
@@ -78,7 +77,7 @@ export default async function CallDetailPage({
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Status</dt>
-                <dd><StatusBadge status={typedCall.status} /></dd>
+                <dd><StatusBadge status={typedCall.outcome || 'unknown'} /></dd>
               </div>
             </dl>
           </div>

@@ -6,7 +6,7 @@ interface CustomerRecord {
   phone: string;
   email: string | null;
   notes: string | null;
-  created_at: string;
+  created_at: string | null;
   appointment_count?: number;
   last_appointment?: string;
 }
@@ -17,32 +17,32 @@ export default async function CustomersPage() {
 
   if (!user) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any;
-
   // Fetch customers with appointment count
-  const { data: customers } = await supabaseAny
+  const { data: customers } = await supabase
     .from('customers')
     .select('*')
     .eq('merchant_id', user.id)
     .order('created_at', { ascending: false });
 
   // Get appointment counts per customer
-  const customerIds = customers?.map((c: CustomerRecord) => c.id) || [];
+  const customerIds = customers?.map((c) => c.id) || [];
   const { data: appointmentCounts } = customerIds.length > 0
-    ? await supabaseAny
+    ? await supabase
         .from('appointments')
         .select('customer_id')
         .in('customer_id', customerIds)
     : { data: [] };
 
   // Count appointments per customer
-  const countsMap = (appointmentCounts || []).reduce((acc: Record<string, number>, apt: { customer_id: string }) => {
-    acc[apt.customer_id] = (acc[apt.customer_id] || 0) + 1;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const countsMap = (appointmentCounts || []).reduce((acc: Record<string, number>, apt: any) => {
+    if (apt.customer_id) {
+      acc[apt.customer_id] = (acc[apt.customer_id] || 0) + 1;
+    }
     return acc;
   }, {});
 
-  const customersWithCounts = (customers || []).map((c: CustomerRecord) => ({
+  const customersWithCounts = (customers || []).map((c) => ({
     ...c,
     appointment_count: countsMap[c.id] || 0,
   }));
@@ -86,7 +86,7 @@ export default async function CustomersPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {customersWithCounts.map((customer: CustomerRecord) => (
+              {customersWithCounts.map((customer) => (
                 <tr key={customer.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
@@ -113,7 +113,7 @@ export default async function CustomersPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
-                      {new Date(customer.created_at).toLocaleDateString('en-GB', {
+                      {new Date(customer.created_at || '').toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',

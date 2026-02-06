@@ -19,7 +19,7 @@ interface Call {
   started_at: string;
   ended_at: string | null;
   duration_seconds: number | null;
-  status: string;
+  outcome: string;
   transcript: string | null;
   summary: string | null;
 }
@@ -60,9 +60,9 @@ export function CallsScreen() {
     >
       <View style={styles.callIcon}>
         <Ionicons
-          name={item.status === 'completed' ? 'call' : 'call-outline'}
+          name={item.outcome === 'completed' ? 'call' : 'call-outline'}
           size={24}
-          color={item.status === 'completed' ? '#10B981' : '#EF4444'}
+          color={item.outcome === 'completed' ? '#10B981' : '#EF4444'}
         />
       </View>
       <View style={styles.callContent}>
@@ -168,7 +168,7 @@ export function CallsScreen() {
                     styles.statusBadge,
                     {
                       backgroundColor:
-                        selectedCall.status === 'completed'
+                        selectedCall.outcome === 'completed'
                           ? '#D1FAE5'
                           : '#FEE2E2',
                     },
@@ -179,13 +179,13 @@ export function CallsScreen() {
                       styles.statusText,
                       {
                         color:
-                          selectedCall.status === 'completed'
+                          selectedCall.outcome === 'completed'
                             ? '#065F46'
                             : '#991B1B',
                       },
                     ]}
                   >
-                    {selectedCall.status}
+                    {selectedCall.outcome}
                   </Text>
                 </View>
               </View>

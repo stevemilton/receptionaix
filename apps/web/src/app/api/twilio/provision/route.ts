@@ -19,8 +19,7 @@ export async function POST(request: Request) {
   }
 
   // Rate limit: each merchant may only provision one phone number
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: merchant } = await (supabase as any)
+  const { data: merchant } = await supabase
     .from('merchants')
     .select('twilio_phone_number')
     .eq('id', user.id)

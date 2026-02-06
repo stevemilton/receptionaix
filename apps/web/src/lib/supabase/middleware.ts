@@ -8,8 +8,8 @@ export async function updateSession(request: NextRequest) {
   });
 
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
     {
       cookies: {
         get(name: string) {
@@ -81,20 +81,19 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/dashboard') &&
     !request.nextUrl.pathname.startsWith('/dashboard/billing')
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: merchant } = await (supabase as any)
+    const { data: merchant } = await supabase
       .from('merchants')
-      .select('subscription_status, subscription_ends_at')
+      .select('plan_status, trial_ends_at')
       .eq('id', user.id)
       .single();
 
     if (merchant) {
       const isExpired =
-        merchant.subscription_status === 'cancelled' ||
-        merchant.subscription_status === 'expired' ||
-        (merchant.subscription_status === 'trial' &&
-          merchant.subscription_ends_at &&
-          new Date(merchant.subscription_ends_at) < new Date());
+        merchant.plan_status === 'cancelled' ||
+        merchant.plan_status === 'expired' ||
+        (merchant.plan_status === 'trial' &&
+          merchant.trial_ends_at &&
+          new Date(merchant.trial_ends_at) < new Date());
 
       if (isExpired) {
         const url = request.nextUrl.clone();

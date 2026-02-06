@@ -17,8 +17,7 @@ export async function POST(request: Request) {
     }
 
     // Get merchant's Stripe customer ID
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: merchant } = await (supabase as any)
+    const { data: merchant } = await supabase
       .from('merchants')
       .select('stripe_customer_id')
       .eq('id', user.id)

@@ -39,17 +39,16 @@ export default function KnowledgePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from('knowledge_bases')
       .select('*')
       .eq('merchant_id', user.id)
       .single();
 
     if (data) {
-      setServices(Array.isArray(data.services) ? data.services : []);
-      setFaqs(Array.isArray(data.faqs) ? data.faqs : []);
-      setOpeningHours(data.opening_hours || getDefaultHours());
+      setServices(Array.isArray(data.services) ? (data.services as unknown as Service[]) : []);
+      setFaqs(Array.isArray(data.faqs) ? (data.faqs as unknown as FAQ[]) : []);
+      setOpeningHours(data.opening_hours ? (data.opening_hours as unknown as Record<string, string>) : getDefaultHours());
     } else {
       setOpeningHours(getDefaultHours());
     }

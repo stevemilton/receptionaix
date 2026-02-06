@@ -5,16 +5,16 @@ import Link from 'next/link';
 interface Call {
   id: string;
   caller_phone: string;
-  started_at: string;
+  started_at: string | null;
   duration_seconds: number | null;
-  status: string;
+  outcome: string | null;
 }
 
 interface Appointment {
   id: string;
   service_name: string;
   start_time: string;
-  status: string;
+  status: string | null;
 }
 
 export default async function MerchantDetailPage({
@@ -23,11 +23,9 @@ export default async function MerchantDetailPage({
   params: { id: string };
 }) {
   const supabase = await createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any;
 
   // Get merchant details
-  const { data: merchant, error } = await supabaseAny
+  const { data: merchant, error } = await supabase
     .from('merchants')
     .select('*')
     .eq('id', params.id)
@@ -46,12 +44,12 @@ export default async function MerchantDetailPage({
     { count: totalAppointments },
     { count: totalCustomers },
   ] = await Promise.all([
-    supabaseAny.from('knowledge_bases').select('*').eq('merchant_id', params.id).single(),
-    supabaseAny.from('calls').select('*').eq('merchant_id', params.id).order('started_at', { ascending: false }).limit(5),
-    supabaseAny.from('appointments').select('*').eq('merchant_id', params.id).order('start_time', { ascending: false }).limit(5),
-    supabaseAny.from('calls').select('*', { count: 'exact', head: true }).eq('merchant_id', params.id),
-    supabaseAny.from('appointments').select('*', { count: 'exact', head: true }).eq('merchant_id', params.id),
-    supabaseAny.from('customers').select('*', { count: 'exact', head: true }).eq('merchant_id', params.id),
+    supabase.from('knowledge_bases').select('*').eq('merchant_id', params.id).single(),
+    supabase.from('calls').select('*').eq('merchant_id', params.id).order('started_at', { ascending: false }).limit(5),
+    supabase.from('appointments').select('*').eq('merchant_id', params.id).order('start_time', { ascending: false }).limit(5),
+    supabase.from('calls').select('*', { count: 'exact', head: true }).eq('merchant_id', params.id),
+    supabase.from('appointments').select('*', { count: 'exact', head: true }).eq('merchant_id', params.id),
+    supabase.from('customers').select('*', { count: 'exact', head: true }).eq('merchant_id', params.id),
   ]);
 
   return (
@@ -67,7 +65,7 @@ export default async function MerchantDetailPage({
         </div>
         <div className="flex items-center gap-3">
           <ImpersonateButton merchantId={merchant.id} />
-          <StatusBadge status={merchant.subscription_status} />
+          <StatusBadge status={merchant.plan_status || 'unknown'} />
         </div>
       </div>
 
@@ -103,11 +101,13 @@ export default async function MerchantDetailPage({
               <div>
                 <dt className="text-sm text-gray-500">Created</dt>
                 <dd className="font-medium">
-                  {new Date(merchant.created_at).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                  {merchant.created_at
+                    ? new Date(merchant.created_at).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })
+                    : 'N/A'}
                 </dd>
               </div>
             </dl>
@@ -121,17 +121,19 @@ export default async function MerchantDetailPage({
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Services</h3>
                   <div className="flex flex-wrap gap-2">
-                    {knowledgeBase.services?.map((service: { name: string }, i: number) => (
-                      <span key={i} className="px-3 py-1 bg-gray-100 rounded-full text-sm">
-                        {service.name}
-                      </span>
-                    )) || <span className="text-gray-500">No services defined</span>}
+                    {Array.isArray(knowledgeBase.services)
+                      ? (knowledgeBase.services as unknown as Array<{ name: string }>).map((service, i: number) => (
+                          <span key={i} className="px-3 py-1 bg-gray-100 rounded-full text-sm">
+                            {service.name}
+                          </span>
+                        ))
+                      : <span className="text-gray-500">No services defined</span>}
                   </div>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">FAQs</h3>
                   <p className="text-sm text-gray-600">
-                    {knowledgeBase.faqs?.length || 0} FAQs configured
+                    {Array.isArray(knowledgeBase.faqs) ? knowledgeBase.faqs.length : 0} FAQs configured
                   </p>
                 </div>
               </div>
@@ -153,14 +155,14 @@ export default async function MerchantDetailPage({
                     <div>
                       <p className="font-medium">{call.caller_phone}</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(call.started_at).toLocaleString('en-GB')}
+                        {call.started_at ? new Date(call.started_at).toLocaleString('en-GB') : 'N/A'}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm">
                         {call.duration_seconds ? `${Math.floor(call.duration_seconds / 60)}m ${call.duration_seconds % 60}s` : '-'}
                       </p>
-                      <p className="text-xs text-gray-500">{call.status}</p>
+                      <p className="text-xs text-gray-500">{call.outcome || 'unknown'}</p>
                     </div>
                   </div>
                 ))}
@@ -198,13 +200,13 @@ export default async function MerchantDetailPage({
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-500">Status</p>
-                <StatusBadge status={merchant.subscription_status} />
+                <StatusBadge status={merchant.plan_status || 'unknown'} />
               </div>
-              {merchant.subscription_ends_at && (
+              {merchant.trial_ends_at && (
                 <div>
                   <p className="text-sm text-gray-500">Ends</p>
                   <p className="font-medium">
-                    {new Date(merchant.subscription_ends_at).toLocaleDateString('en-GB')}
+                    {new Date(merchant.trial_ends_at).toLocaleDateString('en-GB')}
                   </p>
                 </div>
               )}

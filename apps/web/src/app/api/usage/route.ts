@@ -18,13 +18,10 @@ export async function GET() {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabaseAny = supabase as any;
-
     // Fetch merchant subscription data
-    const { data: merchant, error: merchantError } = await supabaseAny
+    const { data: merchant, error: merchantError } = await supabase
       .from('merchants')
-      .select('subscription_status, subscription_tier, billing_period_start, subscription_ends_at')
+      .select('plan_status, plan_tier, billing_period_start, trial_ends_at')
       .eq('id', user.id)
       .single();
 
@@ -33,8 +30,8 @@ export async function GET() {
     }
 
     // Determine tier and limits
-    const tier: PricingTier | undefined = merchant.subscription_tier
-      ? getTierById(merchant.subscription_tier)
+    const tier: PricingTier | undefined = merchant.plan_tier
+      ? getTierById(merchant.plan_tier)
       : undefined;
 
     const callsLimit = tier ? tier.limits.callsPerMonth : DEFAULT_CALLS_LIMIT;
@@ -42,9 +39,9 @@ export async function GET() {
     const overageRate = tier?.overageRate ?? 0.50;
 
     // Calculate billing period
-    const periodStart = merchant.billing_period_start || merchant.subscription_ends_at
+    const periodStart = merchant.billing_period_start || merchant.trial_ends_at
       ? new Date(
-          new Date(merchant.subscription_ends_at || Date.now()).getTime() - 30 * 24 * 60 * 60 * 1000
+          new Date(merchant.trial_ends_at || Date.now()).getTime() - 30 * 24 * 60 * 60 * 1000
         ).toISOString()
       : new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
@@ -52,7 +49,8 @@ export async function GET() {
     let callsUsed = 0;
     let minutesUsed = 0;
 
-    const { data: usage, error: usageError } = await supabaseAny
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: usage, error: usageError } = await (supabase as any)
       .rpc('get_merchant_call_count', {
         p_merchant_id: user.id,
         p_period_start: periodStart,
@@ -71,12 +69,12 @@ export async function GET() {
 
     // Calculate billing period end (30 days from start)
     const periodStartDate = new Date(periodStart);
-    const periodEndDate = merchant.subscription_ends_at
-      ? new Date(merchant.subscription_ends_at)
+    const periodEndDate = merchant.trial_ends_at
+      ? new Date(merchant.trial_ends_at)
       : new Date(periodStartDate.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     // Get daily breakdown for the chart (last 30 days)
-    const { data: dailyCalls } = await supabaseAny
+    const { data: dailyCalls } = await supabase
       .from('calls')
       .select('started_at, duration_seconds')
       .eq('merchant_id', user.id)
@@ -88,12 +86,13 @@ export async function GET() {
     const dailyBreakdown: Record<string, { calls: number; minutes: number }> = {};
     if (dailyCalls) {
       for (const call of dailyCalls) {
+        if (!call.started_at) continue;
         const day = new Date(call.started_at).toISOString().split('T')[0];
         if (!dailyBreakdown[day]) {
           dailyBreakdown[day] = { calls: 0, minutes: 0 };
         }
         dailyBreakdown[day].calls++;
-        dailyBreakdown[day].minutes += (call.duration_seconds || 0) / 60;
+        dailyBreakdown[day].minutes += (call.duration_seconds ?? 0) / 60;
       }
     }
 
@@ -105,7 +104,7 @@ export async function GET() {
       billingPeriodStart: periodStart,
       billingPeriodEnd: periodEndDate.toISOString(),
       tier: tier ? { id: tier.id, name: tier.name } : null,
-      subscriptionStatus: merchant.subscription_status,
+      subscriptionStatus: merchant.plan_status,
       overageCalls,
       overageCharges,
       overageRate,

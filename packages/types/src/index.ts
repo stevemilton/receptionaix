@@ -1,13 +1,14 @@
-export type { Database } from './database.js';
+export type { Database, Json, Tables, TablesInsert, TablesUpdate } from './database.js';
 
 // Row type aliases for common tables
-type Tables = import('./database.js').Database['public']['Tables'];
-export type MerchantRow = Tables['merchants']['Row'];
-export type MerchantInsert = Tables['merchants']['Insert'];
-export type MerchantUpdate = Tables['merchants']['Update'];
-export type CallRow = Tables['calls']['Row'];
-export type CustomerRow = Tables['customers']['Row'];
-export type AppointmentRow = Tables['appointments']['Row'];
-export type MessageRow = Tables['messages']['Row'];
-export type KnowledgeBaseRow = Tables['knowledge_bases']['Row'];
-export type AdminUserRow = Tables['admin_users']['Row'];
+type DbTables = import('./database.js').Database['public']['Tables'];
+export type MerchantRow = DbTables['merchants']['Row'];
+export type MerchantInsert = DbTables['merchants']['Insert'];
+export type MerchantUpdate = DbTables['merchants']['Update'];
+export type CallRow = DbTables['calls']['Row'];
+export type CustomerRow = DbTables['customers']['Row'];
+export type AppointmentRow = DbTables['appointments']['Row'];
+export type KnowledgeBaseRow = DbTables['knowledge_bases']['Row'];
+export type ServiceRow = DbTables['services']['Row'];
+export type FaqRow = DbTables['faqs']['Row'];
+export type OnboardingSessionRow = DbTables['onboarding_sessions']['Row'];

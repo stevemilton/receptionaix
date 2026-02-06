@@ -50,8 +50,7 @@ export default async function DashboardLayout({
     // If not admin, ignore the impersonate param and show their own dashboard
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: merchant } = await (supabase as any)
+  const { data: merchant } = await supabase
     .from('merchants')
     .select('id, business_name, onboarding_completed')
     .eq('id', merchantId)

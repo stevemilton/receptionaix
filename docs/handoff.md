@@ -1,7 +1,7 @@
 # ReceptionAI - Developer Handoff
 
-**Date:** 2026-02-05
-**Status:** All 9 build phases complete. Security hardening substantially complete. Type regeneration and feature gaps remain.
+**Date:** 2026-02-06
+**Status:** All 9 build phases complete. Security hardening complete. Type system regenerated. Feature gaps remain (Google Calendar, push notifications, mobile device testing).
 
 This document is for any developer picking up this codebase. Read this first, then `CLAUDE.md` for architecture details, then `docs/status.md` for the current issue backlog.
 
@@ -147,7 +147,8 @@ Eight hardening batches have been completed. See `docs/status.md` for the detail
 - Request timeouts on external calls
 
 **Remaining technical debt:**
-- ~35 `as any` casts on Supabase queries — caused by hand-written `database.ts` that doesn't match `supabase-js` v2.91's PostgREST type requirements. Fix: run `supabase gen types typescript` against the live project.
+- ~12 justified `as any` casts on queries to tables not in the generated `database.ts` (`admin_users`, `messages`, `call_errors`, `api_usage_daily`, `notification_log`). These will resolve when those tables are added to the schema.
+- Migration `007_billing_enforcement.sql` needs to be applied to the live DB (`pnpm db:push`).
 
 ---
 
@@ -210,7 +211,7 @@ eas submit      # Submit to App Store / Play Store
 
 If picking this up for production deployment:
 
-1. **Regenerate Supabase types** — `supabase gen types typescript` to eliminate all ~35 `as any` casts
+1. **Apply pending migration** — `pnpm db:push` to add `billing_period_start` and `stripe_overage_item_id` columns
 2. **Integrate real Google Calendar** — replace mock slots in tool-handlers.ts
 3. **Build push notification backend** — Expo Push API integration
 4. **Set up a test suite** — at minimum, integration tests for API routes and relay
@@ -237,4 +238,4 @@ If picking this up for production deployment:
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |
 | `packages/knowledge/src/extractor.ts` | Claude-based KB extraction with output capping |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
-| `packages/types/src/database.ts` | Supabase table types (hand-written, needs regeneration) |
+| `packages/types/src/database.ts` | Supabase table types (generated via `supabase gen types typescript`) |

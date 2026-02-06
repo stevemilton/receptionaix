@@ -4,12 +4,12 @@ import Link from 'next/link';
 interface CallRecord {
   id: string;
   caller_phone: string;
-  started_at: string;
+  started_at: string | null;
   ended_at: string | null;
   duration_seconds: number | null;
   transcript: string | null;
   summary: string | null;
-  status: string;
+  outcome: string | null;
   recording_url: string | null;
 }
 
@@ -19,8 +19,7 @@ export default async function CallsPage() {
 
   if (!user) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: calls } = await (supabase as any)
+  const { data: calls } = await supabase
     .from('calls')
     .select('*')
     .eq('merchant_id', user.id)
@@ -57,7 +56,7 @@ export default async function CallsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {calls.map((call: CallRecord) => (
+              {calls.map((call) => (
                 <tr key={call.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -66,14 +65,14 @@ export default async function CallsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {new Date(call.started_at).toLocaleDateString('en-GB', {
+                      {new Date(call.started_at || '').toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
                       })}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {new Date(call.started_at).toLocaleTimeString('en-GB', {
+                      {new Date(call.started_at || '').toLocaleTimeString('en-GB', {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
@@ -83,7 +82,7 @@ export default async function CallsPage() {
                     {formatDuration(call.duration_seconds)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge status={call.status} />
+                    <StatusBadge status={call.outcome || 'unknown'} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <Link

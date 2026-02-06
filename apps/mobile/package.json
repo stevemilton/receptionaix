@@ -31,7 +31,8 @@
     "react-native-screens": "^4.20.0",
     "react-native-url-polyfill": "^3.0.0",
     "react-native-web": "^0.21.0",
-    "zustand": "^5.0.10"
+    "zustand": "^5.0.10",
+    "@receptionalx/types": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",

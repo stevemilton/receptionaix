@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     // Fetch merchant subscription data
     const { data: merchant, error: merchantError } = await supabase
       .from('merchants')
-      .select('subscription_tier, billing_period_start, stripe_overage_item_id')
+      .select('plan_tier, billing_period_start, stripe_overage_item_id')
       .eq('id', merchantId)
       .single();
 
@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ overage: false, reason: 'no_overage_tracking' });
     }
 
-    const tier = merchant.subscription_tier
-      ? getTierById(merchant.subscription_tier)
+    const tier = merchant.plan_tier
+      ? getTierById(merchant.plan_tier)
       : null;
 
     // Unlimited tier — no overage

@@ -11,11 +11,10 @@ interface CallError {
 
 export default async function SystemHealthPage() {
   const supabase = await createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any;
 
   // Get recent call errors
-  const { data: recentErrors } = await supabaseAny
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: recentErrors } = await (supabase as any)
     .from('call_errors')
     .select('*, merchants(business_name)')
     .order('created_at', { ascending: false })
@@ -25,13 +24,14 @@ export default async function SystemHealthPage() {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const { count: errorsLast24h } = await supabaseAny
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { count: errorsLast24h } = await (supabase as any)
     .from('call_errors')
     .select('*', { count: 'exact', head: true })
     .gte('created_at', yesterday.toISOString());
 
   // Get call stats (last 24 hours)
-  const { count: callsLast24h } = await supabaseAny
+  const { count: callsLast24h } = await supabase
     .from('calls')
     .select('*', { count: 'exact', head: true })
     .gte('started_at', yesterday.toISOString());

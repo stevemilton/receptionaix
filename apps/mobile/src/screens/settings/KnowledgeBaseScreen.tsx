@@ -61,7 +61,7 @@ export function KnowledgeBaseScreen() {
 
     console.log('[KnowledgeBaseScreen] Loading KB for user:', user.id);
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('knowledge_bases')
       .select('*')
       .eq('merchant_id', user.id)
@@ -87,7 +87,7 @@ export function KnowledgeBaseScreen() {
     if (!user) return;
     setSaving(true);
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('knowledge_bases')
       .upsert({
         merchant_id: user.id,

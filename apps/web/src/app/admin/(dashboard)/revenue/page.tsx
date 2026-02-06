@@ -7,19 +7,18 @@ interface SubscriptionStats {
 
 export default async function RevenueDashboardPage() {
   const supabase = await createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any;
 
   // Get subscription breakdown
-  const { data: merchants } = await supabaseAny
+  const { data: merchants } = await supabase
     .from('merchants')
-    .select('subscription_status, created_at');
+    .select('plan_status, created_at');
 
   // Calculate subscription stats
-  const subscriptionStats = (merchants || []).reduce((acc: Record<string, number>, m: { subscription_status: string }) => {
-    acc[m.subscription_status] = (acc[m.subscription_status] || 0) + 1;
+  const subscriptionStats: Record<string, number> = (merchants || []).reduce((acc: Record<string, number>, m: { plan_status: string | null }) => {
+    const status = m.plan_status || 'unknown';
+    acc[status] = (acc[status] || 0) + 1;
     return acc;
-  }, {});
+  }, {} as Record<string, number>);
 
   // Calculate monthly signups (last 6 months)
   const monthlySignups: { month: string; count: number }[] = [];
@@ -29,7 +28,8 @@ export default async function RevenueDashboardPage() {
     const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
     const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
-    const count = (merchants || []).filter((m: { created_at: string }) => {
+    const count = (merchants || []).filter((m: { created_at: string | null }) => {
+      if (!m.created_at) return false;
       const created = new Date(m.created_at);
       return created >= monthStart && created <= monthEnd;
     }).length;
@@ -95,11 +95,11 @@ export default async function RevenueDashboardPage() {
                   <span className="capitalize">{status}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="font-bold">{count as number}</span>
+                  <span className="font-bold">{count}</span>
                   <div className="w-32 bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full ${getStatusColor(status)}`}
-                      style={{ width: `${((count as number) / (merchants?.length || 1)) * 100}%` }}
+                      style={{ width: `${(count / (merchants?.length || 1)) * 100}%` }}
                     />
                   </div>
                 </div>

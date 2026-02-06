@@ -3,9 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 export default async function AdminOverviewPage() {
   const supabase = await createClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any;
-
   // Date ranges
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -29,39 +26,39 @@ export default async function AdminOverviewPage() {
     { count: callsThisWeek },
     { count: appointmentsThisMonth },
   ] = await Promise.all([
-    supabaseAny.from('merchants').select('*', { count: 'exact', head: true }),
-    supabaseAny.from('merchants').select('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
-    supabaseAny.from('merchants').select('*', { count: 'exact', head: true }).eq('subscription_status', 'trial'),
-    supabaseAny.from('calls').select('*', { count: 'exact', head: true }),
-    supabaseAny.from('appointments').select('*', { count: 'exact', head: true }),
-    supabaseAny.from('calls').select('*', { count: 'exact', head: true }).gte('started_at', today.toISOString()),
-    supabaseAny.from('calls').select('*', { count: 'exact', head: true }).gte('started_at', sevenDaysAgo.toISOString()),
-    supabaseAny.from('appointments').select('*', { count: 'exact', head: true }).gte('start_time', startOfMonth.toISOString()),
+    supabase.from('merchants').select('*', { count: 'exact', head: true }),
+    supabase.from('merchants').select('*', { count: 'exact', head: true }).eq('plan_status', 'active'),
+    supabase.from('merchants').select('*', { count: 'exact', head: true }).eq('plan_status', 'trial'),
+    supabase.from('calls').select('*', { count: 'exact', head: true }),
+    supabase.from('appointments').select('*', { count: 'exact', head: true }),
+    supabase.from('calls').select('*', { count: 'exact', head: true }).gte('started_at', today.toISOString()),
+    supabase.from('calls').select('*', { count: 'exact', head: true }).gte('started_at', sevenDaysAgo.toISOString()),
+    supabase.from('appointments').select('*', { count: 'exact', head: true }).gte('start_time', startOfMonth.toISOString()),
   ]);
 
   // Get business type breakdown
-  const { data: merchantsByType } = await supabaseAny
+  const { data: merchantsByType } = await supabase
     .from('merchants')
     .select('business_type');
 
-  const businessTypeBreakdown = (merchantsByType || []).reduce((acc: Record<string, number>, m: { business_type: string }) => {
+  const businessTypeBreakdown: Record<string, number> = (merchantsByType || []).reduce((acc: Record<string, number>, m: { business_type: string | null }) => {
     const type = m.business_type || 'Unknown';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
-  }, {});
+  }, {} as Record<string, number>);
 
   // Get call performance metrics (last 30 days)
-  const { data: recentCalls } = await supabaseAny
+  const { data: recentCalls } = await supabase
     .from('calls')
     .select('duration_seconds, started_at')
     .gte('started_at', thirtyDaysAgo.toISOString());
 
   const avgCallDuration = recentCalls && recentCalls.length > 0
-    ? Math.round(recentCalls.reduce((sum: number, c: { duration_seconds: number }) => sum + (c.duration_seconds || 0), 0) / recentCalls.length)
+    ? Math.round(recentCalls.reduce((sum: number, c: { duration_seconds: number | null }) => sum + (c.duration_seconds || 0), 0) / recentCalls.length)
     : 0;
 
   // Get appointments created from calls (conversion rate proxy)
-  const { count: appointmentsFromCalls } = await supabaseAny
+  const { count: appointmentsFromCalls } = await supabase
     .from('appointments')
     .select('*', { count: 'exact', head: true })
     .gte('created_at', thirtyDaysAgo.toISOString());
@@ -71,18 +68,19 @@ export default async function AdminOverviewPage() {
     : '0.0';
 
   // Get peak hours (from call data)
-  const peakHours = (recentCalls || []).reduce((acc: Record<number, number>, c: { started_at: string }) => {
+  const peakHours: Record<number, number> = (recentCalls || []).reduce((acc: Record<number, number>, c: { started_at: string | null }) => {
+    if (!c.started_at) return acc;
     const hour = new Date(c.started_at).getHours();
     acc[hour] = (acc[hour] || 0) + 1;
     return acc;
-  }, {});
+  }, {} as Record<number, number>);
 
-  const topPeakHour = Object.entries(peakHours as Record<string, number>).sort((a, b) => b[1] - a[1])[0];
+  const topPeakHour = Object.entries(peakHours).sort((a, b) => b[1] - a[1])[0];
 
   // Get recent signups
-  const { data: recentMerchants } = await supabaseAny
+  const { data: recentMerchants } = await supabase
     .from('merchants')
-    .select('id, business_name, email, business_type, subscription_status, created_at')
+    .select('id, business_name, email, business_type, plan_status, created_at')
     .gte('created_at', sevenDaysAgo.toISOString())
     .order('created_at', { ascending: false })
     .limit(10);
@@ -92,10 +90,10 @@ export default async function AdminOverviewPage() {
   const mrr = (activeMerchants || 0) * PRICE_PER_MONTH;
 
   // Get churn (merchants who cancelled in last 30 days)
-  const { count: churnedMerchants } = await supabaseAny
+  const { count: churnedMerchants } = await supabase
     .from('merchants')
     .select('*', { count: 'exact', head: true })
-    .eq('subscription_status', 'cancelled')
+    .eq('plan_status', 'cancelled')
     .gte('updated_at', thirtyDaysAgo.toISOString());
 
   const churnRate = activeMerchants && activeMerchants > 0
@@ -143,7 +141,7 @@ export default async function AdminOverviewPage() {
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <h2 className="text-lg font-semibold mb-4">Merchants by Business Type</h2>
           <div className="space-y-3">
-            {Object.entries(businessTypeBreakdown as Record<string, number>)
+            {Object.entries(businessTypeBreakdown)
               .sort((a, b) => b[1] - a[1])
               .slice(0, 8)
               .map(([type, count]) => {
@@ -200,7 +198,7 @@ export default async function AdminOverviewPage() {
           <div className="flex items-end space-x-1 h-20">
             {Array.from({ length: 24 }, (_, hour) => {
               const count = peakHours[hour] || 0;
-              const maxCount = Math.max(...Object.values(peakHours as Record<string, number>), 1);
+              const maxCount = Math.max(...Object.values(peakHours), 1);
               const height = (count / maxCount) * 100;
               return (
                 <div
@@ -250,7 +248,7 @@ export default async function AdminOverviewPage() {
       </div>
 
       {/* API Usage */}
-      <ApiUsageSection supabase={supabaseAny} totalMerchants={totalMerchants || 0} />
+      <ApiUsageSection supabase={supabase} totalMerchants={totalMerchants || 0} />
 
       {/* Recent Signups */}
       <div className="bg-white rounded-xl shadow-sm border">
@@ -266,9 +264,9 @@ export default async function AdminOverviewPage() {
               id: string;
               business_name: string;
               email: string;
-              business_type: string;
-              subscription_status: string;
-              created_at: string;
+              business_type: string | null;
+              plan_status: string | null;
+              created_at: string | null;
             }) => (
               <div key={merchant.id} className="px-6 py-4 flex items-center justify-between">
                 <div>
@@ -279,16 +277,16 @@ export default async function AdminOverviewPage() {
                 </div>
                 <div className="text-right">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                    merchant.subscription_status === 'active'
+                    merchant.plan_status === 'active'
                       ? 'bg-green-100 text-green-800'
-                      : merchant.subscription_status === 'trial'
+                      : merchant.plan_status === 'trial'
                       ? 'bg-blue-100 text-blue-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {merchant.subscription_status}
+                    {merchant.plan_status || 'unknown'}
                   </span>
                   <p className="text-xs text-gray-500 mt-1">
-                    {new Date(merchant.created_at).toLocaleDateString('en-GB')}
+                    {merchant.created_at ? new Date(merchant.created_at).toLocaleDateString('en-GB') : 'N/A'}
                   </p>
                 </div>
               </div>
@@ -333,7 +331,7 @@ function StatCard({
   );
 }
 
-async function ApiUsageSection({ supabase, totalMerchants }: { supabase: ReturnType<typeof createClient>; totalMerchants: number }) {
+async function ApiUsageSection({ supabase, totalMerchants }: { supabase: Awaited<ReturnType<typeof createClient>>; totalMerchants: number }) {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
