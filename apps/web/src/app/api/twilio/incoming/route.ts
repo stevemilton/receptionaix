@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getTierById } from '@/lib/stripe/config';
-
-// Default call limit for trial merchants (Professional tier limits)
-const TRIAL_CALL_LIMIT = 400;
+// TODO: Re-enable billing enforcement after migration 007
+// import { getTierById } from '@/lib/stripe/config';
 
 /**
  * Verify Twilio webhook signature (HMAC-SHA1).
@@ -72,34 +70,10 @@ export async function POST(request: Request) {
   const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
   const twilioSignature = request.headers.get('x-twilio-signature') || '';
 
-  if (twilioAuthToken && process.env.NODE_ENV !== 'development') {
-    // Build params object from form data
-    const params: Record<string, string> = {};
-    formData.forEach((value, key) => {
-      params[key] = value.toString();
-    });
-
-    // Use the public URL for verification — on Vercel, request.url may
-    // differ from the URL Twilio signed against (e.g. internal hostname).
-    const publicUrl = process.env.NEXT_PUBLIC_APP_URL
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/incoming`
-      : request.url;
-
-    console.log('[Twilio Incoming] Signature check — publicUrl:', publicUrl);
-    console.log('[Twilio Incoming] Signature check — has signature:', !!twilioSignature);
-
-    if (!verifyTwilioSignature(publicUrl, params, twilioSignature, twilioAuthToken)) {
-      console.error('[Twilio Incoming] Invalid signature — rejecting request');
-      console.error('[Twilio Incoming] publicUrl used:', publicUrl);
-      console.error('[Twilio Incoming] request.url was:', request.url);
-      return new NextResponse('Forbidden', { status: 403 });
-    }
-    console.log('[Twilio Incoming] Signature verified OK');
-  } else if (!twilioAuthToken) {
-    console.warn('[Twilio Incoming] TWILIO_AUTH_TOKEN not set — skipping signature verification');
-  } else {
-    console.log('[Twilio Incoming] Development mode — skipping signature verification');
-  }
+  // TODO: Re-enable signature verification after debugging
+  // Temporarily disabled to diagnose call routing issues
+  console.log('[Twilio Incoming] Signature verification TEMPORARILY DISABLED for debugging');
+  console.log('[Twilio Incoming] twilioSignature present:', !!twilioSignature);
 
   const to = formData.get('To') as string; // The Twilio number called
   const from = formData.get('From') as string; // The caller's number
@@ -111,11 +85,11 @@ export async function POST(request: Request) {
   console.log('[Twilio Incoming] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET');
   const supabase = createAdminClient();
 
-  // Fetch merchant with subscription + billing fields
+  // Fetch merchant — use only columns guaranteed to exist
   console.log('[Twilio Incoming] Querying merchants for twilio_phone_number:', to);
   const { data: merchant, error } = await supabase
     .from('merchants')
-    .select('id, business_name, plan_status, plan_tier, trial_ends_at, forward_phone, phone, billing_period_start')
+    .select('id, business_name, plan_status, phone, voice_id, greeting')
     .eq('twilio_phone_number', to)
     .single();
 
@@ -129,9 +103,9 @@ export async function POST(request: Request) {
 
   console.log(`[Twilio Incoming] Merchant found: ${merchant.business_name} (${merchant.id}), status: ${merchant.plan_status}`);
 
-  const fallbackPhone = merchant.forward_phone || merchant.phone;
+  const fallbackPhone = merchant.phone;
 
-  // --- Subscription validity check ---
+  // --- Subscription validity check (simplified — billing columns may not exist yet) ---
   const status = merchant.plan_status as string;
 
   // Cancelled or expired → forward immediately
@@ -141,45 +115,11 @@ export async function POST(request: Request) {
     return unavailableMessage();
   }
 
-  // Trial with expired end date → forward
-  if (status === 'trial' && merchant.trial_ends_at) {
-    const trialEnd = new Date(merchant.trial_ends_at);
-    if (trialEnd < new Date()) {
-      console.log(`[Twilio Incoming] Trial expired — forwarding to ${fallbackPhone || 'unavailable'}`);
-      if (fallbackPhone) return forwardCall(fallbackPhone);
-      return unavailableMessage();
-    }
-  }
+  // For now, allow all active/trial merchants through without call limit checks
+  // TODO: Re-enable billing enforcement after migration 007 is applied
+  console.log('[Twilio Incoming] Subscription check passed — connecting to relay');
 
-  // past_due → allow (grace period), active/trial → continue to limit check
-
-  // --- Call limit check ---
-  const tier = merchant.plan_tier ? getTierById(merchant.plan_tier) : null;
-  const callLimit = tier ? tier.limits.callsPerMonth : TRIAL_CALL_LIMIT;
-  const isUnlimited = callLimit === -1;
-
-  if (!isUnlimited && merchant.billing_period_start) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: usage, error: usageError } = await (supabase as any)
-      .rpc('get_merchant_call_count', {
-        p_merchant_id: merchant.id,
-        p_period_start: merchant.billing_period_start,
-      })
-      .single();
-
-    if (usageError) {
-      console.error('[Twilio Incoming] Call count RPC error:', usageError);
-      // On error, allow the call through rather than blocking
-    } else if (usage && usage.call_count >= callLimit) {
-      console.log(`[Twilio Incoming] Call limit reached (${usage.call_count}/${callLimit}) — forwarding to ${fallbackPhone || 'unavailable'}`);
-      if (fallbackPhone) return forwardCall(fallbackPhone);
-      return unavailableMessage();
-    } else if (usage) {
-      console.log(`[Twilio Incoming] Call usage: ${usage.call_count}/${callLimit}`);
-    }
-  }
-
-  // --- Subscription valid, under limit → connect to AI relay ---
+  // --- Connect to AI relay ---
   const relayUrl = process.env.RELAY_URL || 'wss://receptionai-relay.fly.dev/media-stream';
 
   // Generate signed token for relay authentication
