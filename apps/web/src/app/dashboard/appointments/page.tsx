@@ -1,178 +1,144 @@
 import { createClient } from '@/lib/supabase/server';
-
-interface AppointmentRecord {
-  id: string;
-  service_name: string;
-  start_time: string;
-  end_time: string;
-  status: string | null;
-  notes: string | null;
-  created_at: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  customers: any;
-}
+import {
+  formatPhone,
+  formatTime,
+  formatDateHeader,
+  AppointmentStatusBadge,
+  PageHeader,
+  EmptyState,
+  CalendarIcon,
+  ClockIcon,
+} from '../_components/shared';
 
 export default async function AppointmentsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return null;
 
+  // Fetch appointments with customer data, ordered by start_time
   const { data: appointments } = await supabase
     .from('appointments')
     .select('*, customers(id, name, phone, email)')
     .eq('merchant_id', user.id)
     .order('start_time', { ascending: true });
 
-  // Group appointments by date
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const groupedAppointments = groupByDate((appointments || []) as any as AppointmentRecord[]);
+  // Separate into upcoming and past
+  const now = new Date();
+  const upcoming = (appointments || []).filter(a => new Date(a.start_time) >= now && a.status !== 'cancelled');
+  const past = (appointments || []).filter(a => new Date(a.start_time) < now || a.status === 'cancelled');
+
+  // Group upcoming by date
+  const groupedUpcoming = groupByDate(upcoming);
   const today = new Date().toDateString();
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-        <p className="text-gray-600">Manage your calendar and bookings</p>
-      </div>
+    <div className="p-6 lg:p-8 max-w-5xl">
+      <PageHeader title="Appointments" subtitle="Bookings made through your AI receptionist" />
 
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-6">
-        <FilterButton active>All</FilterButton>
-        <FilterButton>Upcoming</FilterButton>
-        <FilterButton>Past</FilterButton>
-        <FilterButton>Cancelled</FilterButton>
-      </div>
-
-      {appointments && appointments.length > 0 ? (
-        <div className="space-y-8">
-          {Object.entries(groupedAppointments).map(([date, dayAppointments]) => (
-            <div key={date}>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
-                {formatDateHeader(date, today)}
-              </h2>
-              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <div className="divide-y divide-gray-200">
-                  {(dayAppointments as AppointmentRecord[]).map((apt) => (
-                    <div key={apt.id} className="p-4 hover:bg-gray-50">
-                      <div className="flex items-start justify-between">
-                        <div className="flex gap-4">
-                          <div className="text-center min-w-[60px]">
-                            <div className="text-lg font-semibold text-gray-900">
-                              {formatTime(apt.start_time)}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {formatTime(apt.end_time)}
-                            </div>
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-gray-900">{apt.service_name}</h3>
-                            <p className="text-sm text-gray-600">
-                              {apt.customers?.name || apt.customers?.phone || 'Unknown customer'}
-                            </p>
-                            {apt.customers?.phone && (
-                              <p className="text-sm text-gray-500">{apt.customers.phone}</p>
-                            )}
-                            {apt.notes && (
-                              <p className="text-sm text-gray-500 mt-1">{apt.notes}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <StatusBadge status={apt.status || 'pending'} />
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MoreIcon className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+      {/* Upcoming Section */}
+      {upcoming.length > 0 ? (
+        <div className="mb-10">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Upcoming</h2>
+          <div className="space-y-6">
+            {Object.entries(groupedUpcoming).map(([date, dayAppts]) => (
+              <div key={date}>
+                <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                  {formatDateHeader(date, today)}
+                </h3>
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="divide-y divide-gray-50">
+                    {dayAppts.map((apt) => (
+                      <AppointmentRow key={apt.id} appointment={apt} />
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-          <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No appointments yet</h3>
-          <p className="text-gray-500">
-            When customers book appointments through your AI receptionist, they will appear here.
-          </p>
+        <div className="mb-10">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Upcoming</h2>
+          <EmptyState
+            icon={CalendarIcon}
+            title="No upcoming appointments"
+            description="When customers book appointments through your AI receptionist, they will appear here."
+          />
+        </div>
+      )}
+
+      {/* Past Section */}
+      {past.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Past & Cancelled</h2>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="divide-y divide-gray-50">
+              {past.slice(0, 20).map((apt) => (
+                <AppointmentRow key={apt.id} appointment={apt} muted />
+              ))}
+            </div>
+          </div>
+          {past.length > 20 && (
+            <p className="text-xs text-gray-400 text-center mt-3">
+              Showing 20 of {past.length} past appointments
+            </p>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function FilterButton({ children, active }: { children: React.ReactNode; active?: boolean }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function AppointmentRow({ appointment: apt, muted }: { appointment: any; muted?: boolean }) {
   return (
-    <button
-      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-        active
-          ? 'bg-primary-100 text-primary-700'
-          : 'text-gray-600 hover:bg-gray-100'
-      }`}
-    >
-      {children}
-    </button>
+    <div className={`px-5 py-4 ${muted ? 'opacity-60' : ''}`}>
+      <div className="flex items-center gap-4">
+        {/* Time */}
+        <div className="w-16 flex-shrink-0 text-center">
+          <div className={`text-sm font-semibold ${muted ? 'text-gray-400' : 'text-gray-900'}`}>
+            {formatTime(apt.start_time)}
+          </div>
+          <div className="text-xs text-gray-400">
+            {formatTime(apt.end_time)}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="w-0.5 h-10 bg-gray-100 rounded-full flex-shrink-0" />
+
+        {/* Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-900">{apt.service_name}</span>
+            <AppointmentStatusBadge status={apt.status || 'pending'} />
+          </div>
+          <div className="text-xs text-gray-500 mt-0.5">
+            {apt.customers?.name || formatPhone(apt.customers?.phone || 'Unknown customer')}
+            {apt.customers?.phone && apt.customers?.name && (
+              <span className="text-gray-400"> &middot; {formatPhone(apt.customers.phone)}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Date (for past appointments) */}
+        {muted && (
+          <div className="text-xs text-gray-400 flex-shrink-0">
+            {new Date(apt.start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const getStyle = (s: string) => {
-    switch (s) {
-      case 'confirmed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      case 'completed': return 'bg-gray-100 text-gray-800';
-      case 'no_show': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-blue-100 text-blue-800';
-    }
-  };
-  return (
-    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStyle(status)}`}>
-      {status.replace('_', ' ')}
-    </span>
-  );
-}
-
-function groupByDate(appointments: AppointmentRecord[]): Record<string, AppointmentRecord[]> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function groupByDate(appointments: any[]): Record<string, any[]> {
   return appointments.reduce((groups, apt) => {
     const date = new Date(apt.start_time).toDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
+    if (!groups[date]) groups[date] = [];
     groups[date].push(apt);
     return groups;
-  }, {} as Record<string, AppointmentRecord[]>);
-}
-
-function formatDateHeader(dateStr: string, today: string): string {
-  if (dateStr === today) return 'Today';
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  if (dateStr === tomorrow.toDateString()) return 'Tomorrow';
-
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-}
-
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
-
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  );
-}
-
-function MoreIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-    </svg>
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }, {} as Record<string, any[]>);
 }

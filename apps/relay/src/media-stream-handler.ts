@@ -3,6 +3,7 @@ import { connectToGrok, type GrokConnection } from './grok-client.js';
 import { connectToMockGrok, isMockModeEnabled } from './mock-grok-client.js';
 import { executeToolCall } from './tool-handlers.js';
 import { saveCallRecord } from './supabase-client.js';
+import { runPostCallProcessing } from './post-call.js';
 import { verifyRelayToken } from './auth.js';
 // Audio conversion is no longer needed — Grok now uses audio/pcmu (μ-law 8kHz)
 // which is Twilio's native format. Audio passes straight through.
@@ -172,21 +173,33 @@ async function handleStop(session: CallSession): Promise<void> {
   const outcome = deriveOutcome(session.toolsCalled);
   console.log(`[MediaStream] Call outcome: ${outcome} (tools: ${[...session.toolsCalled].join(', ') || 'none'})`);
 
+  const transcriptText = session.transcript
+    .map((t) => `${t.speaker}: ${t.text}`)
+    .join('\n');
+
   try {
     await saveCallRecord({
       merchantId: session.merchantId,
       callerPhone: session.callerPhone,
       startedAt: session.startedAt,
       endedAt: new Date(),
-      transcript: session.transcript
-        .map((t) => `${t.speaker}: ${t.text}`)
-        .join('\n'),
+      transcript: transcriptText,
       durationSeconds,
       outcome,
     });
   } catch (error) {
     console.error('[MediaStream] Failed to save call record:', error);
   }
+
+  // Fire-and-forget: post-call processing (summary, customer, message linking)
+  runPostCallProcessing({
+    merchantId: session.merchantId,
+    callerPhone: session.callerPhone,
+    transcript: transcriptText,
+    toolsCalled: session.toolsCalled,
+  }).catch((err) => {
+    console.error('[MediaStream] Post-call processing error:', err);
+  });
 
   // Fire-and-forget: notify web app for overage tracking
   notifyCallComplete(session.merchantId);
