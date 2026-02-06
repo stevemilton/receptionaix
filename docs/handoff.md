@@ -66,7 +66,7 @@ packages/
   supabase/     Migrations (8 files), RLS policies, generated types
   ui/           Shared React components (Button, Card, Modal, Toast, etc.)
   grok/         Grok client, tool definitions, connection types
-  knowledge/    Firecrawl scraping, Claude extraction, Google Places, Master KB
+  knowledge/    Firecrawl scraping, Grok extraction, Google Places, Master KB
   types/        Database types + row type aliases (MerchantRow, CallRow, etc.)
   shared/       API usage tracking utilities
 ```
@@ -201,11 +201,12 @@ fly secrets set KEY=value --app receptionai-relay
 ```
 **Note:** Always use `--no-cache` after changing `.npmrc` or `Dockerfile.relay` structure to avoid stale Docker layers.
 
-### Web -> Vercel ⬜ PENDING
-- `vercel.json` in repo root configures the build pipeline
-- GitHub repo: `stevemilton/receptionaix`, branch: `main`
-- Import via Vercel dashboard → set env vars → deploy
-- See `docs/status.md` for full list of required env vars
+### Web -> Vercel ✅ DEPLOYED
+- **URL:** `https://receptionaix-relay.vercel.app`
+- **Project:** `receptionaix-relay` on Vercel, connected to `stevemilton/receptionaix` GitHub repo
+- **Build:** `vercel.json` runs `types → shared → web` build chain
+- **Env vars:** Set in Vercel dashboard (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, TWILIO_*, RELAY_*, GROK_API_KEY, etc.)
+- **Twilio webhook:** `+447446469600` → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
 
 ### Database -> Supabase
 ```bash
@@ -229,15 +230,16 @@ eas build --platform android
 
 If picking this up for MVP deployment:
 
-1. **Deploy web to Vercel** — Connect GitHub repo, add env vars, deploy
-2. **Configure Twilio webhook** — Point `+447446469600` to Vercel URL `/api/twilio/incoming`
-3. **Test E2E voice call** — Dial number → Grok responds → transcript saved → dashboard shows call
-4. **Build mobile with EAS** — Create project, update app.json, build for iOS/Android
-5. **Apply pending migration** — `pnpm db:push` for `billing_period_start` and `stripe_overage_item_id`
-6. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
-7. **Build push notification backend** — Expo Push API integration
-8. **Re-enable Stripe** — Uncomment keys, test subscription flow
-9. **Set up test suite** — Integration tests for API routes and relay
+1. ~~**Deploy web to Vercel**~~ ✅ Live at `https://receptionaix-relay.vercel.app`
+2. ~~**Configure Twilio webhook**~~ ✅ `+447446469600` → Vercel `/api/twilio/incoming`
+3. **Test E2E voice call** — Dial `+447446469600` → Grok responds → transcript saved → dashboard shows call
+4. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
+5. **Build mobile with EAS** — Create project, update app.json, build for iOS/Android
+6. **Apply pending migration** — `pnpm db:push` for `billing_period_start` and `stripe_overage_item_id`
+7. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
+8. **Build push notification backend** — Expo Push API integration
+9. **Re-enable Stripe** — Uncomment keys, test subscription flow
+10. **Set up test suite** — Integration tests for API routes and relay
 
 ---
 
@@ -257,6 +259,6 @@ If picking this up for MVP deployment:
 | `apps/web/src/lib/supabase/admin.ts` | Service-role Supabase client (typed with Database) |
 | `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |
-| `packages/knowledge/src/extractor.ts` | Claude-based KB extraction with output capping |
+| `packages/knowledge/src/extractor.ts` | Grok-based KB extraction with output capping (xAI text API) |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
 | `packages/types/src/database.ts` | Supabase table types (generated via `supabase gen types typescript`) |

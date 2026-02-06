@@ -58,9 +58,9 @@ WEBSITE CONTENT:
 `;
 
 /**
- * Extract structured knowledge from website content using Claude API
+ * Extract structured knowledge from website content using Grok text API (xAI)
  */
-export async function extractKnowledgeWithClaude(
+export async function extractKnowledgeWithGrok(
   markdown: string,
   apiKey: string
 ): Promise<ExtractedKnowledge> {
@@ -68,15 +68,14 @@ export async function extractKnowledgeWithClaude(
     // Truncate content if too long
     const truncatedContent = markdown.slice(0, 15000);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'grok-3-mini',
         max_tokens: 2000,
         messages: [
           {
@@ -89,15 +88,15 @@ export async function extractKnowledgeWithClaude(
     });
 
     if (!response.ok) {
-      console.error(`Claude API error: ${response.status} ${response.statusText}`);
+      console.error(`Grok API error: ${response.status} ${response.statusText}`);
       return getEmptyKnowledge();
     }
 
     const data = await response.json();
-    const content = data.content?.[0]?.text;
+    const content = data.choices?.[0]?.message?.content;
 
     if (!content) {
-      console.error('Claude returned no content');
+      console.error('Grok returned no content');
       return getEmptyKnowledge();
     }
 
@@ -105,10 +104,15 @@ export async function extractKnowledgeWithClaude(
     const parsed = parseExtractedJson(content);
     return parsed;
   } catch (error) {
-    console.error('Claude extraction failed:', error);
+    console.error('Grok extraction failed:', error);
     return getEmptyKnowledge();
   }
 }
+
+/**
+ * @deprecated Use extractKnowledgeWithGrok instead
+ */
+export const extractKnowledgeWithClaude = extractKnowledgeWithGrok;
 
 /**
  * Parse and validate the extracted JSON

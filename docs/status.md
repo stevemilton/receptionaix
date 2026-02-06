@@ -11,7 +11,7 @@
 |-------|-------------|--------|
 | 1. Foundation | Monorepo, Supabase, Auth, RLS | Complete |
 | 2. UI Components | Design system, shared components | Complete |
-| 3. Knowledge Base | Firecrawl, Places API, Claude extraction | Complete |
+| 3. Knowledge Base | Firecrawl, Places API, Grok extraction | Complete |
 | 4. Onboarding | 8-step merchant onboarding wizard | Complete |
 | 5. Voice Agent | Relay server, Grok integration, tools | Complete |
 | 6. Dashboard | Merchant dashboard, calls, settings | Complete |
@@ -34,7 +34,7 @@ Nine hardening batches have been completed across commits `97440b7` through curr
 ### Batch 2: Env Validation, Tool Params, Timeouts (commit `7c4e61d`)
 - [x] Env var validation — Routes fail closed if `CRON_SECRET`, `RELAY_SERVICE_KEY`, etc. are unset
 - [x] Runtime param validation on relay tool handlers (zod-style checks)
-- [x] Request timeouts on all external fetch() calls (Firecrawl, Anthropic, Google)
+- [x] Request timeouts on all external fetch() calls (Firecrawl, xAI, Google)
 
 ### Batch 3: WebSocket Leaks, SQL Injection, Webhook Validation, Input Checks (commit `5199862`)
 - [x] Grok WebSocket properly closed on error; Twilio error handler cleans up Grok connection
@@ -105,9 +105,9 @@ The relay server was using **OpenAI Realtime API format** which is incompatible 
   - Docker build fixed: `.npmrc` added for `shamefully-hoist=true`, workspace symlinks recreated in runner stage
   - `packages/shared` converted from source-based to compiled package with proper ESM exports
   - Secrets set: `GROK_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `RELAY_SERVICE_KEY`
-- [ ] **Web (Vercel):** `vercel.json` configured, code pushed to GitHub. Needs project connection + env vars
-- [ ] **Twilio webhook:** Must update `+447446469600` to point to Vercel production URL `/api/twilio/incoming`
-- [ ] **Google redirect URI:** Must update from `localhost:3002` to Vercel URL
+- [x] **Web (Vercel):** Deployed at `https://receptionaix-relay.vercel.app` — env vars set, Supabase connected
+- [x] **Twilio webhook:** `+447446469600` pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
+- [x] **Google redirect URI:** Updated in `.env.local` to `https://receptionaix-relay.vercel.app/api/google/callback` (needs updating in Google Cloud Console)
 - [ ] **Mobile (EAS):** Ready for build once EAS project ID configured
 
 ### Build Pipeline Fixes
@@ -190,9 +190,10 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 
 ## Next Steps (Priority Order)
 
-1. **Connect Vercel** — Import GitHub repo, set env vars, deploy web app
-2. **Configure Twilio** — Point webhook to Vercel URL `/api/twilio/incoming`
-3. **Test E2E call** — Dial Twilio number → verify Grok responds → check transcript in Supabase
-4. **EAS build** — Create Expo project, update `app.json`, build iOS/Android
-5. **Google Calendar** — Replace mock slots with real availability queries
-6. **Push notifications** — Expo Push API backend integration
+1. ~~**Connect Vercel**~~ ✅ Deployed at `https://receptionaix-relay.vercel.app`
+2. ~~**Configure Twilio**~~ ✅ Webhook pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
+3. **Test E2E call** — Dial `+447446469600` → verify Grok responds → check transcript in Supabase
+4. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
+5. **EAS build** — Create Expo project, update `app.json`, build iOS/Android
+6. **Google Calendar** — Replace mock slots with real availability queries
+7. **Push notifications** — Expo Push API backend integration

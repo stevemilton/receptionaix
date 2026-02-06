@@ -1,15 +1,15 @@
 import type { KnowledgeBaseResult, PlaceResult, ExtractedKnowledge } from './types';
 import { searchBusiness, getPlaceDetails } from './google-places';
 import { scrapeWebsite } from './firecrawl';
-import { extractKnowledgeWithClaude } from './extractor';
+import { extractKnowledgeWithGrok } from './extractor';
 import { getMockScrapedContent, getMockExtractedKnowledge } from './mock-scraper';
 
 export interface PipelineConfig {
   googlePlacesApiKey: string;
   firecrawlApiKey: string;
-  claudeApiKey: string;
-  /** @deprecated Use claudeApiKey instead */
-  grokApiKey?: string;
+  grokApiKey: string;
+  /** @deprecated Use grokApiKey instead */
+  claudeApiKey?: string;
   useMockData?: boolean;
 }
 
@@ -35,6 +35,8 @@ export async function generateKnowledgeBase(
       extractedKnowledge: getMockExtractedKnowledge(),
     };
   }
+
+  const aiApiKey = config.grokApiKey || config.claudeApiKey || '';
 
   // Step 1: Search Google Places
   console.log(`[Knowledge] Searching for "${businessQuery}" in ${location || 'UK'}...`);
@@ -69,11 +71,11 @@ export async function generateKnowledgeBase(
     if (scrapedData) {
       console.log(`[Knowledge] Scraped ${scrapedData.markdown.length} characters`);
 
-      // Step 3: Extract structured data with Claude
-      console.log('[Knowledge] Extracting services and FAQs with Claude...');
-      extractedKnowledge = await extractKnowledgeWithClaude(
+      // Step 3: Extract structured data with Grok
+      console.log('[Knowledge] Extracting services and FAQs with Grok...');
+      extractedKnowledge = await extractKnowledgeWithGrok(
         scrapedData.markdown,
-        config.claudeApiKey
+        aiApiKey
       );
       console.log(
         `[Knowledge] Extracted ${extractedKnowledge.services.length} services, ${extractedKnowledge.faqs.length} FAQs`
@@ -104,6 +106,8 @@ export async function generateKnowledgeBaseFromPlace(
   placeId: string,
   config: PipelineConfig
 ): Promise<KnowledgeBaseResult> {
+  const aiApiKey = config.grokApiKey || config.claudeApiKey || '';
+
   // Get place details
   const placeData = await getPlaceDetails(placeId, config.googlePlacesApiKey);
 
@@ -133,9 +137,9 @@ export async function generateKnowledgeBaseFromPlace(
     scrapedData = await scrapeWebsite(placeData.website, config.firecrawlApiKey);
 
     if (scrapedData) {
-      extractedKnowledge = await extractKnowledgeWithClaude(
+      extractedKnowledge = await extractKnowledgeWithGrok(
         scrapedData.markdown,
-        config.claudeApiKey
+        aiApiKey
       );
 
       // Preserve Google opening hours if extraction didn't find any
@@ -159,6 +163,8 @@ export async function generateKnowledgeBaseFromUrl(
   url: string,
   config: PipelineConfig
 ): Promise<KnowledgeBaseResult> {
+  const aiApiKey = config.grokApiKey || config.claudeApiKey || '';
+
   const scrapedData = await scrapeWebsite(url, config.firecrawlApiKey);
 
   if (!scrapedData) {
@@ -174,9 +180,9 @@ export async function generateKnowledgeBaseFromUrl(
     };
   }
 
-  const extractedKnowledge = await extractKnowledgeWithClaude(
+  const extractedKnowledge = await extractKnowledgeWithGrok(
     scrapedData.markdown,
-    config.claudeApiKey
+    aiApiKey
   );
 
   return {

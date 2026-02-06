@@ -126,7 +126,7 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] `MockScraper` returns fixed JSON (hair salon sample data)
 - [x] Google Places API search working (New Places API)
 - [x] Firecrawl integration working
-- [x] Claude extracts services/FAQs from markdown (using Anthropic API)
+- [x] Grok extracts services/FAQs from markdown (using xAI text API)
 - [x] Master KB database for cross-merchant learning
 - [x] **Test:** Enter business name → get structured knowledge base
 
@@ -240,10 +240,10 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 
 ### Deployment (In Progress)
 - **Relay (Fly.io):** ✅ Deployed and healthy at `https://receptionai-relay.fly.dev` (LHR region)
-- **Web (Vercel):** ⬜ `vercel.json` configured, code pushed to `nifty-robinson` branch. Needs Vercel project connection + env vars
+- **Web (Vercel):** ✅ Deployed at `https://receptionaix-relay.vercel.app`
 - **Mobile (EAS):** ⬜ Code ready, needs EAS project ID in `app.json` and `eas build`
-- **Twilio webhook:** ⬜ Must point `+447446469600` to `https://<VERCEL_URL>/api/twilio/incoming`
-- **Google redirect URI:** ⬜ Must update from `localhost:3002` to Vercel production URL
+- **Twilio webhook:** ✅ `+447446469600` pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
+- **Google redirect URI:** ✅ Updated to `https://receptionaix-relay.vercel.app/api/google/callback` (needs updating in Google Cloud Console too)
 
 ### Google Calendar Integration
 - OAuth tokens are stored during onboarding
@@ -572,11 +572,11 @@ async function executeToolCall(toolName: string, params: any): Promise<ToolResul
 
 ## Deployment
 
-### Web (Vercel) — ⬜ Pending
-- `vercel.json` in repo root configures build (runs shared build first, then web build)
-- Needs Vercel project connected to GitHub repo `stevemilton/receptionaix`
-- Branch: `main` (or `nifty-robinson` for preview)
-- Required env vars: see `.env.local` or Environment Variables section below
+### Web (Vercel) — ✅ Deployed
+- **URL:** `https://receptionaix-relay.vercel.app`
+- **Project:** `receptionaix-relay` on Vercel, connected to GitHub repo `stevemilton/receptionaix`
+- **Build:** `vercel.json` in repo root runs types → shared → web builds
+- **Env vars:** Set in Vercel dashboard (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, etc.)
 
 ### Relay Server (Fly.io) — ✅ Deployed
 - **URL:** `wss://receptionai-relay.fly.dev/media-stream`
@@ -641,7 +641,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 RELAY_URL=wss://receptionai-relay.fly.dev/media-stream
 
 # App
-NEXT_PUBLIC_APP_URL=https://receptionai.vercel.app
+NEXT_PUBLIC_APP_URL=https://receptionaix-relay.vercel.app
 ```
 
 ---
@@ -695,8 +695,9 @@ pnpm deploy:relay     # Deploy to Fly.io
 2. Read `docs/status.md` for remaining issues
 3. Run `pnpm db:push` to apply pending migration 007
 4. Relay is live at `https://receptionai-relay.fly.dev` — check `/health`
-5. Web app needs Vercel deployment — see Deployment section
-6. Mobile app needs EAS project ID — see `apps/mobile/app.json`
+5. Web is live at `https://receptionaix-relay.vercel.app`
+6. Twilio webhook configured: `+447446469600` → Vercel `/api/twilio/incoming`
+7. Mobile app needs EAS project ID — see `apps/mobile/app.json`
 
 ### When Stuck:
 1. Check PRD for requirements
@@ -737,7 +738,7 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |
 | `packages/knowledge/src/pipeline.ts` | KB generation orchestration |
-| `packages/knowledge/src/extractor.ts` | Claude-based knowledge extraction |
+| `packages/knowledge/src/extractor.ts` | Grok-based knowledge extraction (xAI text API) |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
 | `packages/types/src/database.ts` | Supabase table types (generated via `supabase gen types typescript`) |
 

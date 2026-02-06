@@ -121,7 +121,7 @@ All 9 build phases are complete. Security hardening is substantially complete (8
 - [x] `MockScraper` returns fixed JSON (hair salon sample data)
 - [x] Google Places API search working (New Places API)
 - [x] Firecrawl integration working
-- [x] Claude extracts services/FAQs from markdown (using Anthropic API)
+- [x] Grok extracts services/FAQs from markdown (using xAI Chat Completions API)
 - [x] Master KB database for cross-merchant learning
 - [x] **Test:** Enter business name → get structured knowledge base
 
@@ -548,10 +548,10 @@ async function executeToolCall(toolName: string, params: any): Promise<ToolResul
 
 ## Deployment
 
-### Web (Vercel)
+### Web (Vercel) ✅ DEPLOYED
 - Auto-deploys from `main` branch
 - Environment variables in Vercel dashboard
-- URL: `https://receptionai.vercel.app` (or custom domain)
+- URL: `https://receptionaix-relay.vercel.app`
 
 ### Relay Server (Fly.io)
 ```bash
@@ -606,7 +606,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 RELAY_URL=wss://receptionai-relay.fly.dev/media-stream
 
 # App
-NEXT_PUBLIC_APP_URL=https://receptionai.vercel.app
+NEXT_PUBLIC_APP_URL=https://receptionaix-relay.vercel.app
 ```
 
 ---
@@ -698,7 +698,7 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |
 | `packages/knowledge/src/pipeline.ts` | KB generation orchestration |
-| `packages/knowledge/src/extractor.ts` | Claude-based knowledge extraction |
+| `packages/knowledge/src/extractor.ts` | Grok-based knowledge extraction |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
 | `packages/types/src/database.ts` | Supabase table types (hand-written, needs regeneration) |
 
