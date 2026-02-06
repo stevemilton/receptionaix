@@ -48,18 +48,18 @@ export default async function CustomersPage() {
   }, {});
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
       <PageHeader title="Customers" subtitle="People who have contacted your business" />
 
       {customers && customers.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {customers.map((customer) => {
             const name = customer.name || 'Unknown';
             const apptCount = aptCounts[customer.id] || 0;
             const callCount = callCounts[customer.id] || 0;
 
             return (
-              <div key={customer.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 transition-colors">
+              <div key={customer.id} className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 hover:border-gray-300 transition-colors">
                 {/* Customer Header */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-11 h-11 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">

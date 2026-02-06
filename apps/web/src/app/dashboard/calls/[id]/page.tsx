@@ -51,50 +51,48 @@ export default async function CallDetailPage({
   const c = call as any;
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
       {/* Back link */}
-      <Link href="/dashboard/calls" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
+      <Link href="/dashboard/calls" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 sm:mb-6">
         <ArrowLeftIcon className="w-4 h-4" />
         Back to calls
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {c.customers?.name || formatPhone(c.caller_phone)}
-            </h1>
-            <OutcomeBadge outcome={c.outcome || 'message'} />
-          </div>
-          <p className="text-sm text-gray-500">
-            {formatPhone(c.caller_phone)} &middot; {formatDateTime(c.started_at || '')} &middot; {formatDurationLong(c.duration_seconds)}
-          </p>
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            {c.customers?.name || formatPhone(c.caller_phone)}
+          </h1>
+          <OutcomeBadge outcome={c.outcome || 'message'} />
         </div>
+        <p className="text-xs sm:text-sm text-gray-500">
+          {formatPhone(c.caller_phone)} &middot; {formatDateTime(c.started_at || '')} &middot; {formatDurationLong(c.duration_seconds)}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left: Sidebar with call info + linked data */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Summary */}
           {c.summary && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-2">Summary</h2>
               <p className="text-sm text-gray-600 leading-relaxed">{c.summary}</p>
             </div>
           )}
 
           {/* Call Info */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Call Details</h2>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-gray-500">Caller</dt>
-                <dd className="font-medium text-gray-900">{formatPhone(c.caller_phone)}</dd>
+                <dd className="font-medium text-gray-900 text-right">{formatPhone(c.caller_phone)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Date</dt>
-                <dd className="font-medium text-gray-900">{formatDateTime(c.started_at || '')}</dd>
+                <dd className="font-medium text-gray-900 text-right">{formatDateTime(c.started_at || '')}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Duration</dt>
@@ -109,7 +107,7 @@ export default async function CallDetailPage({
 
           {/* Customer Card */}
           {c.customers && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Customer</h2>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
@@ -133,7 +131,7 @@ export default async function CallDetailPage({
 
           {/* Linked Messages */}
           {messages && messages.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
               <div className="flex items-center gap-2 mb-3">
                 <MessageIcon className="w-4 h-4 text-blue-600" />
                 <h2 className="text-sm font-semibold text-gray-900">Messages Left</h2>
@@ -157,7 +155,7 @@ export default async function CallDetailPage({
 
           {/* Linked Appointments */}
           {appointments && appointments.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
               <div className="flex items-center gap-2 mb-3">
                 <CalendarIcon className="w-4 h-4 text-emerald-600" />
                 <h2 className="text-sm font-semibold text-gray-900">Appointments Made</h2>
@@ -180,7 +178,7 @@ export default async function CallDetailPage({
 
         {/* Right: Transcript */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Transcript</h2>
             {c.transcript ? (
               <div className="space-y-3">
@@ -199,7 +197,7 @@ export default async function CallDetailPage({
                       {entry.speaker === 'assistant' ? 'AI' : 'C'}
                     </div>
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+                      className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 ${
                         entry.speaker === 'assistant'
                           ? 'bg-primary-50 text-gray-900'
                           : 'bg-gray-100 text-gray-900'

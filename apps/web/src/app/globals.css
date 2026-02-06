@@ -31,4 +31,18 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Mobile nav slide-in animation */
+  .animate-slide-in {
+    animation: slide-in 0.2s ease-out;
+  }
+
+  @keyframes slide-in {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
 }

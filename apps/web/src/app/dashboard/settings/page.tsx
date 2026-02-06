@@ -85,11 +85,11 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
-          <div className="space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-1/2 sm:w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4 sm:w-1/2 mb-6 sm:mb-8"></div>
+          <div className="space-y-4 sm:space-y-6">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-24 bg-gray-200 rounded"></div>
             ))}
@@ -102,25 +102,25 @@ export default function SettingsPage() {
   if (!settings) return null;
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-start mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex justify-between items-start gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600">Configure your AI receptionist</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h1>
+          <p className="text-xs sm:text-sm text-gray-600">Configure your AI receptionist</p>
         </div>
         <button
           onClick={saveSettings}
           disabled={saving}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          className="px-3 sm:px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 whitespace-nowrap flex-shrink-0"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
-      <div className="space-y-8 max-w-2xl">
+      <div className="space-y-6 sm:space-y-8 max-w-2xl">
         {/* Business Information */}
-        <section className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-lg font-semibold mb-4">Business Information</h2>
+        <section className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Business Information</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
@@ -163,8 +163,8 @@ export default function SettingsPage() {
         </section>
 
         {/* AI Configuration */}
-        <section className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-lg font-semibold mb-4">AI Configuration</h2>
+        <section className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">AI Configuration</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Greeting Message</label>
@@ -172,16 +172,16 @@ export default function SettingsPage() {
                 value={settings.greeting || ''}
                 onChange={(e) => updateSetting('greeting', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
                 placeholder="e.g., Good morning, thank you for calling [Business Name]. How can I help you today?"
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 This is what callers will hear when they first connect.
               </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Voice</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 {VOICE_OPTIONS.map((voice) => (
                   <button
                     key={voice.id}
@@ -192,8 +192,8 @@ export default function SettingsPage() {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="font-medium text-gray-900">{voice.name}</div>
-                    <div className="text-sm text-gray-500">{voice.description}</div>
+                    <div className="text-sm font-medium text-gray-900">{voice.name}</div>
+                    <div className="text-xs sm:text-sm text-gray-500">{voice.description}</div>
                   </button>
                 ))}
               </div>
@@ -202,18 +202,18 @@ export default function SettingsPage() {
         </section>
 
         {/* Phone Number */}
-        <section className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-lg font-semibold mb-4">Phone Number</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">
+        <section className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Phone Number</h2>
+          <div className="flex items-start sm:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
                 {settings.twilio_phone_number || 'No number assigned'}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 Callers dial this number to reach your AI receptionist
               </p>
             </div>
-            <span className={`px-3 py-1 text-sm rounded-full ${
+            <span className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full flex-shrink-0 ${
               settings.twilio_phone_number
                 ? 'bg-green-100 text-green-800'
                 : 'bg-gray-100 text-gray-800'
@@ -224,19 +224,19 @@ export default function SettingsPage() {
         </section>
 
         {/* Google Calendar */}
-        <section className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-lg font-semibold mb-4">Calendar Integration</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">Google Calendar</p>
-              <p className="text-sm text-gray-500">
+        <section className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Calendar Integration</h2>
+          <div className="flex items-start sm:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-medium text-gray-900 text-sm sm:text-base">Google Calendar</p>
+              <p className="text-xs sm:text-sm text-gray-500">
                 {settings.google_calendar_connected
                   ? 'Your calendar is connected for availability checks'
                   : 'Connect your calendar to enable real-time availability'}
               </p>
             </div>
             <button
-              className={`px-4 py-2 rounded-lg font-medium ${
+              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex-shrink-0 ${
                 settings.google_calendar_connected
                   ? 'bg-red-100 text-red-700 hover:bg-red-200'
                   : 'bg-primary-600 text-white hover:bg-primary-700'
@@ -248,8 +248,8 @@ export default function SettingsPage() {
         </section>
 
         {/* Data & Privacy */}
-        <section className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-lg font-semibold mb-4">Data & Privacy</h2>
+        <section className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Data & Privacy</h2>
           <p className="text-sm text-gray-600 mb-4">
             Control how your data is used. Changes take effect when you save.
           </p>
@@ -295,16 +295,16 @@ export default function SettingsPage() {
         </section>
 
         {/* Danger Zone */}
-        <section className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
-          <h2 className="text-lg font-semibold text-red-600 mb-4">Danger Zone</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">Delete Account</p>
-              <p className="text-sm text-gray-500">
+        <section className="bg-white rounded-xl shadow-sm border border-red-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-red-600 mb-3 sm:mb-4">Danger Zone</h2>
+          <div className="flex items-start sm:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-medium text-gray-900 text-sm sm:text-base">Delete Account</p>
+              <p className="text-xs sm:text-sm text-gray-500">
                 Permanently delete your account and all data
               </p>
             </div>
-            <button className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium">
+            <button className="px-3 sm:px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-sm flex-shrink-0">
               Delete Account
             </button>
           </div>

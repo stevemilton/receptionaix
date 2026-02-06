@@ -76,17 +76,17 @@ export default async function DashboardPage() {
   const unreadMessages = (unreadMessagesResult.data || []) as any[];
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
           Welcome back{merchant?.business_name ? `, ${merchant.business_name}` : ''}
         </h1>
         <p className="text-sm text-gray-500 mt-1">Here&apos;s what&apos;s happening with your AI receptionist</p>
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <MetricCard label="Total Calls" value={totalCalls} sublabel="all time" />
         <MetricCard label="Appointments" value={totalAppointments} sublabel="confirmed" />
         <MetricCard label="Unread Messages" value={unreadCount} accent={unreadCount > 0} />
@@ -94,10 +94,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Calls — spans 2 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Recent Calls — spans 2 columns on desktop */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
-          <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100">
             <h2 className="font-semibold text-gray-900">Recent Calls</h2>
             <Link href="/dashboard/calls" className="text-xs font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
               View all <ChevronRightIcon className="w-3 h-3" />
@@ -106,8 +106,8 @@ export default async function DashboardPage() {
           {recentCalls.length > 0 ? (
             <div className="divide-y divide-gray-50">
               {recentCalls.map((call) => (
-                <Link key={call.id} href={`/dashboard/calls/${call.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
-                  <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <Link key={call.id} href={`/dashboard/calls/${call.id}`} className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 hover:bg-gray-50 transition-colors">
+                  <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 hidden sm:flex">
                     <PhoneIcon className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="p-12 text-center">
+            <div className="p-8 sm:p-12 text-center">
               <PhoneIcon className="w-10 h-10 text-gray-200 mx-auto mb-3" />
               <p className="text-sm text-gray-500">No calls yet. When customers ring your AI receptionist, calls will appear here.</p>
             </div>
@@ -136,10 +136,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* Right Column: Upcoming Appointments + Messages */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Upcoming Appointments */}
           <div className="bg-white rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100">
               <h2 className="font-semibold text-gray-900">Upcoming</h2>
               <Link href="/dashboard/appointments" className="text-xs font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
                 View all <ChevronRightIcon className="w-3 h-3" />
@@ -148,9 +148,9 @@ export default async function DashboardPage() {
             {upcomingAppts.length > 0 ? (
               <div className="divide-y divide-gray-50">
                 {upcomingAppts.map((apt) => (
-                  <div key={apt.id} className="px-5 py-3.5">
+                  <div key={apt.id} className="px-4 sm:px-5 py-3 sm:py-3.5">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0 hidden sm:flex">
                         <CalendarIcon className="w-4 h-4 text-emerald-600" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center">
+              <div className="p-6 sm:p-8 text-center">
                 <CalendarIcon className="w-8 h-8 text-gray-200 mx-auto mb-2" />
                 <p className="text-xs text-gray-400">No upcoming appointments</p>
               </div>
@@ -180,7 +180,7 @@ export default async function DashboardPage() {
 
           {/* Unread Messages */}
           <div className="bg-white rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <h2 className="font-semibold text-gray-900">Messages</h2>
                 {unreadCount > 0 && (
@@ -196,14 +196,14 @@ export default async function DashboardPage() {
             {unreadMessages.length > 0 ? (
               <div className="divide-y divide-gray-50">
                 {unreadMessages.map((msg: MessageRecord) => (
-                  <div key={msg.id} className="px-5 py-3.5">
+                  <div key={msg.id} className="px-4 sm:px-5 py-3 sm:py-3.5">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 hidden sm:flex">
                         <MessageIcon className="w-4 h-4 text-blue-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900">
+                          <span className="text-sm font-medium text-gray-900 truncate">
                             {msg.caller_name || formatPhone(msg.caller_phone)}
                           </span>
                           <UrgencyBadge urgency={msg.urgency || 'medium'} />
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center">
+              <div className="p-6 sm:p-8 text-center">
                 <MessageIcon className="w-8 h-8 text-gray-200 mx-auto mb-2" />
                 <p className="text-xs text-gray-400">No unread messages</p>
               </div>

@@ -71,10 +71,10 @@ export default function MessagesPage() {
 
   if (loading) {
     return (
-      <div className="p-6 lg:p-8 max-w-5xl">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4" />
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-8" />
+          <div className="h-8 bg-gray-200 rounded w-1/2 sm:w-1/4 mb-4" />
+          <div className="h-4 bg-gray-200 rounded w-3/4 sm:w-1/2 mb-8" />
           <div className="space-y-3">
             {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-200 rounded-xl" />)}
           </div>
@@ -84,13 +84,13 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl">
-      <div className="flex items-start justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+      <div className="flex items-start justify-between gap-4 mb-6 sm:mb-8">
         <PageHeader title="Messages" subtitle="Messages left by callers through your AI receptionist" />
         {unreadCount > 0 && (
           <button
             onClick={markAllRead}
-            className="text-sm font-medium text-primary-600 hover:text-primary-700 whitespace-nowrap mt-1"
+            className="text-xs sm:text-sm font-medium text-primary-600 hover:text-primary-700 whitespace-nowrap mt-1 flex-shrink-0"
           >
             Mark all read
           </button>
@@ -98,12 +98,12 @@ export default function MessagesPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-1 mb-6">
+      <div className="flex gap-1 mb-4 sm:mb-6 overflow-x-auto">
         {(['all', 'unread', 'read'] as const).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
               filter === f
                 ? 'bg-primary-100 text-primary-700'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -119,19 +119,19 @@ export default function MessagesPage() {
           {filtered.map((msg) => (
             <div
               key={msg.id}
-              className={`bg-white rounded-xl border p-5 transition-colors ${
+              className={`bg-white rounded-xl border p-4 sm:p-5 transition-colors ${
                 !msg.read ? 'border-primary-200 bg-primary-50/30' : 'border-gray-200'
               }`}
             >
-              <div className="flex items-start gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hidden sm:flex ${
                   !msg.read ? 'bg-blue-100' : 'bg-gray-100'
                 }`}>
                   <MessageIcon className={`w-5 h-5 ${!msg.read ? 'text-blue-600' : 'text-gray-400'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-gray-900">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-sm font-semibold text-gray-900 truncate">
                       {msg.caller_name || formatPhone(msg.caller_phone)}
                     </span>
                     <UrgencyBadge urgency={msg.urgency || 'medium'} />
@@ -143,7 +143,7 @@ export default function MessagesPage() {
                     <div className="text-xs text-gray-400 mb-1">{formatPhone(msg.caller_phone)}</div>
                   )}
                   <p className="text-sm text-gray-700 leading-relaxed">{msg.content}</p>
-                  <div className="flex items-center gap-4 mt-3">
+                  <div className="flex items-center gap-3 sm:gap-4 mt-3 flex-wrap">
                     <span className="text-xs text-gray-400">{timeAgo(msg.created_at || '')}</span>
                     {!msg.read && (
                       <button

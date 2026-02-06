@@ -103,10 +103,10 @@ export default function KnowledgePage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/2 sm:w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4 sm:w-1/2 mb-6 sm:mb-8"></div>
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-20 bg-gray-200 rounded"></div>
@@ -118,23 +118,23 @@ export default function KnowledgePage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-start mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex justify-between items-start gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Knowledge Base</h1>
-          <p className="text-gray-600">Configure what your AI receptionist knows</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Knowledge Base</h1>
+          <p className="text-xs sm:text-sm text-gray-600">Configure what your AI receptionist knows</p>
         </div>
         <button
           onClick={saveKnowledgeBase}
           disabled={saving}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          className="px-3 sm:px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 whitespace-nowrap flex-shrink-0"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b">
+      <div className="flex gap-1 mb-4 sm:mb-6 border-b overflow-x-auto">
         <TabButton active={activeTab === 'services'} onClick={() => setActiveTab('services')}>
           Services
         </TabButton>
@@ -150,53 +150,53 @@ export default function KnowledgePage() {
       {activeTab === 'services' && (
         <div className="space-y-4">
           {services.map((service, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-sm border p-4">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="font-medium text-gray-900">Service {index + 1}</h3>
+            <div key={index} className="bg-white rounded-xl shadow-sm border p-3 sm:p-4">
+              <div className="flex justify-between items-start mb-3 sm:mb-4">
+                <h3 className="font-medium text-sm sm:text-base text-gray-900">Service {index + 1}</h3>
                 <button
                   onClick={() => removeService(index)}
-                  className="text-red-500 hover:text-red-700 text-sm"
+                  className="text-red-500 hover:text-red-700 text-xs sm:text-sm"
                 >
                   Remove
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Name</label>
                   <input
                     type="text"
                     value={service.name}
                     onChange={(e) => updateService(index, 'name', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
                     placeholder="e.g., Haircut"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Description</label>
                   <input
                     type="text"
                     value={service.description || ''}
                     onChange={(e) => updateService(index, 'description', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
                     placeholder="Brief description"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (mins)</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Duration (mins)</label>
                   <input
                     type="number"
                     value={service.duration || ''}
                     onChange={(e) => updateService(index, 'duration', parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price (£)</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Price (£)</label>
                   <input
                     type="number"
                     value={service.price || ''}
                     onChange={(e) => updateService(index, 'price', parseFloat(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
                   />
                 </div>
               </div>
@@ -215,12 +215,12 @@ export default function KnowledgePage() {
       {activeTab === 'faqs' && (
         <div className="space-y-4">
           {faqs.map((faq, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-sm border p-4">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="font-medium text-gray-900">FAQ {index + 1}</h3>
+            <div key={index} className="bg-white rounded-xl shadow-sm border p-3 sm:p-4">
+              <div className="flex justify-between items-start mb-3 sm:mb-4">
+                <h3 className="font-medium text-sm sm:text-base text-gray-900">FAQ {index + 1}</h3>
                 <button
                   onClick={() => removeFaq(index)}
-                  className="text-red-500 hover:text-red-700 text-sm"
+                  className="text-red-500 hover:text-red-700 text-xs sm:text-sm"
                 >
                   Remove
                 </button>
@@ -260,16 +260,16 @@ export default function KnowledgePage() {
 
       {/* Hours Tab */}
       {activeTab === 'hours' && (
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="space-y-4">
+        <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+          <div className="space-y-3 sm:space-y-4">
             {DAYS.map((day) => (
-              <div key={day} className="flex items-center gap-4">
-                <span className="w-28 text-sm font-medium text-gray-700">{day}</span>
+              <div key={day} className="flex items-center gap-2 sm:gap-4">
+                <span className="w-20 sm:w-28 text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">{day}</span>
                 <input
                   type="text"
                   value={openingHours[day] || ''}
                   onChange={(e) => updateHours(day, e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
                   placeholder="e.g., 9:00 AM - 5:00 PM or Closed"
                 />
               </div>
@@ -307,7 +307,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+      className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
         active
           ? 'border-primary-600 text-primary-600'
           : 'border-transparent text-gray-600 hover:text-gray-900'

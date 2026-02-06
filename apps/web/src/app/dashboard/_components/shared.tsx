@@ -147,19 +147,19 @@ export function EmptyState({
   description: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-      <Icon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-      <h3 className="text-base font-semibold text-gray-900 mb-1">{title}</h3>
-      <p className="text-sm text-gray-500 max-w-sm mx-auto">{description}</p>
+    <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-12 text-center">
+      <Icon className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-3 sm:mb-4" />
+      <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-1">{title}</h3>
+      <p className="text-xs sm:text-sm text-gray-500 max-w-sm mx-auto">{description}</p>
     </div>
   );
 }
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="mb-8">
-      <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-      <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+    <div className="mb-6 sm:mb-8">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h1>
+      <p className="text-xs sm:text-sm text-gray-500 mt-1">{subtitle}</p>
     </div>
   );
 }
@@ -176,10 +176,10 @@ export function MetricCard({
   accent?: boolean;
 }) {
   return (
-    <div className={`bg-white rounded-xl border p-5 ${accent ? 'border-primary-200 ring-1 ring-primary-100' : 'border-gray-200'}`}>
-      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</div>
-      <div className={`text-2xl font-bold mt-1 ${accent ? 'text-primary-600' : 'text-gray-900'}`}>{value}</div>
-      {sublabel && <div className="text-xs text-gray-400 mt-0.5">{sublabel}</div>}
+    <div className={`bg-white rounded-xl border p-3 sm:p-5 ${accent ? 'border-primary-200 ring-1 ring-primary-100' : 'border-gray-200'}`}>
+      <div className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</div>
+      <div className={`text-xl sm:text-2xl font-bold mt-1 ${accent ? 'text-primary-600' : 'text-gray-900'}`}>{value}</div>
+      {sublabel && <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{sublabel}</div>}
     </div>
   );
 }

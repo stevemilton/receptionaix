@@ -32,7 +32,7 @@ export default async function AppointmentsPage() {
   const today = new Date().toDateString();
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
       <PageHeader title="Appointments" subtitle="Bookings made through your AI receptionist" />
 
       {/* Upcoming Section */}
@@ -92,31 +92,31 @@ export default async function AppointmentsPage() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function AppointmentRow({ appointment: apt, muted }: { appointment: any; muted?: boolean }) {
   return (
-    <div className={`px-5 py-4 ${muted ? 'opacity-60' : ''}`}>
-      <div className="flex items-center gap-4">
+    <div className={`px-4 sm:px-5 py-3 sm:py-4 ${muted ? 'opacity-60' : ''}`}>
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Time */}
-        <div className="w-16 flex-shrink-0 text-center">
-          <div className={`text-sm font-semibold ${muted ? 'text-gray-400' : 'text-gray-900'}`}>
+        <div className="w-14 sm:w-16 flex-shrink-0 text-center">
+          <div className={`text-xs sm:text-sm font-semibold ${muted ? 'text-gray-400' : 'text-gray-900'}`}>
             {formatTime(apt.start_time)}
           </div>
-          <div className="text-xs text-gray-400">
+          <div className="text-[10px] sm:text-xs text-gray-400">
             {formatTime(apt.end_time)}
           </div>
         </div>
 
         {/* Divider */}
-        <div className="w-0.5 h-10 bg-gray-100 rounded-full flex-shrink-0" />
+        <div className="w-0.5 h-10 bg-gray-100 rounded-full flex-shrink-0 hidden sm:block" />
 
         {/* Details */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-gray-900">{apt.service_name}</span>
             <AppointmentStatusBadge status={apt.status || 'pending'} />
           </div>
-          <div className="text-xs text-gray-500 mt-0.5">
+          <div className="text-xs text-gray-500 mt-0.5 truncate">
             {apt.customers?.name || formatPhone(apt.customers?.phone || 'Unknown customer')}
             {apt.customers?.phone && apt.customers?.name && (
-              <span className="text-gray-400"> &middot; {formatPhone(apt.customers.phone)}</span>
+              <span className="text-gray-400 hidden sm:inline"> &middot; {formatPhone(apt.customers.phone)}</span>
             )}
           </div>
         </div>
