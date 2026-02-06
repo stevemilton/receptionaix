@@ -1,7 +1,7 @@
 # ReceptionAI - Project Status
 
 **Last updated:** 2026-02-06
-**Phase:** Post Phase 9 — Security hardening complete, type system regenerated, pre-production polish remaining
+**Phase:** MVP Deployment — External hosting, mobile-first pivot
 
 ---
 
@@ -16,8 +16,9 @@
 | 5. Voice Agent | Relay server, Grok integration, tools | Complete |
 | 6. Dashboard | Merchant dashboard, calls, settings | Complete |
 | 7. Admin | Enterprise admin panel, impersonation | Complete |
-| 8. Billing | Stripe, RevenueCat, usage tracking | Complete |
+| 8. Billing | Stripe, RevenueCat, usage tracking | Complete (Stripe deferred for MVP) |
 | 9. Mobile | Expo app, auth, push, subscriptions | Complete (untested on device) |
+| 10. Deployment | External hosting, Grok API fix | **In Progress** |
 
 ---
 
@@ -88,6 +89,35 @@ Nine hardening batches have been completed across commits `97440b7` through curr
 
 ---
 
+## Deployment Progress (2026-02-06)
+
+### Grok Voice API Rewrite (commit `bac184a`)
+The relay server was using **OpenAI Realtime API format** which is incompatible with xAI's Grok Voice Agent API. Complete rewrite of `grok-client.ts`:
+- [x] Session config uses xAI nested `audio.input.format` / `audio.output.format` structure
+- [x] Voice names changed from OpenAI (`alloy`, `echo`) to xAI (`Ara`, `Rex`, `Sal`, `Eve`, `Leo`)
+- [x] Event names fixed: `response.output_audio.delta` (was `response.audio.delta`)
+- [x] Transcript event: `response.output_audio_transcript.delta` (was `response.audio_transcript.delta`)
+- [x] Audio conversion removed — Grok supports `audio/pcmu` (μ-law 8kHz) natively, same as Twilio
+- [x] Removed OpenAI-specific fields (`modalities`, `tool_choice`, `temperature`, `OpenAI-Beta` header)
+
+### Infrastructure Deployment
+- [x] **Relay (Fly.io):** Deployed and healthy at `https://receptionai-relay.fly.dev` (LHR region)
+  - Docker build fixed: `.npmrc` added for `shamefully-hoist=true`, workspace symlinks recreated in runner stage
+  - `packages/shared` converted from source-based to compiled package with proper ESM exports
+  - Secrets set: `GROK_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `RELAY_SERVICE_KEY`
+- [ ] **Web (Vercel):** `vercel.json` configured, code pushed to GitHub. Needs project connection + env vars
+- [ ] **Twilio webhook:** Must update `+447446469600` to point to Vercel production URL `/api/twilio/incoming`
+- [ ] **Google redirect URI:** Must update from `localhost:3002` to Vercel URL
+- [ ] **Mobile (EAS):** Ready for build once EAS project ID configured
+
+### Build Pipeline Fixes
+- [x] React 18/19 conflict resolved via `pnpm.overrides` in root `package.json`
+- [x] `packages/shared` now compiles to `dist/` with proper `.js` ESM import extensions
+- [x] `Dockerfile.relay` creates workspace package symlinks (`@receptionalx/grok`, `shared`, `types`)
+- [x] `vercel.json` runs shared build before web build
+
+---
+
 ## Remaining Issues
 
 ### Justified `as any` Casts (~12 remaining)
@@ -127,15 +157,23 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 - iOS simulator and Android emulator testing not yet completed
 - `app.json` still has placeholder EAS project ID
 - No deeplink configuration for password reset flow
+- RevenueCat subscription status not synced back to Supabase
+
+### Stripe Billing (Deferred)
+- Stripe keys commented out for MVP phase
+- All billing code is built and functional
+- Will re-enable after voice pipeline is proven
 
 ---
 
 ## What's Working Well
 
 - Clean monorepo structure with proper package separation
+- **Relay server deployed and healthy** on Fly.io (LHR)
+- **Grok Voice Agent API** correctly integrated (xAI format, μ-law passthrough)
 - RLS consistently enforced in Supabase queries
 - Twilio signature verification with constant-time comparison
-- Stripe webhook signature verification via SDK + metadata validation
+- HMAC-SHA256 relay authentication with callerPhone in payload
 - Google OAuth tokens encrypted at rest
 - CSRF origin validation on all cookie-auth routes
 - Secure token storage on mobile (expo-secure-store)
@@ -146,3 +184,15 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 - Env var validation — routes fail closed if secrets are unset
 - Request timeouts on all external API calls
 - Rate limiting on cost-sensitive endpoints
+- Docker build pipeline working with pnpm workspace symlinks
+
+---
+
+## Next Steps (Priority Order)
+
+1. **Connect Vercel** — Import GitHub repo, set env vars, deploy web app
+2. **Configure Twilio** — Point webhook to Vercel URL `/api/twilio/incoming`
+3. **Test E2E call** — Dial Twilio number → verify Grok responds → check transcript in Supabase
+4. **EAS build** — Create Expo project, update `app.json`, build iOS/Android
+5. **Google Calendar** — Replace mock slots with real availability queries
+6. **Push notifications** — Expo Push API backend integration

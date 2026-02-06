@@ -53,8 +53,11 @@ See `/docs/PRD.md` for full business requirements.
 | Rule | Details |
 |------|---------|
 | **Protocol** | WebSockets only: `wss://api.x.ai/v1/realtime` |
-| **Audio Format** | Twilio sends `g711_ulaw` 8kHz → Relay converts to PCM16 24kHz for Grok |
-| **Audio Conversion** | Implemented in `apps/relay/src/audio-utils.ts` |
+| **Audio Format** | Twilio sends `audio/pcmu` (μ-law 8kHz) → Grok accepts `audio/pcmu` natively → **No conversion needed** |
+| **API Format** | Uses xAI Grok Voice Agent API format (NOT OpenAI Realtime API). See [docs](https://docs.x.ai/developers/model-capabilities/audio/voice) |
+| **Session Config** | Nested `audio.input.format` / `audio.output.format` objects with `type` and `rate` |
+| **Voice Names** | xAI voices: `Ara`, `Rex`, `Sal`, `Eve`, `Leo` (NOT OpenAI voices like alloy/echo) |
+| **Event Names** | `response.output_audio.delta`, `response.output_audio_transcript.delta` (NOT `response.audio.delta`) |
 | **No Vercel WebSockets** | Do NOT host relay on Vercel. Use `apps/relay` on Fly.io |
 | **Tools in Handshake** | Tool definitions sent in `session.update` message after connection |
 
@@ -93,9 +96,11 @@ Phase 4: Onboarding ──→ Phase 5: Voice Agent ──→ Phase 6: Dashboard 
 Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 ```
 
-### Current Phase: Post-Build — Production Readiness
+### Current Phase: MVP Deployment — External Hosting & Mobile-First
 
-All 9 build phases are complete. Security hardening is complete (9 batches). Type system has been regenerated from the live DB and all column mismatches resolved. See `docs/status.md` for the detailed hardening checklist and `docs/handoff.md` for developer onboarding.
+All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay server deployed to Fly.io (LHR). Web app ready for Vercel deployment. Mobile app assessed and ready for EAS build once project ID is configured.
+
+**Pivot:** The project is now mobile-first MVP. Stripe is deferred. Focus is on getting the Grok-Twilio voice pipeline working end-to-end with external hosting.
 
 ---
 
@@ -233,6 +238,13 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 
 ## Known Gaps & TODOs
 
+### Deployment (In Progress)
+- **Relay (Fly.io):** ✅ Deployed and healthy at `https://receptionai-relay.fly.dev` (LHR region)
+- **Web (Vercel):** ⬜ `vercel.json` configured, code pushed to `nifty-robinson` branch. Needs Vercel project connection + env vars
+- **Mobile (EAS):** ⬜ Code ready, needs EAS project ID in `app.json` and `eas build`
+- **Twilio webhook:** ⬜ Must point `+447446469600` to `https://<VERCEL_URL>/api/twilio/incoming`
+- **Google redirect URI:** ⬜ Must update from `localhost:3002` to Vercel production URL
+
 ### Google Calendar Integration
 - OAuth tokens are stored during onboarding
 - `checkAvailability` currently returns **mock slots** (see `apps/relay/src/tool-handlers.ts:94`)
@@ -253,6 +265,7 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 - No test suite (test runner not configured)
 - Admin dev bypass (`ADMIN_DEV_BYPASS=true`) must never reach production
 - Migration 007 must be applied to live DB (`pnpm db:push`)
+- Stripe billing deferred (keys commented out) — focus is mobile-first MVP
 
 ---
 
@@ -291,8 +304,8 @@ Nine hardening batches have been completed. **All critical and high-priority sec
    ```
 4. **Twilio opens WebSocket** to relay server (long-lived connection)
 5. **Relay fetches merchant config** from Supabase (knowledge base, voice settings)
-6. **Relay opens WebSocket to Grok** with `connection_init` (includes tools)
-7. **Audio flows bidirectionally:** Twilio ↔ Relay ↔ Grok
+6. **Relay opens WebSocket to Grok** with `session.update` (includes tools, system prompt, voice config)
+7. **Audio flows bidirectionally:** Twilio ↔ Relay ↔ Grok (μ-law 8kHz passthrough, no conversion)
 8. **Grok sends `tool_call`** → Relay executes → returns `tool_result`
 9. **Call ends** → Relay POSTs transcript to Supabase API
 10. **Dashboard updates** via Supabase realtime subscription
@@ -419,36 +432,45 @@ export type ToolName = typeof RECEPTION_TOOLS[number]["name"];
 
 ## Grok Voice Handshake
 
-The initial WebSocket message to Grok must include system prompt and tools:
+The initial WebSocket message to Grok uses the xAI Voice Agent API format. **Do NOT use OpenAI Realtime API format.**
+
+Reference: https://docs.x.ai/developers/model-capabilities/audio/voice
 
 ```typescript
-// packages/grok/client.ts
+// apps/relay/src/grok-client.ts — createSessionUpdate()
 
-import { RECEPTION_TOOLS } from './tools';
+function createSessionUpdate(config: MerchantConfig) {
+  const tools = RECEPTION_TOOLS.map(tool => ({
+    type: 'function' as const,
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.parameters,
+  }));
 
-export function createConnectionInit(merchant: Merchant, knowledgeBase: KnowledgeBase) {
+  // xAI voice names (NOT OpenAI voices)
+  const voiceMap: Record<string, string> = {
+    'ara': 'Ara', 'rex': 'Rex', 'sal': 'Sal', 'eve': 'Eve', 'leo': 'Leo',
+  };
+  const voice = voiceMap[config.voiceId?.toLowerCase() || 'ara'] || 'Ara';
+
   return {
-    type: "connection_init",
-    data: {
-      model_id: "grok-voice-beta",
-      voice: {
-        id: "eve",  // British female voice
-        speed: 1.0
+    type: 'session.update',
+    session: {
+      instructions: buildSystemPrompt(config),
+      voice,
+      turn_detection: { type: 'server_vad' },
+      audio: {
+        input: { format: { type: 'audio/pcmu', rate: 8000 } },   // μ-law from Twilio
+        output: { format: { type: 'audio/pcmu', rate: 8000 } },  // μ-law back to Twilio
       },
-      input_audio_format: "g711_ulaw",
-      output_audio_format: "g711_ulaw",
-      turn_detection: {
-        type: "server_vad"  // Server-side voice activity detection
-      },
-      instructions: buildSystemPrompt(merchant, knowledgeBase),
-      tools: RECEPTION_TOOLS
-    }
+      tools,
+    },
   };
 }
 
-function buildSystemPrompt(merchant: Merchant, kb: KnowledgeBase): string {
-  return `You are a friendly, professional receptionist for ${merchant.business_name},
-a ${merchant.business_type} in the UK.
+function buildSystemPrompt(config: MerchantConfig): string {
+  return `You are a friendly, professional receptionist for ${config.businessName},
+a ${config.businessType} in the UK.
 
 YOUR CAPABILITIES:
 - Book appointments by checking calendar availability
@@ -550,22 +572,33 @@ async function executeToolCall(toolName: string, params: any): Promise<ToolResul
 
 ## Deployment
 
-### Web (Vercel)
-- Auto-deploys from `main` branch
-- Environment variables in Vercel dashboard
-- URL: `https://receptionai.vercel.app` (or custom domain)
+### Web (Vercel) — ⬜ Pending
+- `vercel.json` in repo root configures build (runs shared build first, then web build)
+- Needs Vercel project connected to GitHub repo `stevemilton/receptionaix`
+- Branch: `main` (or `nifty-robinson` for preview)
+- Required env vars: see `.env.local` or Environment Variables section below
 
-### Relay Server (Fly.io)
+### Relay Server (Fly.io) — ✅ Deployed
+- **URL:** `wss://receptionai-relay.fly.dev/media-stream`
+- **Health:** `https://receptionai-relay.fly.dev/health`
+- **Region:** LHR (London)
+- **Docker:** Multi-stage build via `Dockerfile.relay` in repo root
+- **Secrets set:** `GROK_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `RELAY_SERVICE_KEY`
 ```bash
-cd apps/relay
-fly launch --name receptionai-relay
-fly secrets set GROK_API_KEY=xxx SUPABASE_URL=xxx SUPABASE_SERVICE_KEY=xxx
-fly deploy
+# Deploy
+fly deploy --config fly.toml --dockerfile Dockerfile.relay --no-cache --app receptionai-relay
+
+# Check status
+fly status --app receptionai-relay
+fly logs --app receptionai-relay
+
+# Update secrets
+fly secrets set KEY=value --app receptionai-relay
 ```
-- URL: `wss://receptionai-relay.fly.dev/media-stream`
-- Scale: Start with 1 instance, auto-scale based on connections
+- **Note:** Dockerfile creates symlinks for workspace packages (`@receptionalx/grok`, `shared`, `types`) in the runner stage because Docker COPY doesn't preserve pnpm symlinks
 
 ### Database (Supabase)
+- **Project:** `tvcdqmmxjntxkkmbguwc.supabase.co`
 ```bash
 cd packages/supabase
 npx supabase db push
@@ -645,11 +678,12 @@ pnpm deploy:relay     # Deploy to Fly.io
 ## Quick Reference
 
 ### When Building Voice Features:
-1. Twilio sends μ-law 8kHz, Grok expects PCM16 24kHz - conversion in `audio-utils.ts`
-2. Tools go in the `session.update` message after connection
+1. Twilio sends μ-law 8kHz (`audio/pcmu`), Grok accepts μ-law natively — **no conversion needed**
+2. Tools go in the `session.update` message after connection (xAI format, NOT OpenAI)
 3. Relay handles tool execution, not Grok
 4. Test with Twilio's test credentials first
 5. Mock Grok client available for local development
+6. xAI voice API docs: https://docs.x.ai/developers/model-capabilities/audio/voice
 
 ### When Building UI:
 1. Use components from `packages/ui`
@@ -660,6 +694,9 @@ pnpm deploy:relay     # Deploy to Fly.io
 1. Read `docs/handoff.md` for orientation
 2. Read `docs/status.md` for remaining issues
 3. Run `pnpm db:push` to apply pending migration 007
+4. Relay is live at `https://receptionai-relay.fly.dev` — check `/health`
+5. Web app needs Vercel deployment — see Deployment section
+6. Mobile app needs EAS project ID — see `apps/mobile/app.json`
 
 ### When Stuck:
 1. Check PRD for requirements
@@ -692,10 +729,10 @@ pnpm deploy:relay     # Deploy to Fly.io
 | File | Purpose |
 |------|---------|
 | `apps/relay/src/server.ts` | Fastify server with WebSocket + HMAC verification |
-| `apps/relay/src/grok-client.ts` | Grok connection & session management |
-| `apps/relay/src/media-stream-handler.ts` | Twilio bridge with audio conversion |
+| `apps/relay/src/grok-client.ts` | Grok WebSocket management, xAI Voice Agent session config |
+| `apps/relay/src/media-stream-handler.ts` | Twilio ↔ Grok bridge (μ-law passthrough, no conversion) |
 | `apps/relay/src/tool-handlers.ts` | Backend execution for 5 reception tools |
-| `apps/relay/src/audio-utils.ts` | Audio codec conversion (μ-law ↔ PCM16) |
+| `apps/relay/src/audio-utils.ts` | Audio codec utilities (legacy, conversion no longer needed) |
 | `apps/web/src/lib/supabase/admin.ts` | Service-role Supabase client (typed with Database) |
 | `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |

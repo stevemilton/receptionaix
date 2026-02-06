@@ -1,7 +1,7 @@
 # ReceptionAI - Developer Handoff
 
 **Date:** 2026-02-06
-**Status:** All 9 build phases complete. Security hardening complete. Type system regenerated. Feature gaps remain (Google Calendar, push notifications, mobile device testing).
+**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web app ready for Vercel. Mobile-first MVP pivot in progress. Stripe deferred.
 
 This document is for any developer picking up this codebase. Read this first, then `CLAUDE.md` for architecture details, then `docs/status.md` for the current issue backlog.
 
@@ -74,11 +74,12 @@ packages/
 ### Data Flow: Incoming Call
 ```
 Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
-                   | Returns TwiML with Stream URL
+                   | Returns TwiML with Stream URL + HMAC token
          Twilio -> WebSocket -> relay server (Fly.io)
+                               | Verifies HMAC token
                                | Fetches merchant config from Supabase
-                               | Opens WebSocket to Grok Realtime API
-                               | Converts audio: u-law 8kHz <-> PCM16 24kHz
+                               | Opens WebSocket to Grok Voice Agent API (xAI)
+                               | Audio: μ-law 8kHz passthrough (no conversion)
                                | Executes tool calls (booking, lookup, etc.)
                                | On call end: POST transcript to Supabase
 ```
@@ -91,12 +92,14 @@ Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
 |----------|-----------|
 | Relay on Fly.io, not Vercel | Vercel doesn't support long-lived WebSockets |
 | Firecrawl, not Puppeteer | Serverless-friendly, no headless browser required |
-| u-law <-> PCM16 conversion in relay | Twilio sends 8kHz u-law, Grok needs 24kHz PCM16 |
+| μ-law passthrough (no conversion) | Grok Voice Agent API accepts `audio/pcmu` natively, same as Twilio |
+| xAI Voice Agent API, not OpenAI | Grok has its own API format — session config, event names, voice names all differ |
 | HMAC-SHA256 tokens for relay auth | Twilio custom params can't carry session cookies |
 | Mock Grok client for dev | Avoids burning API credits during development |
 | Zustand for onboarding state | Persists across page navigations without server round-trips |
 | RevenueCat for mobile billing | Handles App Store / Play Store IAP complexity |
 | Master KB for cross-merchant learning | Shared FAQ/service templates by business type |
+| pnpm.overrides for React 18 | Mobile needs React 19 (RN 0.81), web needs React 18 (Next.js 14/styled-jsx) |
 
 ---
 
@@ -131,7 +134,7 @@ The app has not been tested on physical iOS or Android devices. `app.json` still
 
 ## Security Status
 
-Eight hardening batches have been completed. See `docs/status.md` for the detailed checklist.
+Nine hardening batches have been completed. See `docs/status.md` for the detailed checklist.
 
 **All critical and high-priority security issues have been resolved**, including:
 - Merchant impersonation privilege escalation
@@ -181,42 +184,60 @@ All required env vars are listed in `.env.example`. The critical ones:
 
 ## Deployment
 
-### Web -> Vercel
-Auto-deploys from `main`. Environment variables configured in Vercel dashboard.
-
-### Relay -> Fly.io
+### Relay -> Fly.io ✅ DEPLOYED
+- **URL:** `https://receptionai-relay.fly.dev` (LHR region)
+- **Health check:** `GET /health` returns `{"status":"ok","timestamp":"..."}`
+- **Docker:** `Dockerfile.relay` in repo root (multi-stage, creates workspace symlinks)
 ```bash
-cd apps/relay
-fly secrets set GROK_API_KEY=xxx SUPABASE_URL=xxx SUPABASE_SERVICE_KEY=xxx RELAY_SERVICE_KEY=xxx
-fly deploy
+# Deploy (from repo root)
+fly deploy --config fly.toml --dockerfile Dockerfile.relay --app receptionai-relay
+
+# Check health / logs
+curl https://receptionai-relay.fly.dev/health
+fly logs --app receptionai-relay
+
+# Update secrets
+fly secrets set KEY=value --app receptionai-relay
 ```
+**Note:** Always use `--no-cache` after changing `.npmrc` or `Dockerfile.relay` structure to avoid stale Docker layers.
+
+### Web -> Vercel ⬜ PENDING
+- `vercel.json` in repo root configures the build pipeline
+- GitHub repo: `stevemilton/receptionaix`, branch: `main`
+- Import via Vercel dashboard → set env vars → deploy
+- See `docs/status.md` for full list of required env vars
 
 ### Database -> Supabase
 ```bash
-pnpm db:push   # Apply migrations
+pnpm db:push   # Apply migrations (007 still pending)
 pnpm db:types  # Regenerate types (commit the output)
 ```
 
-### Mobile -> EAS Build
+### Mobile -> EAS Build ⬜ PENDING
 ```bash
 cd apps/mobile
+npx eas project:create   # Get real project ID
+# Update app.json with project ID
+# Update .env with EXPO_PUBLIC_PROJECT_ID
 eas build --platform ios
 eas build --platform android
-eas submit      # Submit to App Store / Play Store
 ```
 
 ---
 
 ## Recommended Work Order
 
-If picking this up for production deployment:
+If picking this up for MVP deployment:
 
-1. **Apply pending migration** — `pnpm db:push` to add `billing_period_start` and `stripe_overage_item_id` columns
-2. **Integrate real Google Calendar** — replace mock slots in tool-handlers.ts
-3. **Build push notification backend** — Expo Push API integration
-4. **Set up a test suite** — at minimum, integration tests for API routes and relay
-5. **Test mobile on devices** — update app.json, add deeplinks, run on simulators
-6. **Configure production deployment** — Vercel env vars, Fly.io secrets, Supabase project
+1. **Deploy web to Vercel** — Connect GitHub repo, add env vars, deploy
+2. **Configure Twilio webhook** — Point `+447446469600` to Vercel URL `/api/twilio/incoming`
+3. **Test E2E voice call** — Dial number → Grok responds → transcript saved → dashboard shows call
+4. **Build mobile with EAS** — Create project, update app.json, build for iOS/Android
+5. **Apply pending migration** — `pnpm db:push` for `billing_period_start` and `stripe_overage_item_id`
+6. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
+7. **Build push notification backend** — Expo Push API integration
+8. **Re-enable Stripe** — Uncomment keys, test subscription flow
+9. **Set up test suite** — Integration tests for API routes and relay
 
 ---
 
@@ -225,8 +246,8 @@ If picking this up for production deployment:
 | File | What It Does |
 |------|--------------|
 | `apps/relay/src/server.ts` | Fastify + WS entry point, HMAC verification |
-| `apps/relay/src/media-stream-handler.ts` | Twilio <-> Grok bridge with audio conversion |
-| `apps/relay/src/grok-client.ts` | Grok WebSocket management, session config |
+| `apps/relay/src/media-stream-handler.ts` | Twilio ↔ Grok bridge (μ-law passthrough) |
+| `apps/relay/src/grok-client.ts` | Grok WebSocket management, xAI Voice Agent session config |
 | `apps/relay/src/tool-handlers.ts` | Executes 5 reception tools with param validation |
 | `apps/relay/src/audio-utils.ts` | u-law <-> PCM16 codec conversion |
 | `apps/web/src/app/api/twilio/incoming/route.ts` | Incoming call webhook (returns TwiML) |
