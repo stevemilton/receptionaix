@@ -98,7 +98,7 @@ Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 
 ### Current Phase: MVP Live — Voice Pipeline Working
 
-All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. **Dashboard redesigned** — post-call processing pipeline, AI summaries, shared components, Messages page. Mobile app ready for EAS build.
+All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. **Dashboard redesigned & mobile-responsive** — post-call processing pipeline, AI summaries, shared components, Messages page, hamburger nav, responsive layouts across all pages. **iOS app built and submitted to TestFlight.**
 
 **Pivot:** The project is now mobile-first MVP. Stripe is deferred. The Grok-Twilio voice pipeline is working end-to-end.
 
@@ -180,6 +180,14 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
   - [x] Appointments page split into Upcoming (grouped by date) and Past & Cancelled
   - [x] 3 new API routes: `/api/messages` (GET), `/api/messages/:id/read` (PUT), `/api/messages/mark-all-read` (PUT)
   - [x] Navigation updated: Messages added, Usage/Billing removed from primary nav
+  - [x] **Mobile-responsive (2026-02-06):**
+    - [x] Extracted layout into server + client split (`layout.tsx` + `dashboard-shell.tsx`)
+    - [x] Hamburger menu on mobile with slide-over nav panel + backdrop overlay
+    - [x] Responsive padding (`p-4 sm:p-6 lg:p-8`), text sizes, grid gaps across all pages
+    - [x] Calls page: dual layout — card-based on mobile, table on desktop
+    - [x] Settings: voice grid `grid-cols-1 sm:grid-cols-2`
+    - [x] Knowledge Base: service form and opening hours responsive
+    - [x] Hidden decorative elements on mobile (avatar circles, dividers)
 - [x] **Test:** Merchant can view calls with AI summaries, manage messages, edit knowledge base
 
 ### Phase 7: Enterprise Admin ✅ COMPLETE
@@ -201,7 +209,7 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] RevenueCat integration for mobile IAP
 - [x] **Test:** Merchant can subscribe, webhooks update plan
 
-### Phase 9: Mobile App ✅ COMPLETE
+### Phase 9: Mobile App ✅ iOS SUBMITTED TO TESTFLIGHT
 - [x] Expo project setup
 - [x] Navigation structure (Auth, Main, Root navigators)
 - [x] Auth context with Supabase integration
@@ -213,7 +221,12 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] Settings with notification toggle (persisted to DB)
 - [x] Support links (Help, Contact, Terms, Privacy)
 - [x] Subscription management via RevenueCat
-- [ ] **Test:** App runs on iOS simulator + Android emulator
+- [x] EAS project created (`@stevemilton/receptionai`, ID: `480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3`)
+- [x] `eas.json` configured (development/preview/production profiles)
+- [x] TypeScript errors fixed (Supabase type casts, React Navigation 7 compat)
+- [x] iOS production build completed and submitted to TestFlight
+- [ ] **Test:** TestFlight beta testing on physical iOS device
+- [ ] Android build not yet attempted
 
 ---
 
@@ -255,7 +268,13 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 - **E2E Voice Pipeline:** ✅ Working — first call completed 2026-02-06
 - **Twilio numbers:** `+447446469600` (original), `+447427814067` (The Perse School)
 - **Twilio webhook:** Voice webhook → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
-- **Mobile (EAS):** ⬜ Code ready, needs EAS project ID in `app.json` and `eas build`
+- **Mobile (EAS):** ✅ iOS production build submitted to TestFlight
+  - EAS project: `@stevemilton/receptionai` (ID: `480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3`)
+  - Bundle ID: `com.receptionai.app`
+  - Apple Team: `STEPHEN CHRISTOPHER MILTON` (Team ID: `6FK49H335R`)
+  - Apple ID: `greasylaketwitter@gmail.com`
+  - Distribution cert: `QRRU3Z9PA7` (shared with UTx — safe)
+  - Build command: `EAS_BUILD_DISABLE_CASING_CHECK=1 eas build --platform ios --profile production`
 - **Google redirect URI:** ✅ Updated to `https://receptionaix-relay.vercel.app/api/google/callback` (needs updating in Google Cloud Console too)
 
 ### Twilio Signature Verification (Disabled)
@@ -273,10 +292,12 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 - TODO: Backend service to send notifications via Expo Push API
 
 ### Mobile Testing & Deployment
-- iOS simulator and Android emulator testing not completed
-- `app.json` has placeholder EAS project ID
+- iOS production build submitted to TestFlight — awaiting Apple processing
+- Android build not yet attempted
 - No deeplink configuration for password reset flow
+- RevenueCat API keys not configured (need `EXPO_PUBLIC_REVENUECAT_IOS_KEY` in `apps/mobile/.env`)
 - RevenueCat subscription status not synced back to Supabase
+- **macOS casing workaround:** Use `EAS_BUILD_DISABLE_CASING_CHECK=1` with eas build commands
 
 ### Production Readiness
 - No test suite (test runner not configured)
@@ -717,6 +738,14 @@ pnpm deploy:relay     # Deploy to Fly.io
 2. Follow design system in PRD Section 8
 3. Mobile-first (test at 375px width)
 
+### When Building Mobile:
+1. EAS project: `@stevemilton/receptionai` (ID: `480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3`)
+2. Apple ID: `greasylaketwitter@gmail.com`, Team ID: `6FK49H335R`
+3. Distribution cert `QRRU3Z9PA7` is shared with UTx app — this is safe
+4. Always use `EAS_BUILD_DISABLE_CASING_CHECK=1` with eas build (macOS casing issue)
+5. iOS credentials are cached — future builds won't need Apple login
+6. RevenueCat API keys not yet configured — subscriptions won't work until set up
+
 ### When Picking Up This Project:
 1. Read `docs/handoff.md` for orientation
 2. Read `docs/status.md` for remaining issues
@@ -724,8 +753,9 @@ pnpm deploy:relay     # Deploy to Fly.io
 4. Web is live at `https://receptionaix-relay.vercel.app`
 5. E2E voice pipeline is working — call `+447427814067` to test
 6. Twilio webhook: voice calls → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
-7. Mobile app needs EAS project ID — see `apps/mobile/app.json`
-8. Twilio signature verification is temporarily disabled — see status.md
+7. iOS app submitted to TestFlight — check App Store Connect for status
+8. EAS dashboard: `https://expo.dev/accounts/stevemilton/projects/receptionai`
+9. Twilio signature verification is temporarily disabled — see status.md
 
 ### When Stuck:
 1. Check PRD for requirements
@@ -768,6 +798,7 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `apps/relay/src/tool-handlers.ts` | Backend execution for 5 reception tools |
 | `apps/relay/src/post-call.ts` | Post-call processing: customer creation, AI summaries, message linking |
 | `apps/relay/src/audio-utils.ts` | Audio codec utilities (legacy, conversion no longer needed) |
+| `apps/web/src/app/dashboard/_components/dashboard-shell.tsx` | Client component: mobile hamburger nav, responsive dashboard shell |
 | `apps/web/src/app/dashboard/_components/shared.tsx` | Shared dashboard formatters, badges, icons, layout components |
 | `apps/web/src/app/dashboard/messages/page.tsx` | Messages page with filters and mark-as-read |
 | `apps/web/src/app/api/messages/route.ts` | Messages API (GET all for merchant) |
@@ -778,6 +809,10 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `packages/knowledge/src/extractor.ts` | Grok-based knowledge extraction (xAI text API) |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
 | `packages/types/src/database.ts` | Supabase table types (generated via `supabase gen types typescript`) |
+| `apps/mobile/app.json` | Expo config (EAS project ID, bundle ID, permissions) |
+| `apps/mobile/eas.json` | EAS build profiles (development, preview, production) |
+| `apps/mobile/src/lib/AuthContext.tsx` | Mobile auth context (Supabase + RevenueCat init) |
+| `apps/mobile/src/navigation/RootNavigator.tsx` | Conditional routing: auth → onboarding → main |
 
 ---
 

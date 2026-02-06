@@ -1,7 +1,7 @@
 # ReceptionAI - Developer Handoff
 
 **Date:** 2026-02-06
-**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. **Dashboard redesigned** — post-call processing, AI summaries, shared components, Messages page. Mobile-first MVP pivot in progress. Stripe deferred.
+**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. **Dashboard redesigned & mobile-responsive** — post-call processing, AI summaries, shared components, Messages page, hamburger nav, responsive layouts. **iOS app built and submitted to TestFlight.** Mobile-first MVP pivot in progress. Stripe deferred.
 
 This document is for any developer picking up this codebase. Read this first, then `CLAUDE.md` for architecture details, then `docs/status.md` for the current issue backlog.
 
@@ -132,7 +132,8 @@ Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
   - Shared component library (`_components/shared.tsx`) for all formatters, badges, icons
 - Admin panel (merchant list, detail, impersonation, revenue, health monitor)
 - Stripe billing (3 tiers, webhooks, portal)
-- Mobile app (auth, dashboard, calls, settings, RevenueCat subscriptions)
+- Mobile app (auth, dashboard, calls, settings, RevenueCat subscriptions) — **iOS production build submitted to TestFlight**
+- **Mobile-responsive web dashboard** — hamburger nav, card-based mobile layouts, responsive grids
 - Supabase RLS for multi-tenant isolation
 - CSRF protection on all cookie-auth routes
 - OAuth token encryption at rest
@@ -153,7 +154,14 @@ Temporarily disabled in `/api/twilio/incoming` because `request.url` on Vercel d
 Mobile app registers Expo push tokens and saves to `merchants.push_token`. No backend service exists to actually send notifications. The cron route at `apps/web/src/app/api/cron/notifications/route.ts` handles email notifications but not push.
 
 ### Mobile Device Testing
-The app has not been tested on physical iOS or Android devices. `app.json` still has a placeholder EAS project ID. Deeplink configuration is missing (needed for password reset email flow).
+iOS production build has been submitted to TestFlight via EAS. Awaiting Apple processing. Once available, test on physical device. Android build not yet attempted. Deeplink configuration is missing (needed for password reset email flow). RevenueCat API keys not yet configured — subscriptions will be non-functional until set up.
+
+### RevenueCat (Not Configured)
+Mobile code is ready for RevenueCat but API keys are not set. Need to:
+1. Create products in RevenueCat dashboard matching the 3 tiers (Starter, Professional, Enterprise)
+2. Connect Apple App Store in RevenueCat
+3. Set `EXPO_PUBLIC_REVENUECAT_IOS_KEY` in `apps/mobile/.env`
+4. Rebuild the app for IAP to work
 
 ---
 
@@ -241,15 +249,33 @@ pnpm db:push   # Apply migrations (007 still pending)
 pnpm db:types  # Regenerate types (commit the output)
 ```
 
-### Mobile -> EAS Build ⬜ PENDING
+### Mobile -> EAS Build ✅ iOS SUBMITTED
+- **EAS Project:** `@stevemilton/receptionai` ([expo.dev](https://expo.dev/accounts/stevemilton/projects/receptionai))
+- **Project ID:** `480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3`
+- **Bundle ID:** `com.receptionai.app`
+- **Apple Team:** `STEPHEN CHRISTOPHER MILTON (Individual)` (Team ID: `6FK49H335R`)
+- **Apple ID:** `greasylaketwitter@gmail.com`
+- **Distribution cert:** `QRRU3Z9PA7` (shared with UTx app — this is safe and normal)
+- **iOS status:** Production build submitted to TestFlight
 ```bash
 cd apps/mobile
-npx eas project:create   # Get real project ID
-# Update app.json with project ID
-# Update .env with EXPO_PUBLIC_PROJECT_ID
-eas build --platform ios
-eas build --platform android
+
+# Future builds (credentials are cached now)
+eas build --platform ios --profile production
+
+# Submit to TestFlight
+eas submit --platform ios
+
+# Android (not yet attempted)
+eas build --platform android --profile production
+
+# Development build (iOS Simulator)
+eas build --platform ios --profile development
+
+# IMPORTANT: casing check workaround for macOS
+EAS_BUILD_DISABLE_CASING_CHECK=1 eas build --platform ios --profile production
 ```
+**Note:** macOS case-insensitive filesystem causes EAS to detect "inconsistent filename casing" from unrelated files in git history. Use `EAS_BUILD_DISABLE_CASING_CHECK=1` env var to bypass.
 
 ---
 
@@ -263,12 +289,15 @@ If picking this up:
 4. ~~**Dashboard redesign**~~ ✅ Post-call processing, AI summaries, shared components, Messages page
 5. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
 6. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-7. **Build mobile with EAS** — Create project, update app.json, build for iOS/Android
-8. **Apply pending migrations** — `pnpm db:push` for migrations 007 and 011
-9. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
-10. **Build push notification backend** — Expo Push API integration
-11. **Re-enable Stripe** — Uncomment keys, test subscription flow
-12. **Set up test suite** — Integration tests for API routes and relay
+7. ~~**Build mobile with EAS**~~ ✅ iOS submitted to TestFlight
+8. **TestFlight testing** — Test iOS app on physical device once Apple processes the build
+9. **Android build** — `EAS_BUILD_DISABLE_CASING_CHECK=1 eas build --platform android --profile production`
+10. **Configure RevenueCat** — Set up products, connect App Store, add API keys to `.env`
+11. **Apply pending migrations** — `pnpm db:push` for migrations 007 and 011
+12. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
+13. **Build push notification backend** — Expo Push API integration
+14. **Re-enable Stripe** — Uncomment keys, test subscription flow
+15. **Set up test suite** — Integration tests for API routes and relay
 
 ---
 
@@ -289,7 +318,8 @@ If picking this up:
 | `apps/web/src/app/api/twilio/incoming/route.ts` | Incoming call webhook (returns TwiML) |
 | `apps/web/src/app/api/stripe/webhook/route.ts` | Subscription lifecycle with metadata validation |
 | `apps/web/src/app/admin/(dashboard)/layout.tsx` | Admin auth guard |
-| `apps/web/src/app/dashboard/layout.tsx` | Dashboard auth guard with impersonation validation |
+| `apps/web/src/app/dashboard/_components/dashboard-shell.tsx` | **NEW** Client component with mobile hamburger nav + responsive shell |
+| `apps/web/src/app/dashboard/layout.tsx` | Dashboard auth guard with impersonation validation (server component) |
 | `apps/web/src/lib/supabase/admin.ts` | Service-role Supabase client (typed with Database) |
 | `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |

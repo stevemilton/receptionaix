@@ -1,7 +1,7 @@
 # ReceptionAI - Project Status
 
-**Last updated:** 2026-02-06 (late evening)
-**Phase:** MVP Live — E2E voice pipeline working, dashboard redesigned
+**Last updated:** 2026-02-06 (night)
+**Phase:** MVP Live — E2E voice pipeline working, dashboard redesigned & mobile-responsive, iOS build submitted to TestFlight
 
 ---
 
@@ -17,7 +17,7 @@
 | 6. Dashboard | Merchant dashboard, calls, settings | **Redesigned** ✅ |
 | 7. Admin | Enterprise admin panel, impersonation | Complete |
 | 8. Billing | Stripe, RevenueCat, usage tracking | Complete (Stripe deferred for MVP) |
-| 9. Mobile | Expo app, auth, push, subscriptions | Complete (untested on device) |
+| 9. Mobile | Expo app, auth, push, subscriptions | **iOS build submitted** ✅ |
 | 10. Deployment | External hosting, Grok API fix | **Complete** ✅ |
 
 ---
@@ -109,7 +109,12 @@ The relay server was using **OpenAI Realtime API format** which is incompatible 
 - [x] **Twilio webhook:** `+447446469600` pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
 - [x] **Twilio number provisioned:** `+447427814067` assigned to The Perse School merchant
 - [x] **Google redirect URI:** Updated in `.env.local` to `https://receptionaix-relay.vercel.app/api/google/callback` (needs updating in Google Cloud Console)
-- [ ] **Mobile (EAS):** Ready for build once EAS project ID configured
+- [x] **Mobile (EAS):** iOS production build completed and submitted to TestFlight
+  - EAS project: `@stevemilton/receptionai` (ID: `480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3`)
+  - Bundle ID: `com.receptionai.app`
+  - Apple Team: `STEPHEN CHRISTOPHER MILTON (Individual)` (Team ID: `6FK49H335R`)
+  - Distribution cert: `QRRU3Z9PA7` (shared with UTx app)
+  - Submitted via `eas submit --platform ios`
 
 ### E2E Voice Pipeline ✅ WORKING (2026-02-06)
 First successful end-to-end call completed:
@@ -169,6 +174,46 @@ Full redesign of the merchant dashboard with post-call processing pipeline and n
 - [x] Added Messages to primary nav with `MessageSquareIcon`
 - [x] Removed Usage and Billing from primary nav (accessible from Settings)
 
+### Mobile-Responsive Dashboard (commit `50c1ed9`)
+Full mobile responsiveness pass across all dashboard pages:
+
+#### Layout: Collapsible Mobile Navigation
+- [x] Extracted dashboard layout into server + client component split (`layout.tsx` + `dashboard-shell.tsx`)
+- [x] **Hamburger menu** on mobile with slide-over nav panel + backdrop overlay
+- [x] Desktop sidebar hidden on mobile (`hidden lg:flex`), mobile top bar hidden on desktop (`lg:hidden`)
+- [x] Active route highlighting via `usePathname()`
+- [x] CSS `animate-slide-in` animation for mobile nav panel
+
+#### Responsive Patterns Applied Across All Pages
+- [x] Responsive padding: `p-4 sm:p-6 lg:p-8` (was fixed `p-8`)
+- [x] Responsive text sizing: `text-xl sm:text-2xl`, `text-xs sm:text-sm`
+- [x] Responsive grid gaps: `gap-3 sm:gap-4`, `gap-4 sm:gap-6`
+- [x] Hidden decorative elements on mobile (avatar circles, dividers)
+- [x] `flex-shrink-0` + `whitespace-nowrap` on action buttons
+
+#### Page-Specific Mobile Fixes
+- [x] **Calls list** — Dual layout: card-based on mobile (`sm:hidden`), table on desktop (`hidden sm:block`)
+- [x] **Call detail** — Wider chat bubbles on mobile (`max-w-[85%]`), compact spacing
+- [x] **Messages** — Overflow-x-auto filter tabs, hidden message icon, responsive action links
+- [x] **Customers** — Grid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
+- [x] **Appointments** — Compact row padding, hidden vertical dividers, hidden phone on mobile
+- [x] **Settings** — Voice grid `grid-cols-1 sm:grid-cols-2`, responsive section cards
+- [x] **Knowledge Base** — Service form grid `grid-cols-1 sm:grid-cols-2`, narrower day labels (`w-20 sm:w-28`), responsive tabs
+- [x] **Shared components** — `MetricCard`, `PageHeader`, `EmptyState` all responsive
+
+### iOS Build & TestFlight Submission (commit `2acadfe`)
+- [x] EAS project created: `@stevemilton/receptionai` on expo.dev
+- [x] `eas.json` configured with development/preview/production build profiles
+- [x] `app.json` updated with real EAS project ID, `ITSAppUsesNonExemptEncryption: false`, owner
+- [x] `notification-icon.png` asset added (was missing, referenced by expo-notifications plugin)
+- [x] All mobile TypeScript errors fixed:
+  - Cast Supabase queries for tables/columns not in generated types (`push_token`, `messages`, `notifications_enabled`)
+  - Fixed `headerBackTitleVisible` → `headerBackButtonDisplayMode` for React Navigation 7
+  - Allow null on `started_at`/`outcome` fields to match DB schema
+  - Cast `Json` types to `Service[]`/`FAQ[]`/`Record<string, string>` for knowledge base
+- [x] iOS production build completed on EAS
+- [x] Submitted to TestFlight via `eas submit --platform ios`
+
 ---
 
 ## Remaining Issues
@@ -210,9 +255,10 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 - TODO: Backend service to send notifications via Expo Push API
 
 ### Mobile Testing
-- iOS simulator and Android emulator testing not yet completed
-- `app.json` still has placeholder EAS project ID
+- iOS production build submitted to TestFlight — awaiting Apple processing
+- Android build not yet attempted
 - No deeplink configuration for password reset flow
+- RevenueCat API keys not yet configured (subscriptions won't work until set up in RevenueCat dashboard + `.env`)
 - RevenueCat subscription status not synced back to Supabase
 
 ### Stripe Billing (Deferred)
@@ -255,6 +301,9 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 5. **Verify merchant config** — Check business_name is populated in Supabase (Grok said "Business Name" instead of "The Perse School")
 6. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
 7. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-8. **EAS build** — Create Expo project, update `app.json`, build iOS/Android
-9. **Google Calendar** — Replace mock slots with real availability queries
-10. **Push notifications** — Expo Push API backend integration
+8. ~~**EAS build**~~ ✅ iOS production build submitted to TestFlight
+9. **TestFlight testing** — Test mobile app on physical iOS device once Apple processes the build
+10. **Android build** — `eas build --platform android --profile production`
+11. **RevenueCat setup** — Configure products in RevenueCat dashboard, add API keys to `.env`
+12. **Google Calendar** — Replace mock slots with real availability queries
+13. **Push notifications** — Expo Push API backend integration
