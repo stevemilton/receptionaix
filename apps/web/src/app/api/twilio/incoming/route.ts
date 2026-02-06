@@ -57,6 +57,14 @@ function unavailableMessage() {
 }
 
 export async function POST(request: Request) {
+  console.log('[Twilio Incoming] === REQUEST START ===');
+  console.log('[Twilio Incoming] request.url:', request.url);
+  console.log('[Twilio Incoming] NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL || 'NOT SET');
+  console.log('[Twilio Incoming] TWILIO_AUTH_TOKEN set:', !!process.env.TWILIO_AUTH_TOKEN);
+  console.log('[Twilio Incoming] SUPABASE_SERVICE_ROLE_KEY set:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+  console.log('[Twilio Incoming] SUPABASE_SERVICE_ROLE_KEY starts with eyJ:', process.env.SUPABASE_SERVICE_ROLE_KEY?.startsWith('eyJ') || false);
+  console.log('[Twilio Incoming] NODE_ENV:', process.env.NODE_ENV);
+
   // Parse Twilio webhook data
   const formData = await request.formData();
 
@@ -77,12 +85,20 @@ export async function POST(request: Request) {
       ? `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/incoming`
       : request.url;
 
+    console.log('[Twilio Incoming] Signature check — publicUrl:', publicUrl);
+    console.log('[Twilio Incoming] Signature check — has signature:', !!twilioSignature);
+
     if (!verifyTwilioSignature(publicUrl, params, twilioSignature, twilioAuthToken)) {
       console.error('[Twilio Incoming] Invalid signature — rejecting request');
+      console.error('[Twilio Incoming] publicUrl used:', publicUrl);
+      console.error('[Twilio Incoming] request.url was:', request.url);
       return new NextResponse('Forbidden', { status: 403 });
     }
+    console.log('[Twilio Incoming] Signature verified OK');
   } else if (!twilioAuthToken) {
     console.warn('[Twilio Incoming] TWILIO_AUTH_TOKEN not set — skipping signature verification');
+  } else {
+    console.log('[Twilio Incoming] Development mode — skipping signature verification');
   }
 
   const to = formData.get('To') as string; // The Twilio number called
@@ -91,9 +107,12 @@ export async function POST(request: Request) {
   console.log(`[Twilio Incoming] Call from ${from} to ${to}`);
 
   // Use admin client to bypass RLS since this is an external webhook
+  console.log('[Twilio Incoming] Creating admin Supabase client...');
+  console.log('[Twilio Incoming] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET');
   const supabase = createAdminClient();
 
   // Fetch merchant with subscription + billing fields
+  console.log('[Twilio Incoming] Querying merchants for twilio_phone_number:', to);
   const { data: merchant, error } = await supabase
     .from('merchants')
     .select('id, business_name, plan_status, plan_tier, trial_ends_at, forward_phone, phone, billing_period_start')
@@ -101,7 +120,8 @@ export async function POST(request: Request) {
     .single();
 
   if (error || !merchant) {
-    console.error('[Twilio Incoming] No merchant found for number:', to, error);
+    console.error('[Twilio Incoming] No merchant found for number:', to);
+    console.error('[Twilio Incoming] Supabase error:', JSON.stringify(error));
     return twimlResponse(
       `  <Say>Sorry, this number is not configured. Please try again later.</Say>\n  <Hangup/>`
     );
