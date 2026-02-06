@@ -98,7 +98,7 @@ Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 
 ### Current Phase: MVP Live — Voice Pipeline Working
 
-All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. Mobile app ready for EAS build.
+All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. **Dashboard redesigned** — post-call processing pipeline, AI summaries, shared components, Messages page. Mobile app ready for EAS build.
 
 **Pivot:** The project is now mobile-first MVP. Stripe is deferred. The Grok-Twilio voice pipeline is working end-to-end.
 
@@ -162,7 +162,7 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] Mock Grok client for development/testing
 - [x] **Test:** Call Twilio number → Grok responds → booking created → transcript in DB
 
-### Phase 6: Merchant Dashboard ✅ COMPLETE
+### Phase 6: Merchant Dashboard ✅ REDESIGNED
 - [x] Dashboard home with metrics (calls, appointments, messages, avg duration)
 - [x] Calls list + detail with transcript
 - [x] Appointments calendar view
@@ -170,7 +170,17 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] Knowledge base editor
 - [x] Settings page
 - [x] Usage page with billing period tracking
-- [x] **Test:** Merchant can view calls, edit knowledge base
+- [x] **Redesign (2026-02-06):**
+  - [x] Post-call processing pipeline (`apps/relay/src/post-call.ts`): auto-create customers, AI summaries via Grok text API, message-to-call linking
+  - [x] Shared component library (`_components/shared.tsx`): formatters, badges, icons, layout components
+  - [x] Overview page: 4 metric cards, recent calls with AI summaries, upcoming appointments, unread messages
+  - [x] Call detail: 3-column layout with sidebar (summary, details, customer, linked messages/appointments) + chat-bubble transcript
+  - [x] Dedicated Messages page with All/Unread/Read filters, mark-as-read, link to source calls
+  - [x] Customers page with card-based layout showing call + appointment counts
+  - [x] Appointments page split into Upcoming (grouped by date) and Past & Cancelled
+  - [x] 3 new API routes: `/api/messages` (GET), `/api/messages/:id/read` (PUT), `/api/messages/mark-all-read` (PUT)
+  - [x] Navigation updated: Messages added, Usage/Billing removed from primary nav
+- [x] **Test:** Merchant can view calls with AI summaries, manage messages, edit knowledge base
 
 ### Phase 7: Enterprise Admin ✅ COMPLETE
 - [x] Admin authentication (separate from merchant)
@@ -231,16 +241,17 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 
 | Issue | Scope |
 |-------|-------|
-| `as any` casts (~12 justified) | Queries to tables not in generated types (`admin_users`, `messages`, `call_errors`, `api_usage_daily`, `notification_log`) |
+| `as any` casts (~15 justified) | Queries to tables not in generated types (`admin_users`, `messages`, `call_errors`, `api_usage_daily`, `notification_log`). The `messages` table has the most casts across dashboard, API routes, and call detail page. |
 | Unapplied migration 007 | Run `pnpm db:push` to add `billing_period_start` and `stripe_overage_item_id` columns to live DB |
+| Unapplied migration 011 | Run `pnpm db:push` to add missing RLS policy on `knowledge_bases` table |
 
 ---
 
 ## Known Gaps & TODOs
 
 ### Deployment ✅ Complete
-- **Relay (Fly.io):** ✅ Deployed and healthy at `https://receptionai-relay.fly.dev` (LHR region)
-- **Web (Vercel):** ✅ Deployed at `https://receptionaix-relay.vercel.app`
+- **Relay (Fly.io):** ✅ Deployed and healthy at `https://receptionai-relay.fly.dev` (LHR region) — includes post-call processing
+- **Web (Vercel):** ✅ Deployed at `https://receptionaix-relay.vercel.app` — includes redesigned dashboard
 - **E2E Voice Pipeline:** ✅ Working — first call completed 2026-02-06
 - **Twilio numbers:** `+447446469600` (original), `+447427814067` (The Perse School)
 - **Twilio webhook:** Voice webhook → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
@@ -270,7 +281,7 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 ### Production Readiness
 - No test suite (test runner not configured)
 - Admin dev bypass (`ADMIN_DEV_BYPASS=true`) must never reach production
-- Migration 007 must be applied to live DB (`pnpm db:push`)
+- Migrations 007 and 011 must be applied to live DB (`pnpm db:push`)
 - Stripe billing deferred (keys commented out) — focus is mobile-first MVP
 
 ---
@@ -319,7 +330,12 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 9. **Audio flows bidirectionally:** Twilio ↔ Relay ↔ Grok (μ-law 8kHz passthrough, no conversion)
 10. **Grok sends `tool_call`** → Relay executes → returns `tool_result`
 11. **Call ends** → Relay saves transcript to Supabase, notifies web app for overage tracking
-12. **Dashboard updates** via Supabase realtime subscription
+12. **Post-call processing** (fire-and-forget):
+    - `ensureCustomer()` — creates/updates customer record from caller phone
+    - `linkCallToCustomer()` — sets `customer_id` on the call record
+    - `generateAndSaveSummary()` — Grok text API (`grok-3-mini-fast`) generates 2-3 sentence summary
+    - `linkRecentMessages()` — sets `call_id` on messages created during this call
+13. **Dashboard updates** via Supabase realtime subscription
 
 ---
 
@@ -725,6 +741,7 @@ pnpm deploy:relay     # Deploy to Fly.io
 |-------|---------|
 | `/api/knowledge/search` | Google Places business search |
 | `/api/knowledge/generate` | Knowledge base generation pipeline |
+| `/api/knowledge/kb` | Knowledge base CRUD (admin client, bypasses missing RLS) |
 | `/api/twilio/incoming` | Incoming call webhook (returns TwiML) |
 | `/api/twilio/provision` | Twilio number provisioning |
 | `/api/google/auth` | Google OAuth initiation |
@@ -732,6 +749,9 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `/api/stripe/checkout` | Stripe payment sessions |
 | `/api/stripe/webhook` | Subscription lifecycle |
 | `/api/calls/post-complete` | Call completion notification |
+| `/api/messages` | GET all messages for authenticated merchant |
+| `/api/messages/[id]/read` | PUT mark single message as read |
+| `/api/messages/mark-all-read` | PUT mark all messages as read |
 | `/api/usage` | API usage tracking |
 | `/api/master-kb/suggestions` | Master KB suggestions |
 
@@ -746,7 +766,11 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `apps/relay/src/grok-client.ts` | Grok WebSocket management, xAI Voice Agent session config |
 | `apps/relay/src/media-stream-handler.ts` | Twilio ↔ Grok bridge (μ-law passthrough, no conversion) |
 | `apps/relay/src/tool-handlers.ts` | Backend execution for 5 reception tools |
+| `apps/relay/src/post-call.ts` | Post-call processing: customer creation, AI summaries, message linking |
 | `apps/relay/src/audio-utils.ts` | Audio codec utilities (legacy, conversion no longer needed) |
+| `apps/web/src/app/dashboard/_components/shared.tsx` | Shared dashboard formatters, badges, icons, layout components |
+| `apps/web/src/app/dashboard/messages/page.tsx` | Messages page with filters and mark-as-read |
+| `apps/web/src/app/api/messages/route.ts` | Messages API (GET all for merchant) |
 | `apps/web/src/lib/supabase/admin.ts` | Service-role Supabase client (typed with Database) |
 | `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |

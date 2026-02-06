@@ -1,7 +1,7 @@
 # ReceptionAI - Project Status
 
-**Last updated:** 2026-02-06 (evening)
-**Phase:** MVP Live — E2E voice pipeline working
+**Last updated:** 2026-02-06 (late evening)
+**Phase:** MVP Live — E2E voice pipeline working, dashboard redesigned
 
 ---
 
@@ -14,7 +14,7 @@
 | 3. Knowledge Base | Firecrawl, Places API, Grok extraction | Complete |
 | 4. Onboarding | 8-step merchant onboarding wizard | Complete |
 | 5. Voice Agent | Relay server, Grok integration, tools | Complete |
-| 6. Dashboard | Merchant dashboard, calls, settings | Complete |
+| 6. Dashboard | Merchant dashboard, calls, settings | **Redesigned** ✅ |
 | 7. Admin | Enterprise admin panel, impersonation | Complete |
 | 8. Billing | Stripe, RevenueCat, usage tracking | Complete (Stripe deferred for MVP) |
 | 9. Mobile | Expo app, auth, push, subscriptions | Complete (untested on device) |
@@ -136,6 +136,39 @@ First successful end-to-end call completed:
 - [x] `Dockerfile.relay` creates workspace package symlinks (`@receptionalx/grok`, `shared`, `types`)
 - [x] `vercel.json` runs shared build before web build
 
+### Dashboard Redesign (commit `e290048`)
+Full redesign of the merchant dashboard with post-call processing pipeline and new Messages page:
+
+#### Backend: Post-Call Processing (`apps/relay/src/post-call.ts`)
+- [x] **Auto-create customers** — Every caller gets a customer record (previously only on `createBooking`)
+- [x] **AI call summaries** — Grok text API (`grok-3-mini-fast`) generates 2-3 sentence summaries from transcripts
+- [x] **Link messages to calls** — Messages created by `takeMessage` tool are linked via `call_id`
+- [x] **Link calls to customers** — Calls linked to customer records via `customer_id`
+- [x] Fire-and-forget after `saveCallRecord()` in `media-stream-handler.ts`
+
+#### Frontend: Shared Components (`apps/web/src/app/dashboard/_components/shared.tsx`)
+- [x] Consolidated all format utilities: `formatPhone`, `formatDate`, `formatTime`, `formatDateTime`, `formatDuration`, `formatDurationLong`, `getInitials`, `formatDateHeader`, `timeAgo`
+- [x] Shared badge components: `OutcomeBadge`, `AppointmentStatusBadge`, `UrgencyBadge`
+- [x] Shared layout components: `EmptyState`, `PageHeader`, `MetricCard`
+- [x] All SVG icons centralized: `PhoneIcon`, `CalendarIcon`, `UsersIcon`, `MessageIcon`, `ArrowLeftIcon`, `ChevronRightIcon`, `InboxIcon`, `ClockIcon`
+
+#### Frontend: Page Redesigns
+- [x] **Overview** — 4 metric cards, recent calls with AI summaries and customer names, upcoming appointments, unread messages
+- [x] **Calls list** — Table with customer name join, AI summary column, outcome badges
+- [x] **Call detail** — 3-column layout: sidebar (summary, details, customer card, linked messages, linked appointments) + chat-bubble transcript
+- [x] **Customers** — Card-based layout with call + appointment count badges
+- [x] **Appointments** — Split into Upcoming (grouped by date) and Past & Cancelled
+- [x] **Messages** (NEW) — Dedicated page with All/Unread/Read filters, mark-as-read, link to source calls
+
+#### Frontend: New API Routes
+- [x] `GET /api/messages` — Fetch all messages for authenticated merchant
+- [x] `PUT /api/messages/:id/read` — Mark single message as read
+- [x] `PUT /api/messages/mark-all-read` — Mark all messages as read
+
+#### Navigation Update
+- [x] Added Messages to primary nav with `MessageSquareIcon`
+- [x] Removed Usage and Billing from primary nav (accessible from Settings)
+
 ---
 
 ## Remaining Issues
@@ -146,7 +179,7 @@ These casts are **intentional** — they query tables that exist in the live DB 
 | Table | Used In |
 |-------|---------|
 | `admin_users` | admin/login, dashboard/layout, admin/layout |
-| `messages` | dashboard/page |
+| `messages` | dashboard/page, dashboard/messages/page, api/messages (3 routes), calls/[id]/page |
 | `call_errors` | admin/health |
 | `api_usage_daily` | admin/page |
 | `notification_log` | cron/notifications |
@@ -194,6 +227,8 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 - Clean monorepo structure with proper package separation
 - **Relay server deployed and healthy** on Fly.io (LHR)
 - **Grok Voice Agent API** correctly integrated (xAI format, μ-law passthrough)
+- **Post-call processing** — auto-creates customers, generates AI summaries, links messages to calls
+- **Dashboard redesigned** — polished merchant experience with shared components, Messages page, call summaries
 - RLS consistently enforced in Supabase queries
 - Twilio signature verification with constant-time comparison
 - HMAC-SHA256 relay authentication with callerPhone in payload
@@ -216,9 +251,10 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 1. ~~**Connect Vercel**~~ ✅ Deployed at `https://receptionaix-relay.vercel.app`
 2. ~~**Configure Twilio**~~ ✅ Webhook pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
 3. ~~**Test E2E call**~~ ✅ Call to `+447427814067` → Grok responds with voice greeting
-4. **Verify merchant config** — Check business_name is populated in Supabase (Grok said "Business Name" instead of "The Perse School")
-5. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
-6. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-7. **EAS build** — Create Expo project, update `app.json`, build iOS/Android
-8. **Google Calendar** — Replace mock slots with real availability queries
-9. **Push notifications** — Expo Push API backend integration
+4. ~~**Dashboard redesign**~~ ✅ Post-call processing, shared components, Messages page, all pages redesigned
+5. **Verify merchant config** — Check business_name is populated in Supabase (Grok said "Business Name" instead of "The Perse School")
+6. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
+7. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
+8. **EAS build** — Create Expo project, update `app.json`, build iOS/Android
+9. **Google Calendar** — Replace mock slots with real availability queries
+10. **Push notifications** — Expo Push API backend integration

@@ -1,7 +1,7 @@
 # ReceptionAI - Developer Handoff
 
 **Date:** 2026-02-06
-**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. Mobile-first MVP pivot in progress. Stripe deferred.
+**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. **Dashboard redesigned** — post-call processing, AI summaries, shared components, Messages page. Mobile-first MVP pivot in progress. Stripe deferred.
 
 This document is for any developer picking up this codebase. Read this first, then `CLAUDE.md` for architecture details, then `docs/status.md` for the current issue backlog.
 
@@ -90,6 +90,11 @@ Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
                                | Executes tool calls (booking, lookup, etc.)
                                | On call end: saves transcript to Supabase
                                | On call end: POST /api/calls/post-complete for overage tracking
+                               | On call end: post-call processing (fire-and-forget):
+                               |   → ensureCustomer (create/update customer record)
+                               |   → linkCallToCustomer (set customer_id on call)
+                               |   → generateAndSaveSummary (Grok text API → call.summary)
+                               |   → linkRecentMessages (set call_id on messages from this call)
 ```
 
 **Important:** Twilio `<Stream>` strips query parameters from the WebSocket URL. All auth params MUST be passed as `<Parameter>` child elements in the TwiML. They arrive in the `start` event's `customParameters` object on the relay side.
@@ -117,7 +122,14 @@ Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
 
 - Full web onboarding flow (8 steps, Google Places, Firecrawl, Calendar OAuth, Twilio provisioning)
 - Voice relay with Grok Realtime API (5 tools: lookup, availability, booking, cancel, message)
-- Merchant dashboard (calls, transcripts, appointments, KB editor, settings, usage)
+- **Post-call processing pipeline** — auto-creates customers, generates AI summaries, links messages to calls
+- **Redesigned merchant dashboard:**
+  - Overview with 4 metric cards, recent calls with AI summaries, upcoming appointments, unread messages
+  - Calls list with customer names and AI summaries; call detail with 3-column layout and chat-bubble transcript
+  - Dedicated Messages page with All/Unread/Read filters, mark-as-read, link to source calls
+  - Customers page with card-based layout showing call + appointment counts
+  - Appointments page split into Upcoming (grouped by date) and Past & Cancelled
+  - Shared component library (`_components/shared.tsx`) for all formatters, badges, icons
 - Admin panel (merchant list, detail, impersonation, revenue, health monitor)
 - Stripe billing (3 tiers, webhooks, portal)
 - Mobile app (auth, dashboard, calls, settings, RevenueCat subscriptions)
@@ -163,8 +175,9 @@ Nine hardening batches have been completed. See `docs/status.md` for the detaile
 - Request timeouts on external calls
 
 **Remaining technical debt:**
-- ~12 justified `as any` casts on queries to tables not in the generated `database.ts` (`admin_users`, `messages`, `call_errors`, `api_usage_daily`, `notification_log`). These will resolve when those tables are added to the schema.
+- ~15 justified `as any` casts on queries to tables not in the generated `database.ts` (`admin_users`, `messages`, `call_errors`, `api_usage_daily`, `notification_log`). The `messages` table has the most casts (dashboard/page, dashboard/messages, 3 API routes, calls/[id]/page). These will resolve when those tables are added to the schema.
 - Migration `007_billing_enforcement.sql` needs to be applied to the live DB (`pnpm db:push`).
+- Migration `011_fix_knowledge_bases_rls.sql` needs to be applied to add missing RLS policy on `knowledge_bases` table.
 
 ---
 
@@ -247,14 +260,15 @@ If picking this up:
 1. ~~**Deploy web to Vercel**~~ ✅ Live at `https://receptionaix-relay.vercel.app`
 2. ~~**Configure Twilio webhook**~~ ✅ Voice webhook → Vercel `/api/twilio/incoming`
 3. ~~**Test E2E voice call**~~ ✅ Call to `+447427814067` → Grok responds with voice greeting
-4. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
-5. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-6. **Build mobile with EAS** — Create project, update app.json, build for iOS/Android
-7. **Apply pending migration** — `pnpm db:push` for `billing_period_start` and `stripe_overage_item_id`
-8. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
-9. **Build push notification backend** — Expo Push API integration
-10. **Re-enable Stripe** — Uncomment keys, test subscription flow
-11. **Set up test suite** — Integration tests for API routes and relay
+4. ~~**Dashboard redesign**~~ ✅ Post-call processing, AI summaries, shared components, Messages page
+5. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
+6. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
+7. **Build mobile with EAS** — Create project, update app.json, build for iOS/Android
+8. **Apply pending migrations** — `pnpm db:push` for migrations 007 and 011
+9. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
+10. **Build push notification backend** — Expo Push API integration
+11. **Re-enable Stripe** — Uncomment keys, test subscription flow
+12. **Set up test suite** — Integration tests for API routes and relay
 
 ---
 
@@ -267,7 +281,11 @@ If picking this up:
 | `apps/relay/src/media-stream-handler.ts` | Twilio ↔ Grok bridge (μ-law passthrough, auth from customParameters) |
 | `apps/relay/src/grok-client.ts` | Grok WebSocket management, xAI Voice Agent session config |
 | `apps/relay/src/tool-handlers.ts` | Executes 5 reception tools with param validation |
+| `apps/relay/src/post-call.ts` | **NEW** Post-call processing: customer creation, AI summaries, message linking |
 | `apps/relay/src/audio-utils.ts` | u-law <-> PCM16 codec conversion |
+| `apps/web/src/app/dashboard/_components/shared.tsx` | **NEW** Shared formatters, badges, icons, layout components |
+| `apps/web/src/app/dashboard/messages/page.tsx` | **NEW** Messages page with filters and mark-as-read |
+| `apps/web/src/app/api/messages/route.ts` | **NEW** Messages API (GET all, PUT read, PUT mark-all-read) |
 | `apps/web/src/app/api/twilio/incoming/route.ts` | Incoming call webhook (returns TwiML) |
 | `apps/web/src/app/api/stripe/webhook/route.ts` | Subscription lifecycle with metadata validation |
 | `apps/web/src/app/admin/(dashboard)/layout.tsx` | Admin auth guard |
