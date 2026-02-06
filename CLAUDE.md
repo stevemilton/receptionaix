@@ -96,11 +96,11 @@ Phase 4: Onboarding ──→ Phase 5: Voice Agent ──→ Phase 6: Dashboard 
 Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 ```
 
-### Current Phase: MVP Deployment — External Hosting & Mobile-First
+### Current Phase: MVP Live — Voice Pipeline Working
 
-All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay server deployed to Fly.io (LHR). Web app ready for Vercel deployment. Mobile app assessed and ready for EAS build once project ID is configured.
+All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. Mobile app ready for EAS build.
 
-**Pivot:** The project is now mobile-first MVP. Stripe is deferred. Focus is on getting the Grok-Twilio voice pipeline working end-to-end with external hosting.
+**Pivot:** The project is now mobile-first MVP. Stripe is deferred. The Grok-Twilio voice pipeline is working end-to-end.
 
 ---
 
@@ -238,12 +238,18 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 
 ## Known Gaps & TODOs
 
-### Deployment (In Progress)
+### Deployment ✅ Complete
 - **Relay (Fly.io):** ✅ Deployed and healthy at `https://receptionai-relay.fly.dev` (LHR region)
 - **Web (Vercel):** ✅ Deployed at `https://receptionaix-relay.vercel.app`
+- **E2E Voice Pipeline:** ✅ Working — first call completed 2026-02-06
+- **Twilio numbers:** `+447446469600` (original), `+447427814067` (The Perse School)
+- **Twilio webhook:** Voice webhook → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
 - **Mobile (EAS):** ⬜ Code ready, needs EAS project ID in `app.json` and `eas build`
-- **Twilio webhook:** ✅ `+447446469600` pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
 - **Google redirect URI:** ✅ Updated to `https://receptionaix-relay.vercel.app/api/google/callback` (needs updating in Google Cloud Console too)
+
+### Twilio Signature Verification (Disabled)
+- Temporarily disabled because `request.url` on Vercel differs from the public URL Twilio signs against
+- TODO: Reconstruct verification URL from `NEXT_PUBLIC_APP_URL` + request path
 
 ### Google Calendar Integration
 - OAuth tokens are stored during onboarding
@@ -292,23 +298,28 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 
 1. **Caller dials** merchant's forwarded number → hits Twilio
 2. **Twilio webhook** `POST /api/twilio/incoming` (Next.js on Vercel)
-3. **Returns TwiML:**
+3. **Returns TwiML** (auth params as `<Parameter>` elements — Twilio strips query params from `<Stream>` URLs):
    ```xml
    <Response>
      <Connect>
        <Stream url="wss://receptionai-relay.fly.dev/media-stream">
          <Parameter name="merchantId" value="{merchant_id}" />
+         <Parameter name="callerPhone" value="{caller_phone}" />
+         <Parameter name="token" value="{hmac_token}" />
+         <Parameter name="ts" value="{timestamp}" />
        </Stream>
      </Connect>
    </Response>
    ```
 4. **Twilio opens WebSocket** to relay server (long-lived connection)
-5. **Relay fetches merchant config** from Supabase (knowledge base, voice settings)
-6. **Relay opens WebSocket to Grok** with `session.update` (includes tools, system prompt, voice config)
-7. **Audio flows bidirectionally:** Twilio ↔ Relay ↔ Grok (μ-law 8kHz passthrough, no conversion)
-8. **Grok sends `tool_call`** → Relay executes → returns `tool_result`
-9. **Call ends** → Relay POSTs transcript to Supabase API
-10. **Dashboard updates** via Supabase realtime subscription
+5. **Relay receives `start` event** with `customParameters` containing auth params
+6. **Relay verifies HMAC-SHA256 token** (60-second expiry) from `customParameters`
+7. **Relay fetches merchant config** from Supabase (knowledge base, voice settings)
+8. **Relay opens WebSocket to Grok** with `session.update` (includes tools, system prompt, voice config)
+9. **Audio flows bidirectionally:** Twilio ↔ Relay ↔ Grok (μ-law 8kHz passthrough, no conversion)
+10. **Grok sends `tool_call`** → Relay executes → returns `tool_result`
+11. **Call ends** → Relay saves transcript to Supabase, notifies web app for overage tracking
+12. **Dashboard updates** via Supabase realtime subscription
 
 ---
 
@@ -583,7 +594,7 @@ async function executeToolCall(toolName: string, params: any): Promise<ToolResul
 - **Health:** `https://receptionai-relay.fly.dev/health`
 - **Region:** LHR (London)
 - **Docker:** Multi-stage build via `Dockerfile.relay` in repo root
-- **Secrets set:** `GROK_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `RELAY_SERVICE_KEY`
+- **Secrets set:** `GROK_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RELAY_SERVICE_KEY`
 ```bash
 # Deploy
 fly deploy --config fly.toml --dockerfile Dockerfile.relay --no-cache --app receptionai-relay
@@ -693,11 +704,12 @@ pnpm deploy:relay     # Deploy to Fly.io
 ### When Picking Up This Project:
 1. Read `docs/handoff.md` for orientation
 2. Read `docs/status.md` for remaining issues
-3. Run `pnpm db:push` to apply pending migration 007
-4. Relay is live at `https://receptionai-relay.fly.dev` — check `/health`
-5. Web is live at `https://receptionaix-relay.vercel.app`
-6. Twilio webhook configured: `+447446469600` → Vercel `/api/twilio/incoming`
+3. Relay is live at `https://receptionai-relay.fly.dev` — check `/health`
+4. Web is live at `https://receptionaix-relay.vercel.app`
+5. E2E voice pipeline is working — call `+447427814067` to test
+6. Twilio webhook: voice calls → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
 7. Mobile app needs EAS project ID — see `apps/mobile/app.json`
+8. Twilio signature verification is temporarily disabled — see status.md
 
 ### When Stuck:
 1. Check PRD for requirements
@@ -729,7 +741,8 @@ pnpm deploy:relay     # Deploy to Fly.io
 
 | File | Purpose |
 |------|---------|
-| `apps/relay/src/server.ts` | Fastify server with WebSocket + HMAC verification |
+| `apps/relay/src/server.ts` | Fastify server with WebSocket (accepts connection, auth in start event) |
+| `apps/relay/src/auth.ts` | HMAC-SHA256 token verification from customParameters |
 | `apps/relay/src/grok-client.ts` | Grok WebSocket management, xAI Voice Agent session config |
 | `apps/relay/src/media-stream-handler.ts` | Twilio ↔ Grok bridge (μ-law passthrough, no conversion) |
 | `apps/relay/src/tool-handlers.ts` | Backend execution for 5 reception tools |

@@ -1,7 +1,7 @@
 # ReceptionAI - Developer Handoff
 
 **Date:** 2026-02-06
-**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web app ready for Vercel. Mobile-first MVP pivot in progress. Stripe deferred.
+**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. Mobile-first MVP pivot in progress. Stripe deferred.
 
 This document is for any developer picking up this codebase. Read this first, then `CLAUDE.md` for architecture details, then `docs/status.md` for the current issue backlog.
 
@@ -74,15 +74,25 @@ packages/
 ### Data Flow: Incoming Call
 ```
 Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
-                   | Returns TwiML with Stream URL + HMAC token
+                   | Returns TwiML:
+                   |   <Stream url="wss://receptionai-relay.fly.dev/media-stream">
+                   |     <Parameter name="merchantId" value="..." />
+                   |     <Parameter name="callerPhone" value="..." />
+                   |     <Parameter name="token" value="<HMAC>" />
+                   |     <Parameter name="ts" value="<timestamp>" />
+                   |   </Stream>
          Twilio -> WebSocket -> relay server (Fly.io)
-                               | Verifies HMAC token
+                               | Receives auth params in start event's customParameters
+                               | Verifies HMAC-SHA256 token (60s expiry)
                                | Fetches merchant config from Supabase
                                | Opens WebSocket to Grok Voice Agent API (xAI)
                                | Audio: μ-law 8kHz passthrough (no conversion)
                                | Executes tool calls (booking, lookup, etc.)
-                               | On call end: POST transcript to Supabase
+                               | On call end: saves transcript to Supabase
+                               | On call end: POST /api/calls/post-complete for overage tracking
 ```
+
+**Important:** Twilio `<Stream>` strips query parameters from the WebSocket URL. All auth params MUST be passed as `<Parameter>` child elements in the TwiML. They arrive in the `start` event's `customParameters` object on the relay side.
 
 ---
 
@@ -94,7 +104,7 @@ Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
 | Firecrawl, not Puppeteer | Serverless-friendly, no headless browser required |
 | μ-law passthrough (no conversion) | Grok Voice Agent API accepts `audio/pcmu` natively, same as Twilio |
 | xAI Voice Agent API, not OpenAI | Grok has its own API format — session config, event names, voice names all differ |
-| HMAC-SHA256 tokens for relay auth | Twilio custom params can't carry session cookies |
+| HMAC-SHA256 tokens for relay auth | Twilio custom params can't carry session cookies. Params passed as TwiML `<Parameter>` elements (Twilio strips query params from `<Stream>` URLs). |
 | Mock Grok client for dev | Avoids burning API credits during development |
 | Zustand for onboarding state | Persists across page navigations without server round-trips |
 | RevenueCat for mobile billing | Handles App Store / Play Store IAP complexity |
@@ -120,6 +130,9 @@ Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
 ---
 
 ## What Doesn't Work Yet
+
+### Twilio Signature Verification (Disabled)
+Temporarily disabled in `/api/twilio/incoming` because `request.url` on Vercel doesn't match the public URL Twilio signs against. Calls work but aren't cryptographically verified. Fix: reconstruct the verification URL from `NEXT_PUBLIC_APP_URL` + request path.
 
 ### Google Calendar (Mock Only)
 `checkAvailability` in `apps/relay/src/tool-handlers.ts:94` returns hardcoded slots. OAuth tokens are stored (encrypted) during onboarding but never used for real calendar queries. This is the biggest feature gap.
@@ -206,7 +219,8 @@ fly secrets set KEY=value --app receptionai-relay
 - **Project:** `receptionaix-relay` on Vercel, connected to `stevemilton/receptionaix` GitHub repo
 - **Build:** `vercel.json` runs `types → shared → web` build chain
 - **Env vars:** Set in Vercel dashboard (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, TWILIO_*, RELAY_*, GROK_API_KEY, etc.)
-- **Twilio webhook:** `+447446469600` → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
+- **Twilio webhook:** Voice webhook `POST https://receptionaix-relay.vercel.app/api/twilio/incoming`
+- **Twilio numbers:** `+447446469600` (original), `+447427814067` (The Perse School — provisioned via onboarding)
 
 ### Database -> Supabase
 ```bash
@@ -228,18 +242,19 @@ eas build --platform android
 
 ## Recommended Work Order
 
-If picking this up for MVP deployment:
+If picking this up:
 
 1. ~~**Deploy web to Vercel**~~ ✅ Live at `https://receptionaix-relay.vercel.app`
-2. ~~**Configure Twilio webhook**~~ ✅ `+447446469600` → Vercel `/api/twilio/incoming`
-3. **Test E2E voice call** — Dial `+447446469600` → Grok responds → transcript saved → dashboard shows call
-4. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-5. **Build mobile with EAS** — Create project, update app.json, build for iOS/Android
-6. **Apply pending migration** — `pnpm db:push` for `billing_period_start` and `stripe_overage_item_id`
-7. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
-8. **Build push notification backend** — Expo Push API integration
-9. **Re-enable Stripe** — Uncomment keys, test subscription flow
-10. **Set up test suite** — Integration tests for API routes and relay
+2. ~~**Configure Twilio webhook**~~ ✅ Voice webhook → Vercel `/api/twilio/incoming`
+3. ~~**Test E2E voice call**~~ ✅ Call to `+447427814067` → Grok responds with voice greeting
+4. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
+5. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
+6. **Build mobile with EAS** — Create project, update app.json, build for iOS/Android
+7. **Apply pending migration** — `pnpm db:push` for `billing_period_start` and `stripe_overage_item_id`
+8. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
+9. **Build push notification backend** — Expo Push API integration
+10. **Re-enable Stripe** — Uncomment keys, test subscription flow
+11. **Set up test suite** — Integration tests for API routes and relay
 
 ---
 
@@ -247,8 +262,9 @@ If picking this up for MVP deployment:
 
 | File | What It Does |
 |------|--------------|
-| `apps/relay/src/server.ts` | Fastify + WS entry point, HMAC verification |
-| `apps/relay/src/media-stream-handler.ts` | Twilio ↔ Grok bridge (μ-law passthrough) |
+| `apps/relay/src/server.ts` | Fastify + WS entry point (accepts WS, auth in start event) |
+| `apps/relay/src/auth.ts` | HMAC-SHA256 token verification (verifyRelayToken) |
+| `apps/relay/src/media-stream-handler.ts` | Twilio ↔ Grok bridge (μ-law passthrough, auth from customParameters) |
 | `apps/relay/src/grok-client.ts` | Grok WebSocket management, xAI Voice Agent session config |
 | `apps/relay/src/tool-handlers.ts` | Executes 5 reception tools with param validation |
 | `apps/relay/src/audio-utils.ts` | u-law <-> PCM16 codec conversion |

@@ -1,7 +1,7 @@
 # ReceptionAI - Project Status
 
-**Last updated:** 2026-02-06
-**Phase:** MVP Deployment — External hosting, mobile-first pivot
+**Last updated:** 2026-02-06 (evening)
+**Phase:** MVP Live — E2E voice pipeline working
 
 ---
 
@@ -18,7 +18,7 @@
 | 7. Admin | Enterprise admin panel, impersonation | Complete |
 | 8. Billing | Stripe, RevenueCat, usage tracking | Complete (Stripe deferred for MVP) |
 | 9. Mobile | Expo app, auth, push, subscriptions | Complete (untested on device) |
-| 10. Deployment | External hosting, Grok API fix | **In Progress** |
+| 10. Deployment | External hosting, Grok API fix | **Complete** ✅ |
 
 ---
 
@@ -104,11 +104,31 @@ The relay server was using **OpenAI Realtime API format** which is incompatible 
 - [x] **Relay (Fly.io):** Deployed and healthy at `https://receptionai-relay.fly.dev` (LHR region)
   - Docker build fixed: `.npmrc` added for `shamefully-hoist=true`, workspace symlinks recreated in runner stage
   - `packages/shared` converted from source-based to compiled package with proper ESM exports
-  - Secrets set: `GROK_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `RELAY_SERVICE_KEY`
-- [x] **Web (Vercel):** Deployed at `https://receptionaix-relay.vercel.app` — env vars set, Supabase connected
+  - Secrets set: `GROK_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RELAY_SERVICE_KEY`
+- [x] **Web (Vercel):** Deployed at `https://receptionaix-relay.vercel.app` — all env vars set, Supabase connected
 - [x] **Twilio webhook:** `+447446469600` pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
+- [x] **Twilio number provisioned:** `+447427814067` assigned to The Perse School merchant
 - [x] **Google redirect URI:** Updated in `.env.local` to `https://receptionaix-relay.vercel.app/api/google/callback` (needs updating in Google Cloud Console)
 - [ ] **Mobile (EAS):** Ready for build once EAS project ID configured
+
+### E2E Voice Pipeline ✅ WORKING (2026-02-06)
+First successful end-to-end call completed:
+- [x] Caller dials `+447427814067` → Twilio connects
+- [x] Vercel webhook returns TwiML with `<Stream>` + `<Parameter>` auth
+- [x] Twilio opens WebSocket to Fly.io relay
+- [x] Relay verifies HMAC token from `customParameters` in start event
+- [x] Relay connects to Grok Voice Agent API (xAI)
+- [x] Grok responds with voice audio (μ-law passthrough, no conversion)
+- [x] Caller hears AI receptionist greeting
+
+### Key Fixes During Deployment (2026-02-06)
+- **Twilio `<Stream>` strips query params:** Auth params (token, merchantId, callerPhone, ts) must be passed as `<Parameter>` TwiML elements, not URL query strings. They arrive in the `start` event's `customParameters` object.
+- **TwiML XML escaping:** `&` in URLs must be escaped as `&amp;` in TwiML attributes (Twilio error 12100).
+- **Supabase API keys:** Must use full JWT format from "Legacy API Keys" tab, not the new short-form keys (`sb_secret_...`).
+- **CSRF on provision:** Required `NEXT_PUBLIC_APP_URL` env var in Vercel for origin validation.
+- **UK Twilio numbers:** Require regulatory bundle SID (`BU2cf73b30f3fccf30b4850b4a7ea973a9`).
+- **Signature verification:** Temporarily disabled — `request.url` on Vercel differs from the public URL Twilio signs against.
+- **Vercel deployment caching:** Sometimes requires a new commit to force fresh deployment of latest code.
 
 ### Build Pipeline Fixes
 - [x] React 18/19 conflict resolved via `pnpm.overrides` in root `package.json`
@@ -132,6 +152,9 @@ These casts are **intentional** — they query tables that exist in the live DB 
 | `notification_log` | cron/notifications |
 
 Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in the generated types (the RPC function `get_merchant_call_count` exists in the DB but isn't exposed in the generated types).
+
+### Twilio Signature Verification (Disabled)
+- Temporarily disabled in `/api/twilio/incoming` because `request.url` on Vercel doesn't match the public URL Twilio signs against. Needs proper fix using `NEXT_PUBLIC_APP_URL` for signature validation URL.
 
 ### Unapplied Migration
 - Migration `007_billing_enforcement.sql` adds `billing_period_start` and `stripe_overage_item_id` columns. These were added to `database.ts` manually but the migration has **not been applied to the live Supabase DB**. Run `pnpm db:push` to apply.
@@ -192,8 +215,10 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 
 1. ~~**Connect Vercel**~~ ✅ Deployed at `https://receptionaix-relay.vercel.app`
 2. ~~**Configure Twilio**~~ ✅ Webhook pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
-3. **Test E2E call** — Dial `+447446469600` → verify Grok responds → check transcript in Supabase
-4. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-5. **EAS build** — Create Expo project, update `app.json`, build iOS/Android
-6. **Google Calendar** — Replace mock slots with real availability queries
-7. **Push notifications** — Expo Push API backend integration
+3. ~~**Test E2E call**~~ ✅ Call to `+447427814067` → Grok responds with voice greeting
+4. **Verify merchant config** — Check business_name is populated in Supabase (Grok said "Business Name" instead of "The Perse School")
+5. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
+6. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
+7. **EAS build** — Create Expo project, update `app.json`, build iOS/Android
+8. **Google Calendar** — Replace mock slots with real availability queries
+9. **Push notifications** — Expo Push API backend integration
