@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 interface Service {
   name: string;
@@ -15,12 +14,6 @@ interface FAQ {
   answer: string;
 }
 
-interface KnowledgeBase {
-  services: Service[];
-  faqs: FAQ[];
-  opening_hours: Record<string, string>;
-}
-
 export default function KnowledgePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -29,27 +22,30 @@ export default function KnowledgePage() {
   const [openingHours, setOpeningHours] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'services' | 'faqs' | 'hours'>('services');
 
-  const supabase = createClient();
-
   useEffect(() => {
     loadKnowledgeBase();
   }, []);
 
   async function loadKnowledgeBase() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const resp = await fetch('/api/knowledge/kb');
+      if (!resp.ok) {
+        console.error('KB fetch failed:', resp.status);
+        setOpeningHours(getDefaultHours());
+        setLoading(false);
+        return;
+      }
+      const { data } = await resp.json();
 
-    const { data } = await supabase
-      .from('knowledge_bases')
-      .select('*')
-      .eq('merchant_id', user.id)
-      .single();
-
-    if (data) {
-      setServices(Array.isArray(data.services) ? (data.services as unknown as Service[]) : []);
-      setFaqs(Array.isArray(data.faqs) ? (data.faqs as unknown as FAQ[]) : []);
-      setOpeningHours(data.opening_hours ? (data.opening_hours as unknown as Record<string, string>) : getDefaultHours());
-    } else {
+      if (data) {
+        setServices(Array.isArray(data.services) ? data.services : []);
+        setFaqs(Array.isArray(data.faqs) ? data.faqs : []);
+        setOpeningHours(data.opening_hours ? data.opening_hours : getDefaultHours());
+      } else {
+        setOpeningHours(getDefaultHours());
+      }
+    } catch (err) {
+      console.error('KB load error:', err);
       setOpeningHours(getDefaultHours());
     }
     setLoading(false);
@@ -57,22 +53,19 @@ export default function KnowledgePage() {
 
   async function saveKnowledgeBase() {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
-      .from('knowledge_bases')
-      .upsert({
-        merchant_id: user.id,
-        services,
-        faqs,
-        opening_hours: openingHours,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'merchant_id',
+    try {
+      await fetch('/api/knowledge/kb', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          services,
+          faqs,
+          opening_hours: openingHours,
+        }),
       });
-
+    } catch (err) {
+      console.error('KB save error:', err);
+    }
     setSaving(false);
   }
 
