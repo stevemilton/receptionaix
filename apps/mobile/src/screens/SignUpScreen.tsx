@@ -133,12 +133,13 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.largeTitle,
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     ...typography.subheadline,
-    color: colors.tertiaryLabel,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     marginBottom: 40,
   },

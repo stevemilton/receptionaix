@@ -374,24 +374,24 @@ const styles = StyleSheet.create({
   },
   signOutLink: {
     fontSize: 14,
-    color: colors.tertiaryLabel,
+    color: 'rgba(255,255,255,0.6)',
     fontWeight: '400',
   },
   stepIndicator: {
     fontSize: 14,
-    color: colors.primary,
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '400',
     marginBottom: 8,
   },
   title: {
     fontSize: 24,
     fontWeight: '300',
-    color: colors.label,
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: colors.secondaryLabel,
+    color: 'rgba(255,255,255,0.7)',
     lineHeight: 22,
   },
   card: {

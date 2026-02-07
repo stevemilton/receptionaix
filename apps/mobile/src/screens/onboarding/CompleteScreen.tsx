@@ -115,7 +115,7 @@ export function CompleteScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.successIcon}>
-          <Ionicons name="checkmark" size={40} color={colors.success} />
+          <Ionicons name="checkmark" size={40} color="#FFFFFF" />
         </View>
         <Text style={styles.title}>You're all set!</Text>
         <Text style={styles.subtitle}>
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.successFaint,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -300,12 +300,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '300',
-    color: colors.label,
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: colors.secondaryLabel,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
   },
   errorBox: {

@@ -176,14 +176,14 @@ export const radius = {
 } as const;
 
 export const gradient = {
+  // Eased: holds #344532 longer at top, smooth fade to white
   screen: {
-    colors: ['#E4EBE3', '#EEF2EE', '#F2F2F7'],
-    locations: [0, 0.5, 1] as const,
-    height: 350,
+    colors: ['#344532', '#344532', '#5A7A56', '#A3C4A0', '#D4E6D2', '#F0F5EF', '#FFFFFF'],
+    height: 400,
   },
+  // Auth: full-screen gradient, same palette
   auth: {
-    colors: ['#D8E2D7', '#EEF2EE', '#F8F8F7'],
-    locations: [0, 0.4, 1] as const,
+    colors: ['#344532', '#344532', '#5A7A56', '#A3C4A0', '#D4E6D2', '#F0F5EF', '#FFFFFF'],
   },
 } as const;
 

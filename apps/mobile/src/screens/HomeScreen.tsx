@@ -220,10 +220,11 @@ const styles = StyleSheet.create({
   },
   greeting: {
     ...typography.subheadline,
-    color: colors.tertiaryLabel,
+    color: 'rgba(255,255,255,0.7)',
   },
   businessName: {
     ...typography.title1,
+    color: '#FFFFFF',
     marginTop: 2,
   },
   statsGrid: {
