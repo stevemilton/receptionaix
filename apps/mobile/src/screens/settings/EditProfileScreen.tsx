@@ -14,6 +14,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 interface ProfileData {
   business_name: string;
@@ -100,12 +102,13 @@ export function EditProfileScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
+    <ScreenBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -191,32 +194,33 @@ export function EditProfileScreen() {
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <Text style={styles.saveButtonText}>Save Changes</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     marginTop: 16,
     marginHorizontal: 16,
     borderRadius: 12,
@@ -229,8 +233,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 16,
   },
   inputGroup: {
@@ -238,19 +242,19 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: colors.label,
   },
   multilineInput: {
     minHeight: 80,
@@ -258,11 +262,11 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginTop: 6,
   },
   saveButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     marginHorizontal: 16,
     marginVertical: 24,
     padding: 16,
@@ -273,8 +277,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

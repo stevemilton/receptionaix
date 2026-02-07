@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 // Grok voice options - must match onboarding
 const VOICE_OPTIONS = [
@@ -101,12 +103,13 @@ export function VoiceSettingsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
+    <ScreenBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -139,7 +142,7 @@ export function VoiceSettingsScreen() {
                     {voice.name}
                   </Text>
                   {voiceData.voice_id === voice.id && (
-                    <Ionicons name="checkmark-circle" size={20} color="#4F46E5" />
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                   )}
                 </View>
                 <Text style={styles.voiceDescription}>{voice.description}</Text>
@@ -170,7 +173,7 @@ export function VoiceSettingsScreen() {
             style={styles.useDefaultButton}
             onPress={() => setVoiceData({ ...voiceData, greeting: getDefaultGreeting() })}
           >
-            <Ionicons name="refresh-outline" size={18} color="#4F46E5" />
+            <Ionicons name="refresh-outline" size={18} color={colors.primary} />
             <Text style={styles.useDefaultButtonText}>Use Default Greeting</Text>
           </TouchableOpacity>
         </View>
@@ -196,32 +199,33 @@ export function VoiceSettingsScreen() {
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <Text style={styles.saveButtonText}>Save Changes</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     marginTop: 16,
     marginHorizontal: 16,
     borderRadius: 12,
@@ -234,13 +238,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 4,
   },
   sectionDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -251,12 +255,12 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     backgroundColor: '#FAFAFA',
   },
   voiceOptionSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFaint,
   },
   voiceHeader: {
     flexDirection: 'row',
@@ -265,25 +269,25 @@ const styles = StyleSheet.create({
   },
   voiceName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
   },
   voiceNameSelected: {
-    color: '#4F46E5',
+    color: colors.primary,
   },
   voiceDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginTop: 2,
   },
   greetingInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     borderRadius: 10,
     padding: 14,
     fontSize: 15,
-    color: '#111827',
+    color: colors.label,
     minHeight: 120,
     lineHeight: 22,
   },
@@ -296,8 +300,8 @@ const styles = StyleSheet.create({
   },
   useDefaultButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#4F46E5',
+    fontWeight: '400',
+    color: colors.primary,
     marginLeft: 6,
   },
   tipsCard: {
@@ -316,7 +320,7 @@ const styles = StyleSheet.create({
   },
   tipsTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '400',
     color: '#92400E',
     marginLeft: 8,
   },
@@ -329,7 +333,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   saveButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     marginHorizontal: 16,
     marginVertical: 24,
     padding: 16,
@@ -340,8 +344,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

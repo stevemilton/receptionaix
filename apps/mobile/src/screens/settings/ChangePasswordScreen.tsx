@@ -14,6 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 export function ChangePasswordScreen() {
   const navigation = useNavigation();
@@ -64,6 +66,7 @@ export function ChangePasswordScreen() {
   const isValid = newPassword.length >= 8 && newPassword === confirmPassword;
 
   return (
+    <ScreenBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -95,7 +98,7 @@ export function ChangePasswordScreen() {
                 <Ionicons
                   name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
                   size={22}
-                  color="#6B7280"
+                  color={colors.secondaryLabel}
                 />
               </TouchableOpacity>
             </View>
@@ -122,7 +125,7 @@ export function ChangePasswordScreen() {
                 <Ionicons
                   name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                   size={22}
-                  color="#6B7280"
+                  color={colors.secondaryLabel}
                 />
               </TouchableOpacity>
             </View>
@@ -180,7 +183,7 @@ export function ChangePasswordScreen() {
           disabled={!isValid || loading}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <Text style={styles.saveButtonText}>Change Password</Text>
           )}
@@ -224,19 +227,20 @@ export function ChangePasswordScreen() {
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     marginTop: 16,
     marginHorizontal: 16,
     borderRadius: 12,
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginBottom: 20,
     lineHeight: 20,
   },
@@ -258,16 +262,16 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
     marginBottom: 8,
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     borderRadius: 8,
   },
   passwordInput: {
@@ -275,21 +279,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: colors.label,
   },
   eyeButton: {
     padding: 12,
   },
   requirements: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderRadius: 8,
     padding: 12,
     marginTop: 8,
   },
   requirementsTitle: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
     marginBottom: 8,
   },
   requirementRow: {
@@ -299,14 +303,14 @@ const styles = StyleSheet.create({
   },
   requirementText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginLeft: 8,
   },
   requirementMet: {
-    color: '#10B981',
+    color: colors.success,
   },
   saveButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     marginHorizontal: 16,
     marginTop: 24,
     padding: 16,
@@ -317,9 +321,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   saveButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   forgotButton: {
     alignItems: 'center',
@@ -328,6 +332,6 @@ const styles = StyleSheet.create({
   },
   forgotButtonText: {
     fontSize: 14,
-    color: '#4F46E5',
+    color: colors.primary,
   },
 });

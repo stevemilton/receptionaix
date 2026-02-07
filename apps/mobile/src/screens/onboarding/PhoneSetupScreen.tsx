@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboardingStore } from '../../lib/onboarding-store';
 import { useAuth } from '../../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://receptionai.vercel.app';
 
@@ -116,6 +118,7 @@ export function PhoneSetupScreen() {
   };
 
   return (
+    <ScreenBackground>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
@@ -139,7 +142,7 @@ export function PhoneSetupScreen() {
           <View style={styles.card}>
             <View style={styles.provisionedState}>
               <View style={styles.successIcon}>
-                <Ionicons name="checkmark" size={32} color="#10B981" />
+                <Ionicons name="checkmark" size={32} color={colors.success} />
               </View>
               <Text style={styles.provisionedTitle}>Phone Number Ready!</Text>
               <Text style={styles.provisionedNumber}>{twilioPhoneNumber}</Text>
@@ -174,7 +177,7 @@ export function PhoneSetupScreen() {
             <View style={styles.card}>
               <View style={styles.searchState}>
                 <View style={styles.phoneIcon}>
-                  <Ionicons name="call-outline" size={32} color="#9CA3AF" />
+                  <Ionicons name="call-outline" size={32} color={colors.tertiaryLabel} />
                 </View>
                 <Text style={styles.searchTitle}>Get Your AI Receptionist Number</Text>
                 <Text style={styles.searchText}>
@@ -186,7 +189,7 @@ export function PhoneSetupScreen() {
                   disabled={searchingNumbers}
                 >
                   {searchingNumbers ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={colors.white} />
                   ) : (
                     <Text style={styles.searchButtonText}>Search Available Numbers</Text>
                   )}
@@ -213,7 +216,7 @@ export function PhoneSetupScreen() {
                   </View>
                   {selectedNumber === number.phoneNumber && (
                     <View style={styles.checkmark}>
-                      <Ionicons name="checkmark" size={16} color="#fff" />
+                      <Ionicons name="checkmark" size={16} color={colors.white} />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -237,7 +240,7 @@ export function PhoneSetupScreen() {
                   disabled={!selectedNumber || loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={colors.white} />
                   ) : (
                     <Text style={styles.provisionButtonText}>Provision This Number</Text>
                   )}
@@ -292,7 +295,7 @@ export function PhoneSetupScreen() {
       {/* Navigation */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={20} color="#6B7280" />
+          <Ionicons name="arrow-back" size={20} color={colors.secondaryLabel} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
 
@@ -302,17 +305,18 @@ export function PhoneSetupScreen() {
           disabled={!provisioned}
         >
           <Text style={styles.continueButtonText}>Continue</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
+          <Ionicons name="arrow-forward" size={20} color={colors.white} />
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 20,
@@ -323,62 +327,62 @@ const styles = StyleSheet.create({
   },
   stepIndicator: {
     fontSize: 14,
-    color: '#4F46E5',
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '400',
     marginBottom: 8,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '300',
+    color: colors.label,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     lineHeight: 22,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 8,
   },
   cardSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginBottom: 12,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.separatorOpaque,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#111827',
+    color: colors.label,
   },
   helperText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.tertiaryLabel,
     marginTop: 8,
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.errorFaint,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
+    color: colors.error,
     fontSize: 14,
   },
   provisionedState: {
@@ -389,25 +393,25 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: colors.successFaint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   provisionedTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   provisionedNumber: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontWeight: '300',
+    color: colors.primary,
     marginTop: 8,
   },
   provisionedText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -419,25 +423,25 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   searchTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   searchText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 24,
   },
   searchButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -446,9 +450,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   searchButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   numberOption: {
     flexDirection: 'row',
@@ -456,13 +460,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     borderRadius: 8,
     marginBottom: 8,
   },
   numberOptionSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFaint,
   },
   numberInfo: {
     flexDirection: 'row',
@@ -471,18 +475,18 @@ const styles = StyleSheet.create({
   },
   numberText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   numberLocality: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   checkmark: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -494,18 +498,18 @@ const styles = StyleSheet.create({
   },
   searchAgainLink: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   provisionButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
   provisionButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   step: {
     flexDirection: 'row',
@@ -517,26 +521,26 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.primaryFaint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepNumberText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#4F46E5',
+    fontWeight: '400',
+    color: colors.primary,
   },
   stepContent: {
     flex: 1,
   },
   stepTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   stepText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginTop: 2,
   },
   actions: {
@@ -545,7 +549,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.separator,
     marginBottom: 40,
   },
   backButton: {
@@ -557,10 +561,10 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   continueButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -569,8 +573,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   continueButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

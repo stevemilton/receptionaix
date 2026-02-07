@@ -10,6 +10,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useOnboardingStore } from '../../lib/onboarding-store';
 import { useAuth } from '../../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://receptionai.vercel.app';
 
@@ -108,11 +110,12 @@ export function CompleteScreen() {
   };
 
   return (
+    <ScreenBackground>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.successIcon}>
-          <Ionicons name="checkmark" size={40} color="#10B981" />
+          <Ionicons name="checkmark" size={40} color={colors.success} />
         </View>
         <Text style={styles.title}>You're all set!</Text>
         <Text style={styles.subtitle}>
@@ -132,7 +135,7 @@ export function CompleteScreen() {
 
       {saving && (
         <View style={styles.savingBox}>
-          <ActivityIndicator size="small" color="#3B82F6" />
+          <ActivityIndicator size="small" color={colors.info} />
           <Text style={styles.savingText}>Saving your settings...</Text>
         </View>
       )}
@@ -144,20 +147,20 @@ export function CompleteScreen() {
         {/* Business */}
         <View style={styles.summaryItem}>
           <View style={styles.summaryIcon}>
-            <Ionicons name="business-outline" size={18} color="#4F46E5" />
+            <Ionicons name="business-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>{businessName}</Text>
             <Text style={styles.summaryText}>{businessType}</Text>
             <Text style={styles.summarySubtext}>{address}</Text>
           </View>
-          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
         </View>
 
         {/* Services */}
         <View style={styles.summaryItem}>
           <View style={styles.summaryIcon}>
-            <Ionicons name="clipboard-outline" size={18} color="#4F46E5" />
+            <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>Services</Text>
@@ -165,25 +168,25 @@ export function CompleteScreen() {
               {services.length} service{services.length !== 1 ? 's' : ''} configured
             </Text>
           </View>
-          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
         </View>
 
         {/* Voice */}
         <View style={styles.summaryItem}>
           <View style={styles.summaryIcon}>
-            <Ionicons name="mic-outline" size={18} color="#4F46E5" />
+            <Ionicons name="mic-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>AI Voice</Text>
             <Text style={styles.summaryText}>{voiceId}</Text>
           </View>
-          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
         </View>
 
         {/* Calendar */}
         <View style={styles.summaryItem}>
           <View style={styles.summaryIcon}>
-            <Ionicons name="calendar-outline" size={18} color="#4F46E5" />
+            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>Google Calendar</Text>
@@ -192,7 +195,7 @@ export function CompleteScreen() {
             </Text>
           </View>
           {googleCalendarConnected ? (
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
           ) : (
             <Ionicons name="time-outline" size={20} color="#D1D5DB" />
           )}
@@ -201,7 +204,7 @@ export function CompleteScreen() {
         {/* FAQs */}
         <View style={styles.summaryItem}>
           <View style={styles.summaryIcon}>
-            <Ionicons name="help-circle-outline" size={18} color="#4F46E5" />
+            <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>FAQs</Text>
@@ -209,19 +212,19 @@ export function CompleteScreen() {
               {faqs.length} FAQ{faqs.length !== 1 ? 's' : ''} configured
             </Text>
           </View>
-          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
         </View>
 
         {/* Phone */}
         <View style={[styles.summaryItem, styles.summaryItemLast]}>
           <View style={styles.summaryIcon}>
-            <Ionicons name="call-outline" size={18} color="#4F46E5" />
+            <Ionicons name="call-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>AI Phone Number</Text>
             <Text style={styles.summaryPhone}>{twilioPhoneNumber}</Text>
           </View>
-          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
         </View>
       </View>
 
@@ -265,16 +268,17 @@ export function CompleteScreen() {
         disabled={!saved && !error}
       >
         <Text style={styles.ctaButtonText}>Go to Dashboard</Text>
-        <Ionicons name="arrow-forward" size={20} color="#fff" />
+        <Ionicons name="arrow-forward" size={20} color={colors.white} />
       </TouchableOpacity>
     </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 20,
@@ -288,26 +292,26 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: colors.successFaint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '300',
+    color: colors.label,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     textAlign: 'center',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.errorFaint,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -316,20 +320,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#DC2626',
+    color: colors.error,
     fontSize: 14,
     flex: 1,
   },
   retryLink: {
-    color: '#DC2626',
+    color: colors.error,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
     textDecorationLine: 'underline',
   },
   savingBox: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.infoFaint,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: colors.info,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -338,19 +342,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   savingText: {
-    color: '#3B82F6',
+    color: colors.info,
     fontSize: 14,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 16,
   },
   summaryItem: {
@@ -360,7 +364,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     marginBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.separator,
   },
   summaryItemLast: {
     borderBottomWidth: 0,
@@ -371,7 +375,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.primaryFaint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -380,23 +384,23 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   summaryText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginTop: 2,
   },
   summarySubtext: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.tertiaryLabel,
     marginTop: 2,
   },
   summaryPhone: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#4F46E5',
+    fontWeight: '400',
+    color: colors.primary,
     marginTop: 4,
   },
   nextStep: {
@@ -415,21 +419,21 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
   },
   nextStepText: {
     flex: 1,
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     lineHeight: 20,
   },
   bold: {
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   ctaButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -442,8 +446,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   ctaButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

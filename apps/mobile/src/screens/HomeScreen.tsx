@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../theme';
+import { ScreenBackground } from '../components/ScreenBackground';
 
 interface Stats {
   callsToday: number;
@@ -109,6 +111,7 @@ export function HomeScreen() {
   };
 
   return (
+    <ScreenBackground>
     <ScrollView
       style={styles.container}
       refreshControl={
@@ -122,10 +125,10 @@ export function HomeScreen() {
 
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
-        <StatCard label="Calls Today" value={stats.callsToday} color="#4F46E5" />
-        <StatCard label="This Week" value={stats.callsWeek} color="#10B981" />
-        <StatCard label="Appointments" value={stats.appointmentsToday} color="#F59E0B" />
-        <StatCard label="Messages" value={stats.unreadMessages} color="#EF4444" />
+        <StatCard label="Calls Today" value={stats.callsToday} color={colors.primary} />
+        <StatCard label="This Week" value={stats.callsWeek} color={colors.success} />
+        <StatCard label="Appointments" value={stats.appointmentsToday} color={colors.warning} />
+        <StatCard label="Messages" value={stats.unreadMessages} color={colors.error} />
       </View>
 
       {/* Recent Calls */}
@@ -156,13 +159,13 @@ export function HomeScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    { backgroundColor: call.outcome === 'completed' ? '#D1FAE5' : '#FEE2E2' },
+                    { backgroundColor: call.outcome === 'completed' ? colors.successFaint : colors.errorFaint },
                   ]}
                 >
                   <Text
                     style={[
                       styles.statusText,
-                      { color: call.outcome === 'completed' ? '#065F46' : '#991B1B' },
+                      { color: call.outcome === 'completed' ? colors.successDark : colors.errorDark },
                     ]}
                   >
                     {call.outcome}
@@ -176,6 +179,7 @@ export function HomeScreen() {
         )}
       </View>
     </ScrollView>
+    </ScreenBackground>
   );
 }
 
@@ -207,108 +211,93 @@ function formatPhone(phone: string): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   greeting: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...typography.subheadline,
+    color: colors.tertiaryLabel,
   },
   businessName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 4,
+    ...typography.title1,
+    marginTop: 2,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 12,
-    gap: 12,
+    padding: 16,
+    gap: 10,
   },
   statCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 14,
+    borderLeftWidth: 3,
+    ...shadow.sm,
   },
   statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
+    ...typography.metricValue,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 4,
+    ...typography.caption1,
+    color: colors.tertiaryLabel,
+    marginTop: 2,
   },
   section: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
+    ...typography.title3,
+    marginBottom: 10,
   },
   callItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 14,
+    marginBottom: 6,
+    ...shadow.sm,
   },
   callPhone: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
+    ...typography.headline,
   },
   callTime: {
-    fontSize: 12,
-    color: '#6B7280',
+    ...typography.caption1,
+    color: colors.tertiaryLabel,
     marginTop: 2,
   },
   callRight: {
     alignItems: 'flex-end',
   },
   callDuration: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
+    ...typography.subheadline,
+    color: colors.secondaryLabel,
+    fontWeight: '400',
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 12,
+    borderRadius: radius.full,
     marginTop: 4,
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: '600',
+    ...typography.caption2,
+    fontWeight: '400',
     textTransform: 'uppercase',
   },
   emptyText: {
+    ...typography.subheadline,
     textAlign: 'center',
-    color: '#6B7280',
+    color: colors.tertiaryLabel,
     padding: 20,
   },
 });

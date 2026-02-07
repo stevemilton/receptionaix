@@ -13,6 +13,7 @@ import {
   ChangePasswordScreen,
   CalendarSettingsScreen,
 } from '../screens/settings';
+import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -36,14 +37,26 @@ function TabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#4F46E5',
-        tabBarInactiveTintColor: '#6B7280',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.tertiaryLabel,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.separator,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '400' as const,
+        },
         headerStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: colors.surface,
         },
         headerTitleStyle: {
-          fontWeight: '600',
+          fontSize: 17,
+          fontWeight: '500' as const,
+          color: colors.label,
+          letterSpacing: -0.41,
         },
+        headerShadowVisible: false,
       })}
     >
       <Tab.Screen
@@ -69,10 +82,15 @@ export function MainNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#fff' },
-        headerTitleStyle: { fontWeight: '600' },
+        headerStyle: { backgroundColor: colors.surface },
+        headerTitleStyle: {
+          fontSize: 17,
+          fontWeight: '500' as const,
+          color: colors.label,
+        },
         headerBackButtonDisplayMode: 'minimal',
-        headerTintColor: '#111827',
+        headerTintColor: colors.primary,
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen

@@ -12,6 +12,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 export function CalendarSettingsScreen() {
   const { user } = useAuth();
@@ -86,19 +88,20 @@ export function CalendarSettingsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
+    <ScreenBackground>
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         {/* Status Card */}
         <View style={styles.statusCard}>
           <View style={styles.statusHeader}>
             <View style={styles.iconContainer}>
-              <Ionicons name="calendar" size={32} color="#4F46E5" />
+              <Ionicons name="calendar" size={32} color={colors.primary} />
             </View>
             <View style={styles.statusInfo}>
               <Text style={styles.statusTitle}>Google Calendar</Text>
@@ -124,28 +127,28 @@ export function CalendarSettingsScreen() {
           </Text>
 
           <View style={styles.benefit}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
             <Text style={styles.benefitText}>
               AI checks your real-time availability
             </Text>
           </View>
 
           <View style={styles.benefit}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
             <Text style={styles.benefitText}>
               Bookings automatically added to your calendar
             </Text>
           </View>
 
           <View style={styles.benefit}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
             <Text style={styles.benefitText}>
               Avoid double-bookings
             </Text>
           </View>
 
           <View style={styles.benefit}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
             <Text style={styles.benefitText}>
               Callers get accurate appointment times
             </Text>
@@ -160,14 +163,14 @@ export function CalendarSettingsScreen() {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.connectButton} onPress={handleConnect}>
-            <Ionicons name="logo-google" size={20} color="#fff" />
+            <Ionicons name="logo-google" size={20} color={colors.white} />
             <Text style={styles.connectButtonText}>Connect Google Calendar</Text>
           </TouchableOpacity>
         )}
 
         {/* Privacy Note */}
         <View style={styles.privacyNote}>
-          <Ionicons name="shield-checkmark-outline" size={18} color="#6B7280" />
+          <Ionicons name="shield-checkmark-outline" size={18} color={colors.secondaryLabel} />
           <Text style={styles.privacyText}>
             We only access your calendar to check availability and create appointments.
             We never read, share, or store other calendar data.
@@ -175,25 +178,26 @@ export function CalendarSettingsScreen() {
         </View>
       </View>
     </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 16,
   },
   statusCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 20,
     shadowColor: '#000',
@@ -210,7 +214,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.primaryFaint,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -220,8 +224,8 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   statusRow: {
     flexDirection: 'row',
@@ -236,10 +240,10 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   benefitsCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
@@ -251,8 +255,8 @@ const styles = StyleSheet.create({
   },
   benefitsTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 12,
   },
   benefit: {
@@ -262,7 +266,7 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: 14,
-    color: '#374151',
+    color: colors.secondaryLabel,
     marginLeft: 10,
     flex: 1,
   },
@@ -270,16 +274,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 12,
     marginTop: 20,
     gap: 8,
   },
   connectButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   disconnectButton: {
     flexDirection: 'row',
@@ -294,12 +298,12 @@ const styles = StyleSheet.create({
   disconnectButtonText: {
     color: '#EF4444',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   privacyNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.surfaceSecondary,
     padding: 12,
     borderRadius: 10,
     marginTop: 16,
@@ -307,7 +311,7 @@ const styles = StyleSheet.create({
   privacyText: {
     flex: 1,
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginLeft: 8,
     lineHeight: 18,
   },

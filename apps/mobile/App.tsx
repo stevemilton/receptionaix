@@ -10,6 +10,7 @@ import {
   addNotificationResponseReceivedListener,
   removeNotificationSubscription,
 } from './src/lib/notifications';
+import { colors } from './src/theme';
 
 function AppContent() {
   const { user } = useAuth();
@@ -60,7 +61,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
         <AppContent />
       </AuthProvider>
     </SafeAreaProvider>
