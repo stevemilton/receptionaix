@@ -1,6 +1,7 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { OnboardingGuard } from '@/components/OnboardingGuard';
 
@@ -21,16 +22,41 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const currentStepIndex = STEPS.findIndex((step) => step.path === pathname);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' });
+    } catch {
+      // Continue to redirect even if signout API fails
+    }
+    window.location.href = '/auth/login';
+  };
+
+  const handleBack = () => {
+    if (currentStepIndex > 0) {
+      router.push(STEPS[currentStepIndex - 1].path);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F8F8F7]">
       {/* Header */}
       <header className="bg-gradient-header border-b border-primary-200/30">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-xl font-light tracking-tight text-white">
             ReceptionAI
           </Link>
+          <button
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="text-sm text-white/70 hover:text-white transition-colors disabled:opacity-50"
+          >
+            {signingOut ? 'Signing out...' : 'Sign out'}
+          </button>
         </div>
       </header>
 
@@ -108,6 +134,18 @@ export default function OnboardingLayout({
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Back button (visible on steps 2+) */}
+        {currentStepIndex > 0 && (
+          <button
+            onClick={handleBack}
+            className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+        )}
         <OnboardingGuard>{children}</OnboardingGuard>
       </main>
     </div>

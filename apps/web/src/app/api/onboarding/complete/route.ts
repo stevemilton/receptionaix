@@ -162,21 +162,18 @@ export async function POST(request: Request) {
         const oldId = existingMerchant.id;
 
         if (matchedByEmail && oldId !== user.id) {
-          // Re-assign merchant to new auth user: update FK references first, then merchant ID
-          console.log(`[Onboarding Complete] Reassigning merchant ${oldId} → ${user.id}`);
-          const fkTables = ['knowledge_bases', 'calls', 'appointments', 'customers', 'messages'] as const;
-          for (const table of fkTables) {
-            await client.from(table).update({ merchant_id: user.id } as never).eq('merchant_id', oldId);
-          }
-          // Now update the merchant record itself
-          const { data: updated, error: updateError } = await client
+          // Re-registration: delete old merchant (CASCADE cleans child tables), insert fresh
+          console.log(`[Onboarding Complete] Deleting old merchant ${oldId} (re-registration with new auth ID ${user.id})`);
+          const { error: deleteError } = await client.from('merchants').delete().eq('id', oldId);
+          if (deleteError) throw deleteError;
+
+          const { data: created, error: createError } = await client
             .from('merchants')
-            .update({ ...fields, id: user.id, email: user.email || '', updated_at: new Date().toISOString() } as never)
-            .eq('id', oldId)
+            .insert({ id: user.id, email: user.email || '', ...fields } as never)
             .select()
             .single();
-          if (updateError) throw updateError;
-          return updated;
+          if (createError) throw createError;
+          return created;
         } else {
           // Same user ID — simple update
           const { data: updated, error: updateError } = await client
