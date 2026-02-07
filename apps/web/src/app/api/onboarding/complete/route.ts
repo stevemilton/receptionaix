@@ -94,16 +94,39 @@ export async function POST(request: Request) {
       data.faqs = [];
     }
 
-    // Check for existing merchant
-    const { data: existingMerchant, error: checkError } = await supabase
+    // Check for existing merchant by ID first, then by email
+    // (handles case where user re-registers with same email but gets new auth ID)
+    let existingMerchant: { id: string } | null = null;
+    let matchedByEmail = false;
+
+    const { data: byId, error: checkError } = await supabase
       .from('merchants')
       .select('id')
       .eq('id', user.id)
       .single();
 
     if (checkError && checkError.code !== 'PGRST116') {
-      // PGRST116 = row not found, which is fine
       throw checkError;
+    }
+
+    if (byId) {
+      existingMerchant = byId;
+    } else if (user.email) {
+      // Check by email — user may have re-registered with a new auth account
+      // Use admin client to bypass RLS (RLS filters by auth.uid() which won't match old record)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const adminForCheck: any = createAdminClient();
+      const { data: byEmail } = await adminForCheck
+        .from('merchants')
+        .select('id')
+        .eq('email', user.email)
+        .single();
+
+      if (byEmail) {
+        existingMerchant = byEmail;
+        matchedByEmail = true;
+        console.log('[Onboarding Complete] Found existing merchant by email, will update and reassign ID');
+      }
     }
 
     let merchantResult;
@@ -133,10 +156,18 @@ export async function POST(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const saveMerchant = async (fields: Record<string, any>): Promise<any> => {
       if (existingMerchant) {
-        const { data: updated, error: updateError } = await supabase
+        // Use admin client if matched by email (RLS won't allow updating another user's row)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client: any = matchedByEmail ? createAdminClient() : supabase;
+        const updatePayload = {
+          ...fields,
+          updated_at: new Date().toISOString(),
+          ...(matchedByEmail ? { id: user.id, email: user.email || '' } : {}),
+        };
+        const { data: updated, error: updateError } = await client
           .from('merchants')
-          .update({ ...fields, updated_at: new Date().toISOString() } as never)
-          .eq('id', user.id)
+          .update(updatePayload as never)
+          .eq('id', existingMerchant.id)
           .select()
           .single();
         if (updateError) throw updateError;
@@ -170,12 +201,17 @@ export async function POST(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const adminClient: any = createAdminClient();
 
-    // First check if KB exists for this merchant
-    const { data: existingKb } = await adminClient
+    // The merchant ID is now user.id (even if we updated an email-matched record)
+    const merchantId = user.id;
+
+    // First check if KB exists for this merchant (check both new and old ID)
+    let existingKb = null;
+    const { data: kbById } = await adminClient
       .from('knowledge_bases')
       .select('id')
-      .eq('merchant_id', user.id)
+      .eq('merchant_id', merchantId)
       .single();
+    existingKb = kbById;
 
     const kbPayload = {
       services: data.services || [],
@@ -195,7 +231,7 @@ export async function POST(request: Request) {
       const { data: updated, error: updateKbError } = await adminClient
         .from('knowledge_bases')
         .update(kbPayload)
-        .eq('merchant_id', user.id)
+        .eq('merchant_id', merchantId)
         .select();
 
       kbResult = updated;
@@ -205,7 +241,7 @@ export async function POST(request: Request) {
       const { data: created, error: createKbError } = await adminClient
         .from('knowledge_bases')
         .insert({
-          merchant_id: user.id,
+          merchant_id: merchantId,
           ...kbPayload,
         })
         .select();
