@@ -82,8 +82,15 @@ export default function CompletePage() {
   };
 
   const handleGoToDashboard = () => {
+    if (!saved) return; // Don't navigate if save hasn't succeeded
     reset(); // Clear onboarding store
     window.location.href = '/dashboard'; // Hard navigate to bypass OnboardingGuard
+  };
+
+  const handleGoToBilling = () => {
+    if (!saved) return; // Don't navigate if save hasn't succeeded
+    reset();
+    window.location.href = '/dashboard/billing';
   };
 
   return (
@@ -362,11 +369,8 @@ export default function CompletePage() {
               Pick a subscription plan to keep your AI receptionist running when the trial ends.
             </p>
             <button
-              onClick={() => {
-                reset();
-                window.location.href = '/dashboard/billing'; // Hard navigate to bypass OnboardingGuard
-              }}
-              disabled={!saved && !error}
+              onClick={handleGoToBilling}
+              disabled={!saved}
               className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               View Plans &amp; Pricing
@@ -412,17 +416,14 @@ export default function CompletePage() {
 
       {/* CTA */}
       <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
-        <Button size="lg" onClick={handleGoToDashboard} disabled={!saved && !error}>
+        <Button size="lg" onClick={handleGoToDashboard} disabled={!saved}>
           Go to Dashboard
         </Button>
         <Button
           size="lg"
           variant="outline"
-          onClick={() => {
-            reset();
-            window.location.href = '/dashboard/billing'; // Hard navigate to bypass OnboardingGuard
-          }}
-          disabled={!saved && !error}
+          onClick={handleGoToBilling}
+          disabled={!saved}
         >
           Choose a Plan
         </Button>
