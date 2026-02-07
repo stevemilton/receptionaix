@@ -11,6 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
 import { useOnboardingStore } from '../../lib/onboarding-store';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://receptionai.vercel.app';
 
@@ -73,6 +75,7 @@ export function CalendarConnectScreen() {
   };
 
   return (
+    <ScreenBackground>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
@@ -88,7 +91,7 @@ export function CalendarConnectScreen() {
         {googleCalendarConnected ? (
           <View style={styles.connectedState}>
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark" size={32} color="#10B981" />
+              <Ionicons name="checkmark" size={32} color={colors.success} />
             </View>
             <Text style={styles.connectedTitle}>Calendar Connected</Text>
             <Text style={styles.connectedText}>
@@ -101,7 +104,7 @@ export function CalendarConnectScreen() {
         ) : (
           <View style={styles.disconnectedState}>
             <View style={styles.calendarIcon}>
-              <Ionicons name="calendar-outline" size={32} color="#9CA3AF" />
+              <Ionicons name="calendar-outline" size={32} color={colors.tertiaryLabel} />
             </View>
             <Text style={styles.disconnectedTitle}>Connect Google Calendar</Text>
             <Text style={styles.disconnectedText}>
@@ -113,7 +116,7 @@ export function CalendarConnectScreen() {
               onPress={handleConnectCalendar}
               disabled={loading}
             >
-              <Ionicons name="logo-google" size={20} color="#fff" />
+              <Ionicons name="logo-google" size={20} color={colors.white} />
               <Text style={styles.connectButtonText}>
                 {loading ? 'Connecting...' : 'Connect with Google'}
               </Text>
@@ -122,15 +125,15 @@ export function CalendarConnectScreen() {
             <View style={styles.accessInfo}>
               <Text style={styles.accessTitle}>What we'll access:</Text>
               <View style={styles.accessItem}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                 <Text style={styles.accessText}>View your calendar availability</Text>
               </View>
               <View style={styles.accessItem}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                 <Text style={styles.accessText}>Create new calendar events</Text>
               </View>
               <View style={styles.accessItem}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                 <Text style={styles.accessText}>View and modify existing events</Text>
               </View>
             </View>
@@ -144,7 +147,7 @@ export function CalendarConnectScreen() {
 
         <View style={styles.benefit}>
           <View style={styles.benefitIcon}>
-            <Ionicons name="time-outline" size={18} color="#4F46E5" />
+            <Ionicons name="time-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.benefitContent}>
             <Text style={styles.benefitTitle}>Real-time availability</Text>
@@ -154,7 +157,7 @@ export function CalendarConnectScreen() {
 
         <View style={styles.benefit}>
           <View style={styles.benefitIcon}>
-            <Ionicons name="clipboard-outline" size={18} color="#4F46E5" />
+            <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.benefitContent}>
             <Text style={styles.benefitTitle}>Automatic booking</Text>
@@ -164,7 +167,7 @@ export function CalendarConnectScreen() {
 
         <View style={styles.benefit}>
           <View style={styles.benefitIcon}>
-            <Ionicons name="notifications-outline" size={18} color="#4F46E5" />
+            <Ionicons name="notifications-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.benefitContent}>
             <Text style={styles.benefitTitle}>No double bookings</Text>
@@ -176,7 +179,7 @@ export function CalendarConnectScreen() {
       {/* Navigation */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={20} color="#6B7280" />
+          <Ionicons name="arrow-back" size={20} color={colors.secondaryLabel} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
 
@@ -188,18 +191,19 @@ export function CalendarConnectScreen() {
           )}
           <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
             <Text style={styles.continueButtonText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
+            <Ionicons name="arrow-forward" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 20,
@@ -210,31 +214,31 @@ const styles = StyleSheet.create({
   },
   stepIndicator: {
     fontSize: 14,
-    color: '#4F46E5',
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '400',
     marginBottom: 8,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '300',
+    color: colors.label,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     lineHeight: 22,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 16,
   },
   connectedState: {
@@ -245,25 +249,25 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: colors.successFaint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   connectedTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   connectedText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     textAlign: 'center',
     marginTop: 8,
   },
   disconnectLink: {
     fontSize: 14,
-    color: '#DC2626',
+    color: colors.error,
     marginTop: 16,
     textDecorationLine: 'underline',
   },
@@ -275,25 +279,25 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   disconnectedTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   disconnectedText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 24,
   },
   connectButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -305,12 +309,12 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   connectButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   accessInfo: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderRadius: 8,
     padding: 16,
     marginTop: 24,
@@ -318,8 +322,8 @@ const styles = StyleSheet.create({
   },
   accessTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 12,
   },
   accessItem: {
@@ -330,7 +334,7 @@ const styles = StyleSheet.create({
   },
   accessText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   benefit: {
     flexDirection: 'row',
@@ -342,7 +346,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.primaryFaint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -351,12 +355,12 @@ const styles = StyleSheet.create({
   },
   benefitTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   benefitText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginTop: 2,
   },
   actions: {
@@ -365,7 +369,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.separator,
     marginBottom: 40,
   },
   backButton: {
@@ -377,7 +381,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   rightActions: {
     flexDirection: 'row',
@@ -386,10 +390,10 @@ const styles = StyleSheet.create({
   },
   skipLink: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   continueButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -398,8 +402,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   continueButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

@@ -12,6 +12,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../theme';
+import { ScreenBackground } from '../components/ScreenBackground';
 
 interface Call {
   id: string;
@@ -62,7 +64,7 @@ export function CallsScreen() {
         <Ionicons
           name={item.outcome === 'completed' ? 'call' : 'call-outline'}
           size={24}
-          color={item.outcome === 'completed' ? '#10B981' : '#EF4444'}
+          color={item.outcome === 'completed' ? colors.success : colors.error}
         />
       </View>
       <View style={styles.callContent}>
@@ -85,13 +87,14 @@ export function CallsScreen() {
               ).padStart(2, '0')}`
             : '-'}
         </Text>
-        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        <Ionicons name="chevron-forward" size={20} color={colors.quaternaryLabel} />
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <>
+    <ScreenBackground>
       <FlatList
         data={calls}
         renderItem={renderCallItem}
@@ -99,10 +102,11 @@ export function CallsScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        style={styles.container}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="call-outline" size={48} color="#D1D5DB" />
+            <Ionicons name="call-outline" size={48} color={colors.separator} />
             <Text style={styles.emptyText}>No calls yet</Text>
             <Text style={styles.emptySubtext}>
               Calls will appear here when your AI receptionist handles them
@@ -110,6 +114,7 @@ export function CallsScreen() {
           </View>
         }
       />
+    </ScreenBackground>
 
       {/* Call Detail Modal */}
       <Modal
@@ -125,7 +130,7 @@ export function CallsScreen() {
                 style={styles.closeButton}
                 onPress={() => setSelectedCall(null)}
               >
-                <Ionicons name="close" size={24} color="#111827" />
+                <Ionicons name="close" size={24} color={colors.label} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Call Details</Text>
               <View style={{ width: 40 }} />
@@ -169,8 +174,8 @@ export function CallsScreen() {
                     {
                       backgroundColor:
                         selectedCall.outcome === 'completed'
-                          ? '#D1FAE5'
-                          : '#FEE2E2',
+                          ? colors.successFaint
+                          : colors.errorFaint,
                     },
                   ]}
                 >
@@ -180,8 +185,8 @@ export function CallsScreen() {
                       {
                         color:
                           selectedCall.outcome === 'completed'
-                            ? '#065F46'
-                            : '#991B1B',
+                            ? colors.successDark
+                            : colors.errorDark,
                       },
                     ]}
                   >
@@ -209,7 +214,7 @@ export function CallsScreen() {
           </View>
         )}
       </Modal>
-    </View>
+    </>
   );
 }
 
@@ -224,7 +229,7 @@ function formatPhone(phone: string): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   listContent: {
     padding: 16,
@@ -232,21 +237,17 @@ const styles = StyleSheet.create({
   callItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 14,
+    marginBottom: 6,
+    ...shadow.sm,
   },
   callIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryFaint,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -255,13 +256,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   callPhone: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    ...typography.headline,
   },
   callTime: {
-    fontSize: 12,
-    color: '#6B7280',
+    ...typography.caption1,
+    color: colors.tertiaryLabel,
     marginTop: 2,
   },
   callMeta: {
@@ -270,37 +269,36 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   callDuration: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...typography.subheadline,
+    color: colors.tertiaryLabel,
   },
   emptyContainer: {
     alignItems: 'center',
     paddingTop: 60,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
+    ...typography.title3,
+    color: colors.secondaryLabel,
     marginTop: 16,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...typography.subheadline,
+    color: colors.tertiaryLabel,
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 40,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
   },
   closeButton: {
     width: 40,
@@ -309,9 +307,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    ...typography.headline,
   },
   modalContent: {
     flex: 1,
@@ -322,40 +318,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
   },
   detailLabel: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...typography.subheadline,
+    color: colors.tertiaryLabel,
   },
   detailValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
+    ...typography.subheadline,
+    fontWeight: '400',
+    color: colors.label,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: radius.full,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.caption2,
+    fontWeight: '400',
     textTransform: 'uppercase',
   },
   transcriptSection: {
     marginTop: 24,
   },
   transcriptLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
+    ...typography.headline,
+    marginBottom: 10,
   },
   transcriptText: {
-    fontSize: 14,
-    color: '#374151',
+    ...typography.body,
+    color: colors.secondaryLabel,
     lineHeight: 22,
   },
 });

@@ -25,12 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check if user has completed onboarding
   const checkOnboardingStatus = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('merchants')
-      .select('onboarding_completed')
+      .select('onboarding_completed, business_name')
       .eq('id', userId)
       .single();
 
+    console.log('[Auth] Merchant lookup:', data ? `"${data.business_name}" onboarding=${data.onboarding_completed}` : 'no row', error ? error.message : '');
     setOnboardingCompleted(data?.onboarding_completed ?? false);
   };
 

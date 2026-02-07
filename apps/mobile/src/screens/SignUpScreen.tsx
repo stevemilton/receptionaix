@@ -11,6 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import { useAuth } from '../lib/AuthContext';
+import { colors, typography, radius } from '../theme';
+import { ScreenBackground } from '../components/ScreenBackground';
 
 export function SignUpScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
@@ -56,6 +58,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
   };
 
   return (
+    <ScreenBackground variant="auth">
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
@@ -72,7 +75,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.placeholder}
           />
           <TextInput
             style={styles.input}
@@ -80,7 +83,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.placeholder}
           />
           <TextInput
             style={styles.input}
@@ -88,7 +91,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.placeholder}
           />
 
           <TouchableOpacity
@@ -97,7 +100,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.white} />
             ) : (
               <Text style={styles.buttonText}>Create Account</Text>
             )}
@@ -114,13 +117,14 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
@@ -128,52 +132,49 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#111827',
+    ...typography.largeTitle,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
+    ...typography.subheadline,
+    color: colors.tertiaryLabel,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   form: {
-    gap: 16,
+    gap: 12,
   },
   input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#111827',
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.separator,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    ...typography.body,
   },
   button: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 15,
     alignItems: 'center',
     marginTop: 8,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.headline,
+    color: colors.white,
   },
   linkButton: {
     marginTop: 24,
     alignItems: 'center',
   },
   linkText: {
-    color: '#6B7280',
-    fontSize: 14,
+    ...typography.subheadline,
+    color: colors.tertiaryLabel,
   },
   linkTextBold: {
-    color: '#4F46E5',
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '400',
   },
 });

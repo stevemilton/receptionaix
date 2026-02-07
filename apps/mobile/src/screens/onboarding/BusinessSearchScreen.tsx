@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboardingStore } from '../../lib/onboarding-store';
 import { useAuth } from '../../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://receptionai.vercel.app';
 
@@ -30,7 +32,7 @@ interface PlaceResult {
 
 export function BusinessSearchScreen() {
   const navigation = useNavigation<any>();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('');
   const [results, setResults] = useState<PlaceResult[]>([]);
@@ -170,7 +172,7 @@ export function BusinessSearchScreen() {
       >
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#4F46E5" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingTitle}>Creating your knowledge base</Text>
             <Text style={styles.loadingText}>
               We're analysing your business website to extract services, FAQs, and opening hours.
@@ -180,10 +182,27 @@ export function BusinessSearchScreen() {
         </View>
       </Modal>
 
+      <ScreenBackground>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-        <Text style={styles.stepIndicator}>Step 1 of 8</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.stepIndicator}>Step 1 of 8</Text>
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                'Sign Out',
+                'Are you sure you want to sign out?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Sign Out', style: 'destructive', onPress: signOut },
+                ]
+              );
+            }}
+          >
+            <Text style={styles.signOutLink}>Sign out</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.title}>Find your business</Text>
         <Text style={styles.subtitle}>
           Search for your business to automatically import details, or enter them manually.
@@ -219,7 +238,7 @@ export function BusinessSearchScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={styles.buttonText}>Search</Text>
           )}
@@ -254,7 +273,7 @@ export function BusinessSearchScreen() {
                 )}
                 {place.rating && (
                   <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={14} color="#EAB308" />
+                    <Ionicons name="star" size={14} color={colors.warning} />
                     <Text style={styles.ratingText}>
                       {place.rating.toFixed(1)} ({place.userRatingsTotal} reviews)
                     </Text>
@@ -263,7 +282,7 @@ export function BusinessSearchScreen() {
               </View>
               {selectedPlace?.placeId === place.placeId && (
                 <View style={styles.checkmark}>
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={16} color={colors.white} />
                 </View>
               )}
             </TouchableOpacity>
@@ -286,16 +305,17 @@ export function BusinessSearchScreen() {
           disabled={!selectedPlace || generating}
         >
           {generating ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
               <Text style={styles.continueButtonText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
+              <Ionicons name="arrow-forward" size={20} color={colors.white} />
             </>
           )}
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </ScreenBackground>
     </>
   );
 }
@@ -309,7 +329,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   loadingCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
@@ -318,27 +338,27 @@ const styles = StyleSheet.create({
   },
   loadingTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginTop: 20,
     textAlign: 'center',
   },
   loadingText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginTop: 12,
     textAlign: 'center',
     lineHeight: 20,
   },
   loadingSubtext: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.tertiaryLabel,
     marginTop: 8,
     fontStyle: 'italic',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 20,
@@ -347,52 +367,62 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 24,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  signOutLink: {
+    fontSize: 14,
+    color: colors.tertiaryLabel,
+    fontWeight: '400',
+  },
   stepIndicator: {
     fontSize: 14,
-    color: '#4F46E5',
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '400',
     marginBottom: 8,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '300',
+    color: colors.label,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     lineHeight: 22,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.separatorOpaque,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#111827',
+    color: colors.label,
     marginBottom: 12,
   },
   helperText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.tertiaryLabel,
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     padding: 14,
     alignItems: 'center',
@@ -401,20 +431,20 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.errorFaint,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
+    color: colors.error,
     fontSize: 14,
   },
   resultsSection: {
@@ -422,40 +452,40 @@ const styles = StyleSheet.create({
   },
   resultsTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 12,
   },
   resultCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     flexDirection: 'row',
     alignItems: 'center',
   },
   resultCardSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFaint,
   },
   resultContent: {
     flex: 1,
   },
   resultName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   resultAddress: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginTop: 4,
   },
   resultPhone: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: colors.tertiaryLabel,
     marginTop: 2,
   },
   ratingRow: {
@@ -466,13 +496,13 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   checkmark: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -482,16 +512,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.separator,
     marginBottom: 40,
   },
   manualEntryLink: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     textDecorationLine: 'underline',
   },
   continueButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -500,8 +530,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   continueButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

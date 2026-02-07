@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 interface Service {
   name: string;
@@ -156,12 +158,13 @@ export function KnowledgeBaseScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
+    <ScreenBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -261,7 +264,7 @@ export function KnowledgeBaseScreen() {
             ))}
 
             <TouchableOpacity style={styles.addButton} onPress={addService}>
-              <Ionicons name="add-circle-outline" size={24} color="#4F46E5" />
+              <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
               <Text style={styles.addButtonText}>Add Service</Text>
             </TouchableOpacity>
           </View>
@@ -310,7 +313,7 @@ export function KnowledgeBaseScreen() {
             ))}
 
             <TouchableOpacity style={styles.addButton} onPress={addFaq}>
-              <Ionicons name="add-circle-outline" size={24} color="#4F46E5" />
+              <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
               <Text style={styles.addButtonText}>Add FAQ</Text>
             </TouchableOpacity>
           </View>
@@ -347,32 +350,33 @@ export function KnowledgeBaseScreen() {
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <Text style={styles.saveButtonText}>Save Changes</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.separator,
   },
   tab: {
     flex: 1,
@@ -386,11 +390,11 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: '#6B7280',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
   },
   activeTabText: {
-    color: '#4F46E5',
+    color: colors.primary,
   },
   scrollView: {
     flex: 1,
@@ -400,12 +404,12 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginBottom: 16,
     lineHeight: 20,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -423,27 +427,27 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   inputGroup: {
     marginBottom: 12,
   },
   label: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#111827',
+    color: colors.label,
   },
   multilineInput: {
     minHeight: 80,
@@ -459,14 +463,14 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
+    borderColor: colors.separatorOpaque,
     borderRadius: 12,
     marginTop: 4,
   },
   addButtonText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: '#4F46E5',
+    fontWeight: '400',
+    color: colors.primary,
     marginLeft: 8,
   },
   hourRow: {
@@ -479,22 +483,22 @@ const styles = StyleSheet.create({
   dayLabel: {
     width: 100,
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
   },
   hourInput: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    color: '#111827',
+    color: colors.label,
   },
   saveButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     marginHorizontal: 16,
     marginVertical: 24,
     padding: 16,
@@ -505,8 +509,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

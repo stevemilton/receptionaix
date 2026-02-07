@@ -10,6 +10,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboardingStore } from '../../lib/onboarding-store';
+import { colors, typography, radius, shadow } from '../../theme';
+import { ScreenBackground } from '../../components/ScreenBackground';
 
 const VOICE_OPTIONS = [
   { id: 'Ara', name: 'Ara', description: 'Warm & friendly (Female)', recommended: true },
@@ -88,6 +90,7 @@ export function AiGreetingScreen() {
   };
 
   return (
+    <ScreenBackground>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
@@ -184,7 +187,7 @@ export function AiGreetingScreen() {
               <Text style={styles.voiceDescription}>{voice.description}</Text>
             </View>
             {localVoiceId === voice.id && (
-              <Ionicons name="checkmark-circle" size={24} color="#4F46E5" />
+              <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
             )}
           </TouchableOpacity>
         ))}
@@ -193,23 +196,24 @@ export function AiGreetingScreen() {
       {/* Navigation */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={20} color="#6B7280" />
+          <Ionicons name="arrow-back" size={20} color={colors.secondaryLabel} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
           <Text style={styles.continueButtonText}>Continue</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
+          <Ionicons name="arrow-forward" size={20} color={colors.white} />
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 20,
@@ -220,36 +224,36 @@ const styles = StyleSheet.create({
   },
   stepIndicator: {
     fontSize: 14,
-    color: '#4F46E5',
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '400',
     marginBottom: 8,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '300',
+    color: colors.label,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     lineHeight: 22,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
     marginBottom: 12,
   },
   cardSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginBottom: 16,
   },
   templateGrid: {
@@ -262,34 +266,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
+    borderColor: colors.separator,
+    backgroundColor: colors.surface,
   },
   templateButtonSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFaint,
   },
   templateButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '400',
+    color: colors.secondaryLabel,
   },
   templateButtonTextSelected: {
-    color: '#4F46E5',
+    color: colors.primary,
   },
   textArea: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.grouped,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.separatorOpaque,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#111827',
+    color: colors.label,
     minHeight: 100,
   },
   helperText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.tertiaryLabel,
     marginTop: 8,
   },
   voiceOption: {
@@ -298,24 +302,24 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: colors.separator,
     marginBottom: 8,
   },
   voiceOptionSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFaint,
   },
   voiceIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   voiceIconSelected: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
   },
   voiceInfo: {
     flex: 1,
@@ -327,23 +331,23 @@ const styles = StyleSheet.create({
   },
   voiceName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: '400',
+    color: colors.label,
   },
   recommendedBadge: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.primaryFaint,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
   },
   recommendedText: {
     fontSize: 10,
-    color: '#4F46E5',
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '400',
   },
   voiceDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
     marginTop: 2,
   },
   actions: {
@@ -352,7 +356,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.separator,
     marginBottom: 40,
   },
   backButton: {
@@ -364,10 +368,10 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.secondaryLabel,
   },
   continueButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -376,8 +380,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   continueButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });
