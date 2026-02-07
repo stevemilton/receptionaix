@@ -6,6 +6,7 @@ export type {
   ExtractedFAQ,
   ExtractedKnowledge,
   KnowledgeBaseResult,
+  PipelineSources,
 } from './types';
 
 // Mock data (for testing)

@@ -48,6 +48,15 @@ export interface OnboardingData {
   dataSharingConsent: boolean;
   marketingConsent: boolean;
 
+  // Pipeline metadata (from KB generation)
+  kbSources: {
+    googlePlaces: boolean;
+    websiteFound: boolean;
+    websiteScraped: boolean;
+    grokExtraction: boolean;
+    websiteUrl: string | null;
+  } | null;
+
   // Metadata
   currentStep: number;
   completedSteps: number[];
@@ -98,6 +107,7 @@ const initialState: OnboardingData = {
   privacyAccepted: false,
   dataSharingConsent: false,
   marketingConsent: false,
+  kbSources: null,
   currentStep: 1,
   completedSteps: [],
   skippedSteps: [],

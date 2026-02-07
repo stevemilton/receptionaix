@@ -38,21 +38,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check for required API keys
+    // Check for required API keys (Google Places + Grok required, Firecrawl optional)
     const googlePlacesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-    const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+    const firecrawlApiKey = process.env.FIRECRAWL_API_KEY || '';
     const grokApiKey = process.env.GROK_API_KEY;
 
-    if (!googlePlacesApiKey || !firecrawlApiKey || !grokApiKey) {
-      console.error('[Knowledge] Missing API keys:', {
+    if (!googlePlacesApiKey || !grokApiKey) {
+      console.error('[Knowledge] Missing required API keys:', {
         googlePlaces: !!googlePlacesApiKey,
-        firecrawl: !!firecrawlApiKey,
         grok: !!grokApiKey,
       });
       return NextResponse.json(
         { error: 'API keys not configured' },
         { status: 500 }
       );
+    }
+
+    if (!firecrawlApiKey) {
+      console.warn('[Knowledge] FIRECRAWL_API_KEY not set — website scraping will be skipped');
     }
 
     const config = {
@@ -78,6 +81,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       knowledgeBase: result,
+      sources: result.sources || null,
     });
   } catch (error) {
     console.error('Knowledge base generation failed:', error);

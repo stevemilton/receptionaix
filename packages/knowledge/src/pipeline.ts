@@ -1,4 +1,4 @@
-import type { KnowledgeBaseResult, PlaceResult, ExtractedKnowledge } from './types';
+import type { KnowledgeBaseResult, PlaceResult, ExtractedKnowledge, PipelineSources } from './types';
 import { searchBusiness, getPlaceDetails } from './google-places';
 import { scrapeWebsite } from './firecrawl';
 import { extractKnowledgeWithGrok } from './extractor';
@@ -108,10 +108,20 @@ export async function generateKnowledgeBaseFromPlace(
 ): Promise<KnowledgeBaseResult> {
   const aiApiKey = config.grokApiKey || config.claudeApiKey || '';
 
+  const sources: PipelineSources = {
+    googlePlaces: false,
+    websiteFound: false,
+    websiteScraped: false,
+    grokExtraction: false,
+    websiteUrl: null,
+  };
+
   // Get place details
+  console.log(`[Knowledge] Fetching place details for ${placeId}...`);
   const placeData = await getPlaceDetails(placeId, config.googlePlacesApiKey);
 
   if (!placeData) {
+    console.log('[Knowledge] Failed to get place details');
     return {
       placeData: null,
       scrapedData: null,
@@ -121,8 +131,12 @@ export async function generateKnowledgeBaseFromPlace(
         faqs: [],
         openingHours: null,
       },
+      sources,
     };
   }
+
+  sources.googlePlaces = true;
+  console.log(`[Knowledge] Got place: ${placeData.name}, website: ${placeData.website || 'NONE'}`);
 
   // Scrape and extract if website available
   let scrapedData = null;
@@ -134,25 +148,50 @@ export async function generateKnowledgeBaseFromPlace(
   };
 
   if (placeData.website) {
-    scrapedData = await scrapeWebsite(placeData.website, config.firecrawlApiKey);
+    sources.websiteFound = true;
+    sources.websiteUrl = placeData.website;
 
-    if (scrapedData) {
-      extractedKnowledge = await extractKnowledgeWithGrok(
-        scrapedData.markdown,
-        aiApiKey
-      );
+    if (config.firecrawlApiKey) {
+      console.log(`[Knowledge] Scraping website: ${placeData.website}...`);
+      scrapedData = await scrapeWebsite(placeData.website, config.firecrawlApiKey);
 
-      // Preserve Google opening hours if extraction didn't find any
-      if (!extractedKnowledge.openingHours && placeData.openingHours) {
-        extractedKnowledge.openingHours = placeData.openingHours;
+      if (scrapedData) {
+        sources.websiteScraped = true;
+        console.log(`[Knowledge] Scraped ${scrapedData.markdown.length} chars from website`);
+
+        console.log('[Knowledge] Extracting services and FAQs with Grok...');
+        extractedKnowledge = await extractKnowledgeWithGrok(
+          scrapedData.markdown,
+          aiApiKey
+        );
+
+        const hasExtracted = extractedKnowledge.services.length > 0 || extractedKnowledge.faqs.length > 0;
+        sources.grokExtraction = hasExtracted;
+        console.log(
+          `[Knowledge] Grok extracted ${extractedKnowledge.services.length} services, ${extractedKnowledge.faqs.length} FAQs`
+        );
+
+        // Preserve Google opening hours if extraction didn't find any
+        if (!extractedKnowledge.openingHours && placeData.openingHours) {
+          extractedKnowledge.openingHours = placeData.openingHours;
+        }
+      } else {
+        console.log('[Knowledge] Website scraping failed (Firecrawl returned null)');
       }
+    } else {
+      console.log('[Knowledge] Firecrawl API key not configured, skipping website scrape');
     }
+  } else {
+    console.log('[Knowledge] No website URL from Google Places — skipping scrape');
   }
+
+  console.log('[Knowledge] Pipeline complete. Sources:', JSON.stringify(sources));
 
   return {
     placeData,
     scrapedData,
     extractedKnowledge,
+    sources,
   };
 }
 

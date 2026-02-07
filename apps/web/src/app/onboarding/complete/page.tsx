@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button, Card } from '@receptionalx/ui';
 import { useOnboardingStore } from '@/lib/onboarding-store';
 
 export default function CompletePage() {
-  const router = useRouter();
   const {
     businessName,
     businessType,
@@ -85,7 +83,7 @@ export default function CompletePage() {
 
   const handleGoToDashboard = () => {
     reset(); // Clear onboarding store
-    router.push('/dashboard');
+    window.location.href = '/dashboard'; // Hard navigate to bypass OnboardingGuard
   };
 
   return (
@@ -366,7 +364,7 @@ export default function CompletePage() {
             <button
               onClick={() => {
                 reset();
-                router.push('/dashboard/billing');
+                window.location.href = '/dashboard/billing'; // Hard navigate to bypass OnboardingGuard
               }}
               disabled={!saved && !error}
               className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -422,7 +420,7 @@ export default function CompletePage() {
           variant="outline"
           onClick={() => {
             reset();
-            router.push('/dashboard/billing');
+            window.location.href = '/dashboard/billing'; // Hard navigate to bypass OnboardingGuard
           }}
           disabled={!saved && !error}
         >

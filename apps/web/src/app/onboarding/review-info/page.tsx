@@ -32,6 +32,7 @@ export default function ReviewInfoPage() {
     website,
     services,
     openingHours,
+    kbSources,
     setBusinessInfo,
     setServices,
     setOpeningHours,
@@ -156,6 +157,39 @@ export default function ReviewInfoPage() {
           Confirm and edit your business details. This information will help your AI receptionist.
         </p>
       </div>
+
+      {/* Data source info banner */}
+      {kbSources && (
+        <div className={`p-4 rounded-lg text-sm ${
+          kbSources.grokExtraction
+            ? 'bg-green-50 border border-green-200 text-green-800'
+            : kbSources.websiteFound && !kbSources.websiteScraped
+            ? 'bg-amber-50 border border-amber-200 text-amber-800'
+            : 'bg-blue-50 border border-blue-200 text-blue-800'
+        }`}>
+          {kbSources.grokExtraction ? (
+            <p>
+              <span className="font-medium">Services and FAQs extracted from your website.</span>{' '}
+              Review and edit below.
+            </p>
+          ) : kbSources.websiteFound && !kbSources.websiteScraped ? (
+            <p>
+              <span className="font-medium">We found your website but couldn&apos;t scan it.</span>{' '}
+              Please add your services and FAQs manually below.
+            </p>
+          ) : !kbSources.websiteFound ? (
+            <p>
+              <span className="font-medium">No website found for this business.</span>{' '}
+              Please add your services manually below. Opening hours from Google have been imported.
+            </p>
+          ) : (
+            <p>
+              <span className="font-medium">Website scanned but no services were found.</span>{' '}
+              Please add your services manually below.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Business Details */}
       <Card>

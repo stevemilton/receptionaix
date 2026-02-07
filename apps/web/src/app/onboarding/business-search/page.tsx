@@ -102,6 +102,7 @@ export default function BusinessSearchPage() {
         services: extracted.services || [],
         openingHours: extracted.openingHours || {},
         faqs: extracted.faqs || [],
+        kbSources: data.sources || null,
       });
 
       markStepCompleted(1);
@@ -172,7 +173,29 @@ export default function BusinessSearchPage() {
         </div>
       )}
 
-      {results.length > 0 && (
+      {/* Loading overlay during KB generation */}
+      {generating && (
+        <Card>
+          <div className="flex flex-col items-center text-center py-6">
+            <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center mb-4">
+              <svg className="animate-spin h-6 w-6 text-primary-600" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Building your AI receptionist&apos;s knowledge base</h3>
+            <p className="mt-2 text-sm text-gray-500 max-w-md">
+              We&apos;re importing your business details, scanning your website, and extracting services and FAQs. This usually takes 10–15 seconds.
+            </p>
+            <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
+              <div className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
+              <span>Please don&apos;t close this page</span>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {results.length > 0 && !generating && (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold text-gray-900">Search Results</h2>
           {results.map((place) => (

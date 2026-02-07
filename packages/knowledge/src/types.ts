@@ -36,8 +36,17 @@ export interface ExtractedKnowledge {
   openingHours: Record<string, string> | null;
 }
 
+export interface PipelineSources {
+  googlePlaces: boolean;
+  websiteFound: boolean;
+  websiteScraped: boolean;
+  grokExtraction: boolean;
+  websiteUrl: string | null;
+}
+
 export interface KnowledgeBaseResult {
   placeData: PlaceResult | null;
   scrapedData: ScrapedContent | null;
   extractedKnowledge: ExtractedKnowledge;
+  sources?: PipelineSources;
 }
