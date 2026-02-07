@@ -133,11 +133,11 @@ export default async function DashboardPage() {
       )}
 
       {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+      <div className="mb-6 sm:mb-8 -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-6 sm:pb-8 bg-gradient-header rounded-b-2xl">
+        <h1 className="text-xl sm:text-2xl font-light tracking-tight text-white">
           Welcome back{merchant?.business_name ? `, ${merchant.business_name}` : ''}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Here&apos;s what&apos;s happening with your AI receptionist</p>
+        <p className="text-sm text-white/60 mt-1">Here&apos;s what&apos;s happening with your AI receptionist</p>
       </div>
 
       {/* Metric Cards */}
@@ -151,9 +151,9 @@ export default async function DashboardPage() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Recent Calls — spans 2 columns on desktop */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
+        <div className="lg:col-span-2 bg-white rounded-[12px] border border-[#E5E5EA] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900">Recent Calls</h2>
+            <h2 className="font-medium text-gray-900">Recent Calls</h2>
             <Link href="/dashboard/calls" className="text-xs font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
               View all <ChevronRightIcon className="w-3 h-3" />
             </Link>
@@ -193,9 +193,9 @@ export default async function DashboardPage() {
         {/* Right Column: Upcoming Appointments + Messages */}
         <div className="space-y-4 sm:space-y-6">
           {/* Upcoming Appointments */}
-          <div className="bg-white rounded-xl border border-gray-200">
+          <div className="bg-white rounded-[12px] border border-[#E5E5EA] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">Upcoming</h2>
+              <h2 className="font-medium text-gray-900">Upcoming</h2>
               <Link href="/dashboard/appointments" className="text-xs font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
                 View all <ChevronRightIcon className="w-3 h-3" />
               </Link>
@@ -234,10 +234,10 @@ export default async function DashboardPage() {
           </div>
 
           {/* Unread Messages */}
-          <div className="bg-white rounded-xl border border-gray-200">
+          <div className="bg-white rounded-[12px] border border-[#E5E5EA] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100">
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-gray-900">Messages</h2>
+                <h2 className="font-medium text-gray-900">Messages</h2>
                 {unreadCount > 0 && (
                   <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-primary-600 rounded-full">
                     {unreadCount}

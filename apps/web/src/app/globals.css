@@ -4,14 +4,14 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --background: 60 2% 97%;
+    --foreground: 240 6% 12%;
+    --muted: 100 6% 93%;
+    --muted-foreground: 240 2% 48%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 127 20% 30%;
+    --radius: 0.75rem;
   }
 
   * {
@@ -19,8 +19,8 @@
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: #F8F8F7;
+    color: #1C1C1E;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -30,6 +30,36 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Brand gradient — dark green to white (full page, auth/landing) */
+  .bg-gradient-brand {
+    background: linear-gradient(
+      to bottom,
+      #344532 0%,
+      #344532 15%,
+      #5A7A56 35%,
+      #A3C4A0 55%,
+      #D4E6D2 70%,
+      #F0F5EF 85%,
+      #FFFFFF 100%
+    );
+  }
+
+  /* Header gradient — shorter, for dashboard hero sections */
+  .bg-gradient-header {
+    background: linear-gradient(
+      to bottom,
+      #344532 0%,
+      #4A6347 50%,
+      #6B8568 80%,
+      #E8EDE7 100%
+    );
+  }
+
+  /* Subtle gradient — very light, for section backgrounds */
+  .bg-gradient-subtle {
+    background: linear-gradient(to bottom, #F4F6F4, #FFFFFF);
   }
 
   /* Mobile nav slide-in animation */

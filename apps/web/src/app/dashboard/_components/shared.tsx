@@ -158,7 +158,7 @@ export function EmptyState({
 export function PageHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="mb-6 sm:mb-8">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h1>
+      <h1 className="text-xl sm:text-2xl font-light text-gray-900 tracking-tight">{title}</h1>
       <p className="text-xs sm:text-sm text-gray-500 mt-1">{subtitle}</p>
     </div>
   );
@@ -176,9 +176,9 @@ export function MetricCard({
   accent?: boolean;
 }) {
   return (
-    <div className={`bg-white rounded-xl border p-3 sm:p-5 ${accent ? 'border-primary-200 ring-1 ring-primary-100' : 'border-gray-200'}`}>
+    <div className={`bg-white rounded-[12px] border border-l-[3px] p-3 sm:p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${accent ? 'border-l-primary-500 border-primary-200' : 'border-l-primary-400 border-[#E5E5EA]'}`}>
       <div className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</div>
-      <div className={`text-xl sm:text-2xl font-bold mt-1 ${accent ? 'text-primary-600' : 'text-gray-900'}`}>{value}</div>
+      <div className={`text-xl sm:text-2xl font-extralight tracking-tight mt-1 ${accent ? 'text-primary-600' : 'text-gray-900'}`}>{value}</div>
       {sublabel && <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{sublabel}</div>}
     </div>
   );

@@ -3,20 +3,20 @@ import { CLIENT_PRICING_TIERS } from '@/lib/stripe/pricing';
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F8F8F7]">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-gradient-header border-b border-primary-200/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-primary-600">
+          <Link href="/" className="text-xl font-light tracking-tight text-white">
             ReceptionAI
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/auth/login" className="text-sm text-gray-600 hover:text-gray-900">
+            <Link href="/auth/login" className="text-sm text-white/70 hover:text-white">
               Sign in
             </Link>
             <Link
               href="/auth/signup"
-              className="text-sm bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium"
+              className="text-sm bg-white/20 text-white px-4 py-2 rounded-[10px] hover:bg-white/30 font-medium backdrop-blur-sm"
             >
               Get Started
             </Link>
@@ -27,10 +27,10 @@ export default function PricingPage() {
       {/* Hero */}
       <section className="py-16 text-center">
         <div className="max-w-4xl mx-auto px-4">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-light tracking-tight text-gray-900 mb-4">
             Simple, Transparent Pricing
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-500 max-w-2xl mx-auto">
             Choose the plan that fits your business. Start with a 14-day free trial, no credit card required.
           </p>
         </div>
@@ -46,8 +46,8 @@ export default function PricingPage() {
               return (
                 <div
                   key={tier.id}
-                  className={`relative bg-white rounded-2xl shadow-sm border-2 p-8 flex flex-col ${
-                    tier.popular ? 'border-primary-500 shadow-lg' : 'border-gray-200'
+                  className={`relative bg-white rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] border-2 p-8 flex flex-col ${
+                    tier.popular ? 'border-primary-500 shadow-lg' : 'border-[#E5E5EA]'
                   }`}
                 >
                   {tier.popular && (
@@ -57,19 +57,19 @@ export default function PricingPage() {
                   )}
 
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-gray-900">{tier.name}</h3>
+                    <h3 className="text-2xl font-light text-gray-900">{tier.name}</h3>
                     <p className="text-gray-500 mt-1">{tier.description}</p>
                   </div>
 
                   <div className="mb-6">
                     {isEnterprise ? (
                       <>
-                        <span className="text-4xl font-bold text-gray-900">&pound;{tier.price}</span>
+                        <span className="text-4xl font-extralight text-gray-900">&pound;{tier.price}</span>
                         <span className="text-gray-500">+/month</span>
                       </>
                     ) : (
                       <>
-                        <span className="text-4xl font-bold text-gray-900">&pound;{tier.price}</span>
+                        <span className="text-4xl font-extralight text-gray-900">&pound;{tier.price}</span>
                         <span className="text-gray-500">/month</span>
                       </>
                     )}
@@ -84,7 +84,7 @@ export default function PricingPage() {
                   <ul className="space-y-3 mb-8 flex-1">
                     {tier.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-2">
-                        <svg className="w-5 h-5 text-green-500 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                        <svg className="w-5 h-5 text-[#34C759] shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                         <span className="text-sm text-gray-600">{feature}</span>
@@ -95,14 +95,14 @@ export default function PricingPage() {
                   {isEnterprise ? (
                     <a
                       href="mailto:enterprise@receptionai.com?subject=Enterprise%20Plan%20Enquiry"
-                      className="w-full py-3 rounded-lg font-medium text-center transition-colors bg-gray-900 text-white hover:bg-gray-800 block"
+                      className="w-full py-3 rounded-[10px] font-medium text-center transition-colors bg-gray-900 text-white hover:bg-gray-800 block"
                     >
                       Contact Us
                     </a>
                   ) : (
                     <Link
                       href="/auth/signup"
-                      className={`w-full py-3 rounded-lg font-medium text-center transition-colors block ${
+                      className={`w-full py-3 rounded-[10px] font-medium text-center transition-colors block ${
                         tier.popular
                           ? 'bg-primary-600 text-white hover:bg-primary-700'
                           : 'bg-gray-900 text-white hover:bg-gray-800'
@@ -121,7 +121,7 @@ export default function PricingPage() {
       {/* Feature Comparison */}
       <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-4">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">Compare Plans</h2>
+          <h2 className="text-2xl font-light text-gray-900 text-center mb-8">Compare Plans</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -156,7 +156,7 @@ export default function PricingPage() {
       {/* FAQ */}
       <section className="py-16">
         <div className="max-w-3xl mx-auto px-4">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">Frequently Asked Questions</h2>
+          <h2 className="text-2xl font-light text-gray-900 text-center mb-8">Frequently Asked Questions</h2>
           <div className="space-y-4">
             <FAQ
               question="Is there a free trial?"
@@ -187,17 +187,17 @@ export default function PricingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 bg-primary-600">
+      <section className="py-16 bg-[#344532]">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
+          <h2 className="text-3xl font-light text-white mb-4">
             Ready to never miss a call again?
           </h2>
-          <p className="text-primary-100 mb-8 text-lg">
+          <p className="text-white/60 mb-8 text-lg">
             Start your 14-day free trial today. No credit card required.
           </p>
           <Link
             href="/auth/signup"
-            className="inline-block bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-primary-50 transition-colors"
+            className="inline-block bg-white text-primary-700 px-8 py-3 rounded-[10px] font-medium hover:bg-white/90 transition-colors"
           >
             Get Started Free
           </Link>
@@ -222,7 +222,7 @@ function ComparisonRow({ label, values }: { label: string; values: (string | boo
         <td key={i} className="text-center py-3 px-4">
           {typeof value === 'boolean' ? (
             value ? (
-              <svg className="w-5 h-5 text-green-500 mx-auto" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="w-5 h-5 text-[#34C759] mx-auto" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             ) : (
@@ -239,7 +239,7 @@ function ComparisonRow({ label, values }: { label: string; values: (string | boo
 
 function FAQ({ question, answer }: { question: string; answer: string }) {
   return (
-    <div className="bg-white rounded-lg border p-5">
+    <div className="bg-white rounded-[12px] border border-[#E5E5EA] p-5">
       <h3 className="font-medium text-gray-900">{question}</h3>
       <p className="text-sm text-gray-600 mt-2" dangerouslySetInnerHTML={{ __html: answer }} />
     </div>

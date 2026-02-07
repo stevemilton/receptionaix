@@ -106,8 +106,8 @@ export default function BillingPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
-        <p className="text-gray-600">Manage your subscription and billing</p>
+        <h1 className="text-2xl font-light tracking-tight text-gray-900">Billing</h1>
+        <p className="text-gray-500">Manage your subscription and billing</p>
       </div>
 
       {/* Success/Cancel/Expired Messages */}
@@ -165,16 +165,16 @@ export default function BillingPage() {
 
       {/* Trial Banner */}
       {subscription?.status === 'trial' && (
-        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <div className="mb-8 bg-primary-50 border border-primary-200 rounded-[12px] p-6">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-blue-900">You&apos;re on a free trial</h3>
-              <p className="text-blue-700 mt-1">
+              <h3 className="font-medium text-primary-900">You&apos;re on a free trial</h3>
+              <p className="text-primary-700 mt-1">
                 Select a plan below to continue using ReceptionAI after your trial ends.
               </p>
             </div>
             {subscription.ends_at && (
-              <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+              <span className="text-sm bg-primary-100 text-primary-800 px-3 py-1 rounded-full">
                 Ends {new Date(subscription.ends_at).toLocaleDateString('en-GB')}
               </span>
             )}
@@ -191,8 +191,8 @@ export default function BillingPage() {
           return (
             <div
               key={tier.id}
-              className={`relative bg-white rounded-xl shadow-sm border-2 p-6 flex flex-col ${
-                tier.popular ? 'border-primary-500' : 'border-gray-200'
+              className={`relative bg-white rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] border-2 p-6 flex flex-col ${
+                tier.popular ? 'border-primary-500' : 'border-[#E5E5EA]'
               }`}
             >
               {tier.popular && (
@@ -202,19 +202,19 @@ export default function BillingPage() {
               )}
 
               <div className="mb-6">
-                <h3 className="text-xl font-bold text-gray-900">{tier.name}</h3>
+                <h3 className="text-xl font-light text-gray-900">{tier.name}</h3>
                 <p className="text-sm text-gray-500 mt-1">{tier.description}</p>
               </div>
 
               <div className="mb-6">
                 {isEnterprise ? (
                   <>
-                    <span className="text-4xl font-bold text-gray-900">£{tier.price}</span>
+                    <span className="text-4xl font-extralight text-gray-900">£{tier.price}</span>
                     <span className="text-gray-500">+/month</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-4xl font-bold text-gray-900">£{tier.price}</span>
+                    <span className="text-4xl font-extralight text-gray-900">£{tier.price}</span>
                     <span className="text-gray-500">/month</span>
                   </>
                 )}
@@ -229,7 +229,7 @@ export default function BillingPage() {
               <ul className="space-y-3 mb-8 flex-1">
                 {tier.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-2">
-                    <CheckIcon className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                    <CheckIcon className="w-5 h-5 text-[#34C759] shrink-0 mt-0.5" />
                     <span className="text-sm text-gray-600">{feature}</span>
                   </li>
                 ))}
@@ -238,7 +238,7 @@ export default function BillingPage() {
               {isEnterprise ? (
                 <a
                   href="mailto:enterprise@receptionai.com?subject=Enterprise%20Plan%20Enquiry"
-                  className="w-full py-3 rounded-lg font-medium text-center transition-colors bg-gray-900 text-white hover:bg-gray-800 block"
+                  className="w-full py-3 rounded-[10px] font-medium text-center transition-colors bg-gray-900 text-white hover:bg-gray-800 block"
                 >
                   Contact Us
                 </a>
@@ -246,7 +246,7 @@ export default function BillingPage() {
                 <button
                   onClick={() => handleSelectPlan(tier.id)}
                   disabled={isCurrentPlan || checkoutLoading !== null}
-                  className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                  className={`w-full py-3 rounded-[10px] font-medium transition-colors ${
                     isCurrentPlan
                       ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                       : tier.popular
@@ -268,7 +268,7 @@ export default function BillingPage() {
 
       {/* FAQ */}
       <div className="mt-12">
-        <h2 className="text-lg font-semibold mb-4">Frequently Asked Questions</h2>
+        <h2 className="text-lg font-light mb-4">Frequently Asked Questions</h2>
         <div className="space-y-4">
           <FAQ
             question="Can I change my plan later?"
@@ -306,7 +306,7 @@ function CheckIcon({ className }: { className?: string }) {
 
 function FAQ({ question, answer }: { question: string; answer: string }) {
   return (
-    <div className="bg-white rounded-lg border p-4">
+    <div className="bg-white rounded-[12px] border border-[#E5E5EA] p-4">
       <h3 className="font-medium text-gray-900">{question}</h3>
       <p className="text-sm text-gray-600 mt-1">{answer}</p>
     </div>

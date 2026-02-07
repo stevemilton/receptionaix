@@ -2,10 +2,10 @@ import Link from 'next/link';
 
 export default function VerifyPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-brand py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 text-center">
         <div>
-          <Link href="/" className="text-2xl font-bold text-primary-600 block">
+          <Link href="/" className="text-2xl font-light tracking-tight text-white block">
             ReceptionAI
           </Link>
           <div className="mt-8">
@@ -15,10 +15,10 @@ export default function VerifyPage() {
               </svg>
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-6 text-3xl font-light text-white">
             Check your email
           </h2>
-          <p className="mt-4 text-gray-600">
+          <p className="mt-4 text-white/70">
             We&apos;ve sent you a verification link. Please check your email and click the link to verify your account.
           </p>
         </div>

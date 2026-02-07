@@ -24,11 +24,11 @@ export default function OnboardingLayout({
   const currentStepIndex = STEPS.findIndex((step) => step.path === pathname);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F8F8F7]">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-gradient-header border-b border-primary-200/30">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <Link href="/" className="text-xl font-bold text-primary-600">
+          <Link href="/" className="text-xl font-light tracking-tight text-white">
             ReceptionAI
           </Link>
         </div>

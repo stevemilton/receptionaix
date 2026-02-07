@@ -40,7 +40,7 @@ export function DashboardShell({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#F8F8F7] flex flex-col">
       {/* Impersonation banner */}
       {isImpersonating && (
         <div className="bg-yellow-400 text-yellow-900 text-center text-sm py-2 font-medium">
@@ -50,13 +50,13 @@ export function DashboardShell({
       )}
 
       {/* Mobile top bar */}
-      <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
-        <Link href="/dashboard" className="text-lg font-bold text-primary-600">
+      <div className="lg:hidden flex items-center justify-between bg-[#344532] px-4 py-3">
+        <Link href="/dashboard" className="text-lg font-light text-white tracking-tight">
           ReceptionAI
         </Link>
         <button
           onClick={() => setMobileNavOpen(!mobileNavOpen)}
-          className="p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+          className="p-2 rounded-lg text-white/80 hover:bg-white/10"
           aria-label="Toggle navigation"
         >
           {mobileNavOpen ? (
@@ -77,9 +77,9 @@ export function DashboardShell({
           />
           {/* Slide-over nav */}
           <aside className="absolute top-0 left-0 bottom-0 w-72 bg-white shadow-xl z-50 flex flex-col animate-slide-in">
-            <div className="p-5 border-b border-gray-200 flex items-center justify-between">
+            <div className="p-5 border-b border-[#E5E5EA] flex items-center justify-between">
               <div>
-                <div className="text-lg font-bold text-primary-600">ReceptionAI</div>
+                <div className="text-lg font-light text-primary-700 tracking-tight">ReceptionAI</div>
                 <p className="text-sm text-gray-500 truncate">{businessName}</p>
               </div>
               <button
@@ -108,10 +108,10 @@ export function DashboardShell({
               ))}
             </nav>
 
-            <div className="p-4 border-t border-gray-200">
+            <div className="p-4 border-t border-[#E5E5EA]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary-600">
+                  <span className="text-sm font-medium text-primary-700">
                     {userEmail[0]?.toUpperCase()}
                   </span>
                 </div>
@@ -131,13 +131,13 @@ export function DashboardShell({
       )}
 
       <div className="flex flex-1">
-        {/* Desktop sidebar — hidden on mobile */}
-        <aside className="hidden lg:flex w-64 bg-white border-r border-gray-200 flex-col">
-          <div className="p-6 border-b border-gray-200">
-            <Link href="/dashboard" className="text-xl font-bold text-primary-600">
+        {/* Desktop sidebar — dark forest green */}
+        <aside className="hidden lg:flex w-64 bg-[#344532] flex-col">
+          <div className="p-6 border-b border-white/10">
+            <Link href="/dashboard" className="text-xl font-light text-white tracking-tight">
               ReceptionAI
             </Link>
-            <p className="text-sm text-gray-500 mt-1 truncate">{businessName}</p>
+            <p className="text-sm text-white/60 mt-1 truncate">{businessName}</p>
           </div>
 
           <nav className="flex-1 p-4 space-y-1">
@@ -147,8 +147,8 @@ export function DashboardShell({
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                   isActive(item.href)
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-white/15 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <item.icon className="w-5 h-5" />
@@ -157,21 +157,21 @@ export function DashboardShell({
             ))}
           </nav>
 
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-white/10">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-primary-600">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-white">
                   {userEmail[0]?.toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{userEmail}</p>
+                <p className="text-sm font-medium text-white/90 truncate">{userEmail}</p>
               </div>
             </div>
             <form action="/api/auth/signout" method="POST">
               <button
                 type="submit"
-                className="w-full text-left text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-100"
+                className="w-full text-left text-sm text-white/60 hover:text-white px-3 py-2 rounded-lg hover:bg-white/10"
               >
                 Sign out
               </button>

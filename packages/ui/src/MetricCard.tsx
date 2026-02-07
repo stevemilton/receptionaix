@@ -17,11 +17,11 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
     const isPositive = change && change.value >= 0;
 
     return (
-      <Card ref={ref} className={cn('', className)} {...props}>
+      <Card ref={ref} className={cn('border-l-[3px] border-l-primary-500', className)} {...props}>
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-medium text-gray-500">{title}</p>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
+            <p className="mt-2 text-3xl font-extralight text-gray-900 tracking-tight">{value}</p>
             {change && (
               <div className="mt-2 flex items-center text-sm">
                 <span
@@ -68,7 +68,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
             )}
           </div>
           {icon && (
-            <div className="p-3 bg-primary-50 rounded-lg text-primary-600">
+            <div className="p-3 bg-primary-50 rounded-[10px] text-primary-600">
               {icon}
             </div>
           )}
