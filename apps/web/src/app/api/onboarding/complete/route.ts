@@ -159,19 +159,35 @@ export async function POST(request: Request) {
         // Use admin client if matched by email (RLS won't allow updating another user's row)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const client: any = matchedByEmail ? createAdminClient() : supabase;
-        const updatePayload = {
-          ...fields,
-          updated_at: new Date().toISOString(),
-          ...(matchedByEmail ? { id: user.id, email: user.email || '' } : {}),
-        };
-        const { data: updated, error: updateError } = await client
-          .from('merchants')
-          .update(updatePayload as never)
-          .eq('id', existingMerchant.id)
-          .select()
-          .single();
-        if (updateError) throw updateError;
-        return updated;
+        const oldId = existingMerchant.id;
+
+        if (matchedByEmail && oldId !== user.id) {
+          // Re-assign merchant to new auth user: update FK references first, then merchant ID
+          console.log(`[Onboarding Complete] Reassigning merchant ${oldId} → ${user.id}`);
+          const fkTables = ['knowledge_bases', 'calls', 'appointments', 'customers', 'messages'] as const;
+          for (const table of fkTables) {
+            await client.from(table).update({ merchant_id: user.id } as never).eq('merchant_id', oldId);
+          }
+          // Now update the merchant record itself
+          const { data: updated, error: updateError } = await client
+            .from('merchants')
+            .update({ ...fields, id: user.id, email: user.email || '', updated_at: new Date().toISOString() } as never)
+            .eq('id', oldId)
+            .select()
+            .single();
+          if (updateError) throw updateError;
+          return updated;
+        } else {
+          // Same user ID — simple update
+          const { data: updated, error: updateError } = await client
+            .from('merchants')
+            .update({ ...fields, updated_at: new Date().toISOString() } as never)
+            .eq('id', oldId)
+            .select()
+            .single();
+          if (updateError) throw updateError;
+          return updated;
+        }
       } else {
         const { data: created, error: createError } = await supabase
           .from('merchants')
