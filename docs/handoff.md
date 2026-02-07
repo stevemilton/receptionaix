@@ -1,7 +1,7 @@
 # ReceptionAI - Developer Handoff
 
 **Date:** 2026-02-07
-**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. **Dashboard redesigned & mobile-responsive** — post-call processing, AI summaries, shared components, Messages page, hamburger nav, responsive layouts. **iOS app redesigned** — lighter typography, dark-green gradient backgrounds, 64-band smooth gradient, white header text on dark areas. **TestFlight build #5 completed** — needs `eas submit`. Mobile-first MVP pivot in progress. Stripe deferred.
+**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. **Dashboard redesigned & mobile-responsive** — post-call processing, AI summaries, shared components, Messages page, hamburger nav, responsive layouts. **iOS app redesigned** — lighter typography, dark-green gradient backgrounds, 64-band smooth gradient, white header text on dark areas. **TestFlight build #5 completed** — needs `eas submit`. **Onboarding hardened** — KB pipeline resilience (Grok retry, fallback generation), re-registration FK fix (delete+insert), sign-out + back button in layout. Mobile-first MVP pivot in progress. Stripe deferred.
 
 This document is for any developer picking up this codebase. Read this first, then `CLAUDE.md` for architecture details, then `docs/status.md` for the current issue backlog.
 
@@ -120,7 +120,8 @@ Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
 
 ## What Works
 
-- Full web onboarding flow (8 steps, Google Places, Firecrawl, Calendar OAuth, Twilio provisioning)
+- Full web onboarding flow (8 steps, Google Places, Firecrawl, Calendar OAuth, Twilio provisioning) — with sign-out link, back button, re-registration handling
+- Resilient KB pipeline — Grok retry with fallback model, undefined→null sanitization, fallback KB generation, Firecrawl `onlyMainContent`
 - Voice relay with Grok Realtime API (5 tools: lookup, availability, booking, cancel, message)
 - **Post-call processing pipeline** — auto-creates customers, generates AI summaries, links messages to calls
 - **Redesigned merchant dashboard:**
@@ -191,8 +192,9 @@ Nine hardening batches have been completed. See `docs/status.md` for the detaile
 
 **Remaining technical debt:**
 - ~15 justified `as any` casts on queries to tables not in the generated `database.ts` (`admin_users`, `messages`, `call_errors`, `api_usage_daily`, `notification_log`). The `messages` table has the most casts (dashboard/page, dashboard/messages, 3 API routes, calls/[id]/page). These will resolve when those tables are added to the schema.
-- Migration `007_billing_enforcement.sql` needs to be applied to the live DB (`pnpm db:push`).
+- ~~Migration `007_billing_enforcement.sql`~~ ✅ Applied via SQL Editor (2026-02-07).
 - Migration `011_fix_knowledge_bases_rls.sql` needs to be applied to add missing RLS policy on `knowledge_bases` table.
+- Multi-merchant per email deferred to Phase 2. Current re-registration deletes old merchant data (CASCADE). See plan for `owner_id` approach.
 
 ---
 
@@ -252,7 +254,7 @@ fly secrets set KEY=value --app receptionai-relay
 
 ### Database -> Supabase
 ```bash
-pnpm db:push   # Apply migrations (007 still pending)
+pnpm db:push   # Apply migrations (011 still pending; 007 applied via SQL Editor)
 pnpm db:types  # Regenerate types (commit the output)
 ```
 
@@ -299,13 +301,14 @@ If picking this up:
 7. ~~**Build mobile with EAS**~~ ✅ Build #5 completed (redesigned UI)
 8. **Submit build #5 to TestFlight** — `eas submit --platform ios`
 9. **TestFlight testing** — Test iOS app on physical device
-9. **Android build** — `EAS_BUILD_DISABLE_CASING_CHECK=1 eas build --platform android --profile production`
-10. **Configure RevenueCat** — Set up products, connect App Store, add API keys to `.env`
-11. **Apply pending migrations** — `pnpm db:push` for migrations 007 and 011
-12. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
-13. **Build push notification backend** — Expo Push API integration
-14. **Re-enable Stripe** — Uncomment keys, test subscription flow
-15. **Set up test suite** — Integration tests for API routes and relay
+10. **Apply migration 011** — `pnpm db:push` for knowledge_bases RLS policy (007 already applied)
+11. **Android build** — `EAS_BUILD_DISABLE_CASING_CHECK=1 eas build --platform android --profile production`
+12. **Configure RevenueCat** — Set up products, connect App Store, add API keys to `.env`
+13. **Multi-merchant support** — Add `owner_id` column, merchant selector in dashboard (Phase 2)
+14. **Integrate real Google Calendar** — Replace mock slots in tool-handlers.ts
+15. **Build push notification backend** — Expo Push API integration
+16. **Re-enable Stripe** — Uncomment keys, test subscription flow
+17. **Set up test suite** — Integration tests for API routes and relay
 
 ---
 
@@ -331,7 +334,9 @@ If picking this up:
 | `apps/web/src/lib/supabase/admin.ts` | Service-role Supabase client (typed with Database) |
 | `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |
-| `packages/knowledge/src/extractor.ts` | Grok-based KB extraction with output capping (xAI text API) |
+| `packages/knowledge/src/extractor.ts` | Grok-based KB extraction (retry, undefined→null sanitization, fallback generation) |
+| `packages/knowledge/src/pipeline.ts` | KB generation orchestration (with fallback when 0 results, source tracking) |
+| `packages/knowledge/src/firecrawl.ts` | Firecrawl scraping client (`onlyMainContent: true`) |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
 | `packages/types/src/database.ts` | Supabase table types (generated via `supabase gen types typescript`) |
 | `apps/mobile/src/theme.ts` | **NEW** Mobile design tokens (typography, gradient colors, color palette) |

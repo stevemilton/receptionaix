@@ -98,7 +98,7 @@ Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 
 ### Current Phase: MVP Live — Voice Pipeline Working
 
-All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. **Dashboard redesigned & mobile-responsive** — post-call processing pipeline, AI summaries, shared components, Messages page, hamburger nav, responsive layouts across all pages. **iOS app redesigned** — lighter typography (Light/Regular weights), dark-green gradient backgrounds (#344532→white, 64-band smooth interpolation), white header text on dark areas, sign-out from onboarding. **TestFlight build #5 completed** (2026-02-07).
+All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. **Dashboard redesigned & mobile-responsive** — post-call processing pipeline, AI summaries, shared components, Messages page, hamburger nav, responsive layouts across all pages. **iOS app redesigned** — lighter typography (Light/Regular weights), dark-green gradient backgrounds (#344532→white, 64-band smooth interpolation), white header text on dark areas, sign-out from onboarding. **TestFlight build #5 completed** (2026-02-07). **Onboarding hardened** (2026-02-07) — KB pipeline resilience (Grok retry, fallback generation, Firecrawl `onlyMainContent`), re-registration FK fix (delete+insert), sign-out link + back button in onboarding layout.
 
 **Pivot:** The project is now mobile-first MVP. Stripe is deferred. The Grok-Twilio voice pipeline is working end-to-end.
 
@@ -122,15 +122,21 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] Design system colors applied (full palette for primary, success, warning, error)
 - [x] **Test:** `pnpm build` passes
 
-### Phase 3: Knowledge Base ✅ COMPLETE
+### Phase 3: Knowledge Base ✅ COMPLETE + HARDENED
 - [x] `MockScraper` returns fixed JSON (hair salon sample data)
 - [x] Google Places API search working (New Places API)
-- [x] Firecrawl integration working
+- [x] Firecrawl integration working (`onlyMainContent: true` for cleaner scraping)
 - [x] Grok extracts services/FAQs from markdown (using xAI text API)
 - [x] Master KB database for cross-merchant learning
+- [x] **Hardening (2026-02-07):**
+  - [x] Grok extraction retry with `grok-3-mini-fast` fallback on 502/503/429
+  - [x] `undefined` → `null` sanitization in JSON parsing (Grok outputs JS-style `undefined`)
+  - [x] Fallback KB generation from business name+type when primary extraction yields 0 results
+  - [x] Firecrawl `onlyMainContent: true` to filter cookie banners and nav content
+  - [x] Pipeline source tracking (`PipelineSources` type exported from `packages/knowledge`)
 - [x] **Test:** Enter business name → get structured knowledge base
 
-### Phase 4: Merchant Onboarding ✅ COMPLETE
+### Phase 4: Merchant Onboarding ✅ COMPLETE + HARDENED
 - [x] All onboarding pages built:
   - `/onboarding/business-search` - Google Places search or manual entry
   - `/onboarding/review-info` - Edit business info
@@ -144,6 +150,13 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] Twilio number provisioning working
 - [x] Knowledge base saved to merchant record
 - [x] Onboarding state managed with Zustand
+- [x] **Hardening (2026-02-07):**
+  - [x] Re-registration with same email: delete old merchant (CASCADE cleans 9 child tables) + insert fresh
+  - [x] Email-based merchant lookup using admin client (bypasses RLS)
+  - [x] Core/extended field split for migration compatibility
+  - [x] Sign-out link in onboarding header (fetch `/api/auth/signout` → redirect to login)
+  - [x] Back button on steps 2-8 (navigate to previous step)
+  - [x] Completion page buttons only enabled after successful save
 - [x] **Test:** New user completes onboarding, has Twilio number
 
 ### Phase 5: Voice Agent + Relay ✅ COMPLETE
@@ -265,8 +278,9 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 | Issue | Scope |
 |-------|-------|
 | `as any` casts (~15 justified) | Queries to tables not in generated types (`admin_users`, `messages`, `call_errors`, `api_usage_daily`, `notification_log`). The `messages` table has the most casts across dashboard, API routes, and call detail page. |
-| Unapplied migration 007 | Run `pnpm db:push` to add `billing_period_start` and `stripe_overage_item_id` columns to live DB |
+| ~~Unapplied migration 007~~ | ✅ Applied via SQL Editor (2026-02-07). `forward_phone`, `billing_period_start`, `stripe_overage_item_id` columns now live. |
 | Unapplied migration 011 | Run `pnpm db:push` to add missing RLS policy on `knowledge_bases` table |
+| Multi-merchant per email (deferred) | Current architecture: `merchants.id = auth.users.id` (1:1). Re-registration deletes old merchant. Phase 2 would add `owner_id` column and merchant selector. |
 
 ---
 
@@ -291,6 +305,11 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 ### Twilio Signature Verification (Disabled)
 - Temporarily disabled because `request.url` on Vercel differs from the public URL Twilio signs against
 - TODO: Reconstruct verification URL from `NEXT_PUBLIC_APP_URL` + request path
+
+### Onboarding Re-registration (Edge Case)
+- When a user signs up with the same email but a new auth ID, the old merchant is **deleted** (CASCADE cleans all child tables) and a fresh one is inserted
+- This means all call history, appointments, customers, etc. from the old account are lost
+- Phase 2 TODO: Support multiple merchants per email by adding `owner_id` column and merchant selector in dashboard
 
 ### Google Calendar Integration
 - OAuth tokens are stored during onboarding
@@ -818,8 +837,9 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `apps/web/src/lib/supabase/admin.ts` | Service-role Supabase client (typed with Database) |
 | `apps/web/src/lib/supabase/api-auth.ts` | Dual auth (cookie + Bearer token) for web/mobile |
 | `apps/web/src/lib/csrf.ts` | CSRF origin validation utility |
-| `packages/knowledge/src/pipeline.ts` | KB generation orchestration |
-| `packages/knowledge/src/extractor.ts` | Grok-based knowledge extraction (xAI text API) |
+| `packages/knowledge/src/pipeline.ts` | KB generation orchestration (with fallback when 0 results) |
+| `packages/knowledge/src/extractor.ts` | Grok-based knowledge extraction (xAI text API, retry, undefined→null sanitization) |
+| `packages/knowledge/src/firecrawl.ts` | Firecrawl scraping client (`onlyMainContent: true`) |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
 | `packages/types/src/database.ts` | Supabase table types (generated via `supabase gen types typescript`) |
 | `apps/mobile/app.json` | Expo config (EAS project ID, bundle ID, permissions) |

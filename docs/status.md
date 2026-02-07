@@ -1,7 +1,7 @@
 # ReceptionAI - Project Status
 
 **Last updated:** 2026-02-07
-**Phase:** MVP Live — E2E voice pipeline working, dashboard redesigned & mobile-responsive, iOS app redesigned & TestFlight build #5 submitted
+**Phase:** MVP Live — E2E voice pipeline working, dashboard redesigned & mobile-responsive, iOS app redesigned & TestFlight build #5 submitted, onboarding hardened (KB pipeline, re-registration, UX)
 
 ---
 
@@ -11,8 +11,8 @@
 |-------|-------------|--------|
 | 1. Foundation | Monorepo, Supabase, Auth, RLS | Complete |
 | 2. UI Components | Design system, shared components | Complete |
-| 3. Knowledge Base | Firecrawl, Places API, Grok extraction | Complete |
-| 4. Onboarding | 8-step merchant onboarding wizard | Complete |
+| 3. Knowledge Base | Firecrawl, Places API, Grok extraction | **Hardened** ✅ |
+| 4. Onboarding | 8-step merchant onboarding wizard | **Hardened** ✅ |
 | 5. Voice Agent | Relay server, Grok integration, tools | Complete |
 | 6. Dashboard | Merchant dashboard, calls, settings | **Redesigned** ✅ |
 | 7. Admin | Enterprise admin panel, impersonation | Complete |
@@ -247,6 +247,35 @@ Complete visual redesign of the iOS mobile app with lighter typography and gradi
 - [x] buildNumber incremented from 4 → 5
 - [ ] Submit to TestFlight via `eas submit --platform ios`
 
+### Onboarding Hardening (2026-02-07)
+Multiple fixes to the onboarding flow addressing KB pipeline failures, re-registration errors, and UX lockout:
+
+#### Knowledge Base Pipeline Resilience
+- [x] **Grok extraction retry** — On 502/503/429, retries with `grok-3-mini-fast` model (more reliable than `grok-3-mini`)
+- [x] **`undefined` → `null` sanitization** — Grok outputs JS-style `"duration": undefined` which breaks `JSON.parse`; regex sanitization before parse
+- [x] **Fallback KB generation** — When primary extraction yields 0 services AND 0 FAQs, generates KB from business name+type alone using Grok
+- [x] **Firecrawl `onlyMainContent: true`** — Filters cookie banners and nav content from scraped pages
+- [x] **Pipeline source tracking** — `PipelineSources` type tracks which data sources contributed (Google Places, website found/scraped, Grok extraction)
+- [x] Updated Grok prompts: "Use null for unknown values, NEVER use the word undefined"
+- [x] Commits: `e5dcc25`, `abbbfb2`
+
+#### Onboarding Complete API (`/api/onboarding/complete`)
+- [x] **Re-registration with same email** — When user signs up with same email but new auth ID, old merchant is deleted (ON DELETE CASCADE cleans 9 child tables: knowledge_bases, calls, appointments, customers, messages, call_errors, api_usage, master_kb_contributions, notification_log) and fresh merchant inserted
+- [x] **Email-based merchant lookup** — Uses admin client (service role) to look up existing merchant by email, bypassing RLS
+- [x] **Core/extended field split** — Tries all fields first, falls back to core-only fields if extended columns (from migration 007) don't exist
+- [x] **Detailed error logging** — Logs exact Supabase error message and code for debugging
+- [x] Commits: `6001164`, `125ff66`, `c7d0bc8`, `8a4a21f`, `6b349c5`
+
+#### Onboarding UX Improvements
+- [x] **Sign-out link** in onboarding header (top-right) — calls `/api/auth/signout` then `window.location.href = '/auth/login'`
+- [x] **Back button** on steps 2-8 — navigates to previous step via `router.push()`
+- [x] **Completion page buttons** — only enabled after successful save (`disabled={!saved}`), prevents navigation to dashboard when `onboarding_completed` is still false
+- [x] Commit: `6b349c5`
+
+#### Migration 007 Applied
+- [x] User applied `007_billing_enforcement.sql` via Supabase SQL Editor
+- [x] Adds `forward_phone`, `billing_period_start`, `stripe_overage_item_id` columns, `get_merchant_call_count` function, `notification_log` table
+
 ---
 
 ## Remaining Issues
@@ -268,7 +297,13 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 - Temporarily disabled in `/api/twilio/incoming` because `request.url` on Vercel doesn't match the public URL Twilio signs against. Needs proper fix using `NEXT_PUBLIC_APP_URL` for signature validation URL.
 
 ### Unapplied Migration
-- Migration `007_billing_enforcement.sql` adds `billing_period_start` and `stripe_overage_item_id` columns. These were added to `database.ts` manually but the migration has **not been applied to the live Supabase DB**. Run `pnpm db:push` to apply.
+- ~~Migration `007_billing_enforcement.sql`~~ ✅ Applied via SQL Editor (2026-02-07)
+- Migration `011_fix_knowledge_bases_rls.sql` needs to be applied. Run `pnpm db:push` to add missing RLS policy on `knowledge_bases` table.
+
+### Multi-Merchant Per Email (Deferred)
+- Current architecture: `merchants.id = auth.users.id` (1:1 mapping). Re-registration deletes old merchant data.
+- Phase 2: Add `owner_id` column to merchants, update all RLS policies from `merchant_id = auth.uid()` to use owner_id, add merchant selector to dashboard.
+- See plan file for detailed implementation notes.
 
 ### `styled-jsx` Build Warning
 - 404/500 error pages fail during SSG due to a React version conflict in `styled-jsx`. This is a pre-existing dependency issue unrelated to the type system work. All actual app routes build correctly.
@@ -317,7 +352,8 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 - Secure token storage on mobile (expo-secure-store)
 - Good navigation architecture in mobile (three-state auth flow)
 - Well-defined tool system for Grok voice agent with runtime param validation
-- Comprehensive onboarding flow with 8 steps
+- Comprehensive onboarding flow with 8 steps (sign-out + back button, re-registration handling)
+- Resilient KB pipeline (Grok retry, fallback generation, undefined sanitization)
 - Master KB system for cross-merchant learning
 - Env var validation — routes fail closed if secrets are unset
 - Request timeouts on all external API calls
@@ -336,10 +372,11 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 6. ~~**EAS build #5**~~ ✅ Completed with redesigned UI — `4084dc98-783e-435a-9b1e-9d6d3879b582`
 7. **Submit build #5 to TestFlight** — `eas submit --platform ios`
 8. **TestFlight testing** — Test mobile app on physical iOS device
-9. **Verify merchant config** — Check business_name is populated in Supabase
+9. **Apply migration 011** — `pnpm db:push` for knowledge_bases RLS policy
 10. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
 11. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-10. **Android build** — `eas build --platform android --profile production`
-11. **RevenueCat setup** — Configure products in RevenueCat dashboard, add API keys to `.env`
-12. **Google Calendar** — Replace mock slots with real availability queries
-13. **Push notifications** — Expo Push API backend integration
+12. **Android build** — `eas build --platform android --profile production`
+13. **RevenueCat setup** — Configure products in RevenueCat dashboard, add API keys to `.env`
+14. **Multi-merchant support** — Add `owner_id` column, merchant selector (Phase 2)
+15. **Google Calendar** — Replace mock slots with real availability queries
+16. **Push notifications** — Expo Push API backend integration

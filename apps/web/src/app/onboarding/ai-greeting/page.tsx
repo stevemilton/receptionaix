@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@receptionalx/ui';
 import { useOnboardingStore } from '@/lib/onboarding-store';
@@ -43,6 +43,7 @@ export default function AIGreetingPage() {
     businessName,
     greeting,
     voiceId,
+    hasHydrated,
     setGreeting,
     setVoiceId,
     markStepCompleted,
@@ -56,6 +57,25 @@ export default function AIGreetingPage() {
     greeting.replace('{businessName}', businessName || 'your business')
   );
   const [localVoiceId, setLocalVoiceId] = useState(voiceId);
+  const hasAppliedHydration = useRef(false);
+
+  // After Zustand hydration, update localGreeting with the real business name
+  useEffect(() => {
+    if (hasHydrated && !hasAppliedHydration.current && businessName) {
+      hasAppliedHydration.current = true;
+      // If the greeting still contains the placeholder, replace it with the real name
+      setLocalGreeting((prev) => {
+        if (prev.includes('{businessName}')) {
+          return prev.replace('{businessName}', businessName);
+        }
+        // Also replace 'your business' fallback if that was used during initial render
+        if (prev.includes('your business') && businessName !== 'your business') {
+          return prev.replace('your business', businessName);
+        }
+        return prev;
+      });
+    }
+  }, [hasHydrated, businessName]);
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
