@@ -30,7 +30,8 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://tvcdqmmxjntxkkmbguwc.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2Y2RxbW14am50eGtrbWJndXdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NzYxODMsImV4cCI6MjA4NDU1MjE4M30.Fj7_ynMHo32M4ZYY1EgJVu9sN3Hx3xAwQsVka1ON_mA"
-      }
+      },
+      "prebuildCommand": "node scripts/fix-react-version.mjs"
     }
   }
 }
