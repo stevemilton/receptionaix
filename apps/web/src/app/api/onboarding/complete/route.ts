@@ -154,11 +154,16 @@ export async function POST(request: Request) {
 
     try {
       // Try with all fields (including extended migration columns)
+      console.log('[Onboarding Complete] Attempting save with all fields...');
       merchantResult = await saveMerchant({ ...coreFields, ...extendedFields });
+      console.log('[Onboarding Complete] Save succeeded with all fields');
     } catch (fullError) {
-      console.warn('[Onboarding Complete] Full save failed, retrying with core fields only:', fullError);
-      // Fallback: save with core fields only (works even if migrations 006/007 not applied)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fe = fullError as any;
+      console.warn('[Onboarding Complete] Full save failed:', fe?.message || fe?.code || JSON.stringify(fullError));
+      console.log('[Onboarding Complete] Retrying with core fields only...');
       merchantResult = await saveMerchant(coreFields);
+      console.log('[Onboarding Complete] Core-only save succeeded');
     }
 
     // Save knowledge base to separate table using service role to bypass RLS
@@ -227,11 +232,17 @@ export async function POST(request: Request) {
       merchant: merchantResult,
     });
   } catch (error) {
-    console.error('[Onboarding Complete] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to complete onboarding';
-    console.error('[Onboarding Complete] Error message:', errorMessage);
+    console.error('[Onboarding Complete] Error:', JSON.stringify(error, null, 2));
+    console.error('[Onboarding Complete] Error type:', typeof error);
+    console.error('[Onboarding Complete] Error constructor:', error?.constructor?.name);
+    // Supabase errors have .message, .code, .details, .hint
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supaErr = error as any;
+    const errorMessage = supaErr?.message || (error instanceof Error ? error.message : 'Failed to complete onboarding');
+    const errorDetails = supaErr?.details || supaErr?.hint || supaErr?.code || '';
+    console.error('[Onboarding Complete] Error message:', errorMessage, 'Details:', errorDetails);
     return NextResponse.json(
-      { error: errorMessage },
+      { error: `${errorMessage}${errorDetails ? ` (${errorDetails})` : ''}` },
       { status: 500 }
     );
   }
