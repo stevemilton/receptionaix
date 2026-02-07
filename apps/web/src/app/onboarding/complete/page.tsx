@@ -349,6 +349,37 @@ export default function CompletePage() {
         </div>
       </Card>
 
+      {/* Choose a Plan */}
+      <Card>
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
+            <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-900">Choose your plan</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              You&apos;re currently on a <span className="font-medium text-primary-600">free trial</span>.
+              Pick a subscription plan to keep your AI receptionist running when the trial ends.
+            </p>
+            <button
+              onClick={() => {
+                reset();
+                router.push('/dashboard/billing');
+              }}
+              disabled={!saved && !error}
+              className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              View Plans &amp; Pricing
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </Card>
+
       {/* Next Steps */}
       <Card>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Next Steps</h2>
@@ -382,9 +413,20 @@ export default function CompletePage() {
       </Card>
 
       {/* CTA */}
-      <div className="flex justify-center pt-4">
+      <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
         <Button size="lg" onClick={handleGoToDashboard} disabled={!saved && !error}>
           Go to Dashboard
+        </Button>
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={() => {
+            reset();
+            router.push('/dashboard/billing');
+          }}
+          disabled={!saved && !error}
+        >
+          Choose a Plan
         </Button>
       </div>
     </div>

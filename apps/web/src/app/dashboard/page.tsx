@@ -75,8 +75,63 @@ export default async function DashboardPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const unreadMessages = (unreadMessagesResult.data || []) as any[];
 
+  // Subscription status
+  const planStatus = (merchant?.plan_status as string) || 'trial';
+  const planTier = (merchant?.plan_tier as string) || null;
+  const showSubscriptionBanner = !planTier || planStatus === 'trial' || planStatus === 'expired' || planStatus === 'cancelled';
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
+      {/* Subscription Banner */}
+      {showSubscriptionBanner && (
+        <div className={`mb-4 sm:mb-6 rounded-xl border p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${
+          planStatus === 'expired' || planStatus === 'cancelled'
+            ? 'bg-red-50 border-red-200'
+            : 'bg-amber-50 border-amber-200'
+        }`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+            planStatus === 'expired' || planStatus === 'cancelled'
+              ? 'bg-red-100'
+              : 'bg-amber-100'
+          }`}>
+            <svg className={`w-5 h-5 ${
+              planStatus === 'expired' || planStatus === 'cancelled' ? 'text-red-600' : 'text-amber-600'
+            }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className={`text-sm font-semibold ${
+              planStatus === 'expired' || planStatus === 'cancelled' ? 'text-red-900' : 'text-amber-900'
+            }`}>
+              {planStatus === 'expired' || planStatus === 'cancelled'
+                ? 'Your subscription has ended'
+                : 'You\u2019re on a free trial'}
+            </h3>
+            <p className={`text-sm mt-0.5 ${
+              planStatus === 'expired' || planStatus === 'cancelled' ? 'text-red-700' : 'text-amber-700'
+            }`}>
+              {planStatus === 'expired' || planStatus === 'cancelled'
+                ? 'Subscribe to a plan to keep your AI receptionist active.'
+                : 'Choose a plan to ensure uninterrupted service when your trial ends.'}
+            </p>
+          </div>
+          <Link
+            href="/dashboard/billing"
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors flex-shrink-0 ${
+              planStatus === 'expired' || planStatus === 'cancelled'
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-amber-600 text-white hover:bg-amber-700'
+            }`}
+          >
+            Choose a Plan
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
