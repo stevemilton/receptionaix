@@ -506,7 +506,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_merchant_call_count: {
+        Args: {
+          p_merchant_id: string
+          p_period_start: string
+        }
+        Returns: {
+          call_count: number
+          total_minutes: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
