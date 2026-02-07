@@ -6,6 +6,7 @@ import { supabaseAdmin } from './supabase-client.js';
  * 2. Links the call to the customer
  * 3. Generates an AI summary from the transcript
  * 4. Links any messages created during the call to the call record
+ * 5. Reports overage usage to Stripe (via Vercel API) if over call limit
  */
 
 interface PostCallData {
@@ -43,6 +44,9 @@ export async function runPostCallProcessing(data: PostCallData): Promise<void> {
   if (toolsCalled.has('takeMessage')) {
     await linkRecentMessages(merchantId, callerPhone, callId);
   }
+
+  // Step 5: Report overage usage to Stripe (via Vercel API)
+  await reportOverageIfNeeded(merchantId);
 
   console.log(`[PostCall] Processing complete for call ${callId}`);
 }
@@ -170,6 +174,42 @@ async function generateAndSaveSummary(callId: string, transcript: string): Promi
     }
   } catch (err) {
     console.error('[PostCall] Summary generation error:', err);
+  }
+}
+
+async function reportOverageIfNeeded(merchantId: string): Promise<void> {
+  const appUrl = process.env['APP_URL'] || 'https://receptionaix-relay.vercel.app';
+  const relayServiceKey = process.env['RELAY_SERVICE_KEY'];
+
+  if (!relayServiceKey) {
+    console.warn('[PostCall] No RELAY_SERVICE_KEY, skipping overage report');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${appUrl}/api/billing/report-overage`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${relayServiceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ merchantId }),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!response.ok) {
+      console.error('[PostCall] Overage report failed:', response.status);
+      return;
+    }
+
+    const result = await response.json() as { reported?: boolean; reason?: string; callCount?: number };
+    if (result.reported) {
+      console.log(`[PostCall] Overage reported for ${merchantId} (call ${result.callCount})`);
+    } else {
+      console.log(`[PostCall] No overage: ${result.reason}`);
+    }
+  } catch (err) {
+    console.error('[PostCall] Overage report error:', err);
   }
 }
 

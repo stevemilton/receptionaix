@@ -98,7 +98,7 @@ Phase 7: Admin ──→ Phase 8: Billing ──→ Phase 9: Mobile
 
 ### Current Phase: MVP Live — Voice Pipeline Working
 
-All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. **Dashboard redesigned & mobile-responsive** — post-call processing pipeline, AI summaries, shared components, Messages page, hamburger nav, responsive layouts across all pages. **iOS app built and submitted to TestFlight.**
+All 9 build phases complete. Security hardening complete (9 batches). Grok Voice API integration rewritten to use correct xAI format. Relay deployed to Fly.io (LHR). Web deployed to Vercel. **E2E voice pipeline confirmed working** — first successful call completed 2026-02-06. **Dashboard redesigned & mobile-responsive** — post-call processing pipeline, AI summaries, shared components, Messages page, hamburger nav, responsive layouts across all pages. **iOS app redesigned** — lighter typography (Light/Regular weights), dark-green gradient backgrounds (#344532→white, 64-band smooth interpolation), white header text on dark areas, sign-out from onboarding. **TestFlight build #5 completed** (2026-02-07).
 
 **Pivot:** The project is now mobile-first MVP. Stripe is deferred. The Grok-Twilio voice pipeline is working end-to-end.
 
@@ -209,7 +209,7 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] RevenueCat integration for mobile IAP
 - [x] **Test:** Merchant can subscribe, webhooks update plan
 
-### Phase 9: Mobile App ✅ iOS SUBMITTED TO TESTFLIGHT
+### Phase 9: Mobile App ✅ REDESIGNED + BUILD #5 COMPLETE
 - [x] Expo project setup
 - [x] Navigation structure (Auth, Main, Root navigators)
 - [x] Auth context with Supabase integration
@@ -224,7 +224,17 @@ All 9 build phases complete. Security hardening complete (9 batches). Grok Voice
 - [x] EAS project created (`@stevemilton/receptionai`, ID: `480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3`)
 - [x] `eas.json` configured (development/preview/production profiles)
 - [x] TypeScript errors fixed (Supabase type casts, React Navigation 7 compat)
-- [x] iOS production build completed and submitted to TestFlight
+- [x] iOS production build #4 submitted to TestFlight
+- [x] **UI Redesign (2026-02-07):**
+  - [x] Centralized design tokens in `theme.ts` (typography, gradient, colors)
+  - [x] Lighter typography: Light (300) / Regular (400) weights, CTA buttons Medium (500)
+  - [x] Dark-green gradient backgrounds: `#344532` → white, eased 64-band interpolation
+  - [x] `ScreenBackground` component — pure View bands, no native module (works in Expo Go)
+  - [x] White header text on dark gradient areas (dashboard, auth, onboarding)
+  - [x] Sign-out link on onboarding Step 1 with confirmation dialog
+  - [x] All screens wrapped in gradient: 8 onboarding, 5 settings sub-screens, dashboard, calls, login, signup
+- [x] iOS build #5 completed with redesigned UI (`4084dc98`)
+- [ ] Submit build #5 to TestFlight (`eas submit --platform ios`)
 - [ ] **Test:** TestFlight beta testing on physical iOS device
 - [ ] Android build not yet attempted
 
@@ -268,13 +278,14 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 - **E2E Voice Pipeline:** ✅ Working — first call completed 2026-02-06
 - **Twilio numbers:** `+447446469600` (original), `+447427814067` (The Perse School)
 - **Twilio webhook:** Voice webhook → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
-- **Mobile (EAS):** ✅ iOS production build submitted to TestFlight
+- **Mobile (EAS):** ✅ iOS build #5 completed with redesigned UI (gradient + typography)
   - EAS project: `@stevemilton/receptionai` (ID: `480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3`)
   - Bundle ID: `com.receptionai.app`
   - Apple Team: `STEPHEN CHRISTOPHER MILTON` (Team ID: `6FK49H335R`)
   - Apple ID: `greasylaketwitter@gmail.com`
   - Distribution cert: `QRRU3Z9PA7` (shared with UTx — safe)
-  - Build command: `EAS_BUILD_DISABLE_CASING_CHECK=1 eas build --platform ios --profile production`
+  - Build #5: `4084dc98-783e-435a-9b1e-9d6d3879b582` — needs `eas submit --platform ios`
+  - Build command: `eas build --platform ios --profile production`
 - **Google redirect URI:** ✅ Updated to `https://receptionaix-relay.vercel.app/api/google/callback` (needs updating in Google Cloud Console too)
 
 ### Twilio Signature Verification (Disabled)
@@ -292,7 +303,8 @@ Nine hardening batches have been completed. **All critical and high-priority sec
 - TODO: Backend service to send notifications via Expo Push API
 
 ### Mobile Testing & Deployment
-- iOS production build submitted to TestFlight — awaiting Apple processing
+- iOS build #5 completed with redesigned UI — needs `eas submit --platform ios`
+- Previous build (#4) already in TestFlight with older UI
 - Android build not yet attempted
 - No deeplink configuration for password reset flow
 - RevenueCat API keys not configured (need `EXPO_PUBLIC_REVENUECAT_IOS_KEY` in `apps/mobile/.env`)
@@ -753,9 +765,10 @@ pnpm deploy:relay     # Deploy to Fly.io
 4. Web is live at `https://receptionaix-relay.vercel.app`
 5. E2E voice pipeline is working — call `+447427814067` to test
 6. Twilio webhook: voice calls → `https://receptionaix-relay.vercel.app/api/twilio/incoming`
-7. iOS app submitted to TestFlight — check App Store Connect for status
-8. EAS dashboard: `https://expo.dev/accounts/stevemilton/projects/receptionai`
-9. Twilio signature verification is temporarily disabled — see status.md
+7. iOS build #5 completed (redesigned UI) — needs `eas submit --platform ios` to push to TestFlight
+8. Mobile design tokens in `apps/mobile/src/theme.ts`, gradient in `ScreenBackground.tsx`
+9. EAS dashboard: `https://expo.dev/accounts/stevemilton/projects/receptionai`
+10. Twilio signature verification is temporarily disabled — see status.md
 
 ### When Stuck:
 1. Check PRD for requirements
@@ -813,6 +826,8 @@ pnpm deploy:relay     # Deploy to Fly.io
 | `apps/mobile/eas.json` | EAS build profiles (development, preview, production) |
 | `apps/mobile/src/lib/AuthContext.tsx` | Mobile auth context (Supabase + RevenueCat init) |
 | `apps/mobile/src/navigation/RootNavigator.tsx` | Conditional routing: auth → onboarding → main |
+| `apps/mobile/src/theme.ts` | Central design tokens: typography weights, gradient colors, color palette |
+| `apps/mobile/src/components/ScreenBackground.tsx` | 64-band gradient background (pure Views, Expo Go compatible) |
 
 ---
 

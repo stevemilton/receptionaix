@@ -1,7 +1,7 @@
 # ReceptionAI - Project Status
 
-**Last updated:** 2026-02-06 (night)
-**Phase:** MVP Live — E2E voice pipeline working, dashboard redesigned & mobile-responsive, iOS build submitted to TestFlight
+**Last updated:** 2026-02-07
+**Phase:** MVP Live — E2E voice pipeline working, dashboard redesigned & mobile-responsive, iOS app redesigned & TestFlight build #5 submitted
 
 ---
 
@@ -17,7 +17,7 @@
 | 6. Dashboard | Merchant dashboard, calls, settings | **Redesigned** ✅ |
 | 7. Admin | Enterprise admin panel, impersonation | Complete |
 | 8. Billing | Stripe, RevenueCat, usage tracking | Complete (Stripe deferred for MVP) |
-| 9. Mobile | Expo app, auth, push, subscriptions | **iOS build submitted** ✅ |
+| 9. Mobile | Expo app, auth, push, subscriptions | **iOS redesigned, TestFlight build #5** ✅ |
 | 10. Deployment | External hosting, Grok API fix | **Complete** ✅ |
 
 ---
@@ -109,12 +109,12 @@ The relay server was using **OpenAI Realtime API format** which is incompatible 
 - [x] **Twilio webhook:** `+447446469600` pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
 - [x] **Twilio number provisioned:** `+447427814067` assigned to The Perse School merchant
 - [x] **Google redirect URI:** Updated in `.env.local` to `https://receptionaix-relay.vercel.app/api/google/callback` (needs updating in Google Cloud Console)
-- [x] **Mobile (EAS):** iOS production build completed and submitted to TestFlight
+- [x] **Mobile (EAS):** iOS build #5 completed with redesigned UI (gradient + typography)
   - EAS project: `@stevemilton/receptionai` (ID: `480f5c1a-a0ba-4bd2-b98b-9dd8926a90f3`)
   - Bundle ID: `com.receptionai.app`
   - Apple Team: `STEPHEN CHRISTOPHER MILTON (Individual)` (Team ID: `6FK49H335R`)
   - Distribution cert: `QRRU3Z9PA7` (shared with UTx app)
-  - Submitted via `eas submit --platform ios`
+  - Build #4 submitted to TestFlight; Build #5 (redesigned UI) needs `eas submit --platform ios`
 
 ### E2E Voice Pipeline ✅ WORKING (2026-02-06)
 First successful end-to-end call completed:
@@ -214,6 +214,39 @@ Full mobile responsiveness pass across all dashboard pages:
 - [x] iOS production build completed on EAS
 - [x] Submitted to TestFlight via `eas submit --platform ios`
 
+### Mobile UI Redesign (2026-02-07)
+Complete visual redesign of the iOS mobile app with lighter typography and gradient backgrounds:
+
+#### Typography
+- [x] All font weights reduced across 18+ files — no `'600'` or `'700'` weights remain
+- [x] Titles: `'300'` (Light), body/labels: `'400'` (Regular), CTA buttons only: `'500'` (Medium)
+- [x] New `metricValue` style: fontSize 36, fontWeight `'200'` (Ultralight) for dashboard stats
+- [x] Centralized design tokens in `apps/mobile/src/theme.ts`
+
+#### Gradient Backgrounds
+- [x] Dark green eased gradient: `#344532` → `#5A7A56` → `#A3C4A0` → `#D4E6D2` → `#F0F5EF` → `#FFFFFF`
+- [x] 64-band interpolated View approach (smooth, no native module dependencies — works in Expo Go)
+- [x] Reusable `ScreenBackground` component with `screen` (400px top) and `auth` (full-screen) variants
+- [x] Eased stop distribution: `[0, 0.15, 0.35, 0.55, 0.75, 0.9, 1.0]` — holds dark green longer at top
+
+#### Screen Updates
+- [x] All 8 onboarding screens: wrapped in gradient, white header text, sign-out link on Step 1
+- [x] Dashboard, Calls, Settings: wrapped in gradient, transparent backgrounds
+- [x] Login/SignUp: full-screen gradient, white title/subtitle text
+- [x] All 5 settings sub-screens: wrapped in gradient
+- [x] Subscription screen: lighter price weights
+
+#### Key Files
+- `apps/mobile/src/theme.ts` — Central design tokens (typography, gradient, colors)
+- `apps/mobile/src/components/ScreenBackground.tsx` — 64-band gradient component
+- `react-native-svg` added to dependencies (installed but not currently used for gradient)
+
+#### TestFlight Build #5
+- [x] EAS build completed: `4084dc98-783e-435a-9b1e-9d6d3879b582`
+- [x] IPA: `https://expo.dev/artifacts/eas/8Y6fVKvuGgVYHcz8DUu8c9.ipa`
+- [x] buildNumber incremented from 4 → 5
+- [ ] Submit to TestFlight via `eas submit --platform ios`
+
 ---
 
 ## Remaining Issues
@@ -255,7 +288,8 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 - TODO: Backend service to send notifications via Expo Push API
 
 ### Mobile Testing
-- iOS production build submitted to TestFlight — awaiting Apple processing
+- iOS build #5 completed with redesigned UI (gradient + lighter typography) — needs `eas submit` to TestFlight
+- Previous build (#4) already submitted to TestFlight with older UI
 - Android build not yet attempted
 - No deeplink configuration for password reset flow
 - RevenueCat API keys not yet configured (subscriptions won't work until set up in RevenueCat dashboard + `.env`)
@@ -298,11 +332,13 @@ Additionally, 3 `.rpc()` calls retain `as any` because `Functions` is empty in t
 2. ~~**Configure Twilio**~~ ✅ Webhook pointed to `https://receptionaix-relay.vercel.app/api/twilio/incoming`
 3. ~~**Test E2E call**~~ ✅ Call to `+447427814067` → Grok responds with voice greeting
 4. ~~**Dashboard redesign**~~ ✅ Post-call processing, shared components, Messages page, all pages redesigned
-5. **Verify merchant config** — Check business_name is populated in Supabase (Grok said "Business Name" instead of "The Perse School")
-6. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
-7. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-8. ~~**EAS build**~~ ✅ iOS production build submitted to TestFlight
-9. **TestFlight testing** — Test mobile app on physical iOS device once Apple processes the build
+5. ~~**Mobile UI redesign**~~ ✅ Lighter typography, dark-green gradient, white header text, sign-out from onboarding
+6. ~~**EAS build #5**~~ ✅ Completed with redesigned UI — `4084dc98-783e-435a-9b1e-9d6d3879b582`
+7. **Submit build #5 to TestFlight** — `eas submit --platform ios`
+8. **TestFlight testing** — Test mobile app on physical iOS device
+9. **Verify merchant config** — Check business_name is populated in Supabase
+10. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
+11. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
 10. **Android build** — `eas build --platform android --profile production`
 11. **RevenueCat setup** — Configure products in RevenueCat dashboard, add API keys to `.env`
 12. **Google Calendar** — Replace mock slots with real availability queries

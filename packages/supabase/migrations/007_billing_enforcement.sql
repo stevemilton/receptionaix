@@ -29,7 +29,7 @@ BEGIN
   FROM calls
   WHERE merchant_id = p_merchant_id
     AND started_at >= p_period_start
-    AND status = 'completed';
+    AND outcome = 'completed';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -38,7 +38,7 @@ $$ LANGUAGE plpgsql;
 -- =============================================
 CREATE INDEX IF NOT EXISTS idx_calls_merchant_started
   ON calls(merchant_id, started_at)
-  WHERE status = 'completed';
+  WHERE outcome = 'completed';
 
 -- =============================================
 -- NOTIFICATION LOG (deduplication for emails)

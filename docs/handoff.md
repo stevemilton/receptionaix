@@ -1,7 +1,7 @@
 # ReceptionAI - Developer Handoff
 
-**Date:** 2026-02-06
-**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. **Dashboard redesigned & mobile-responsive** — post-call processing, AI summaries, shared components, Messages page, hamburger nav, responsive layouts. **iOS app built and submitted to TestFlight.** Mobile-first MVP pivot in progress. Stripe deferred.
+**Date:** 2026-02-07
+**Status:** All 9 build phases complete. Security hardened. Grok Voice API rewritten (xAI format). Relay deployed to Fly.io. Web deployed to Vercel. **E2E voice pipeline working** — first successful call completed. **Dashboard redesigned & mobile-responsive** — post-call processing, AI summaries, shared components, Messages page, hamburger nav, responsive layouts. **iOS app redesigned** — lighter typography, dark-green gradient backgrounds, 64-band smooth gradient, white header text on dark areas. **TestFlight build #5 completed** — needs `eas submit`. Mobile-first MVP pivot in progress. Stripe deferred.
 
 This document is for any developer picking up this codebase. Read this first, then `CLAUDE.md` for architecture details, then `docs/status.md` for the current issue backlog.
 
@@ -132,7 +132,7 @@ Caller -> Twilio -> POST /api/twilio/incoming (Vercel)
   - Shared component library (`_components/shared.tsx`) for all formatters, badges, icons
 - Admin panel (merchant list, detail, impersonation, revenue, health monitor)
 - Stripe billing (3 tiers, webhooks, portal)
-- Mobile app (auth, dashboard, calls, settings, RevenueCat subscriptions) — **iOS production build submitted to TestFlight**
+- Mobile app (auth, dashboard, calls, settings, RevenueCat subscriptions) — **iOS redesigned with gradient + lighter typography, build #5 completed**
 - **Mobile-responsive web dashboard** — hamburger nav, card-based mobile layouts, responsive grids
 - Supabase RLS for multi-tenant isolation
 - CSRF protection on all cookie-auth routes
@@ -154,7 +154,14 @@ Temporarily disabled in `/api/twilio/incoming` because `request.url` on Vercel d
 Mobile app registers Expo push tokens and saves to `merchants.push_token`. No backend service exists to actually send notifications. The cron route at `apps/web/src/app/api/cron/notifications/route.ts` handles email notifications but not push.
 
 ### Mobile Device Testing
-iOS production build has been submitted to TestFlight via EAS. Awaiting Apple processing. Once available, test on physical device. Android build not yet attempted. Deeplink configuration is missing (needed for password reset email flow). RevenueCat API keys not yet configured — subscriptions will be non-functional until set up.
+iOS build #5 completed with redesigned UI (dark-green gradient, lighter typography, white header text). Needs `eas submit --platform ios` to push to TestFlight. Previous build (#4) already in TestFlight with older UI. Android build not yet attempted. Deeplink configuration is missing (needed for password reset email flow). RevenueCat API keys not yet configured — subscriptions will be non-functional until set up.
+
+### Mobile UI Architecture
+- **Design tokens:** `apps/mobile/src/theme.ts` — centralized typography weights, gradient colors, color palette
+- **Gradient:** `apps/mobile/src/components/ScreenBackground.tsx` — 64-band View interpolation (smooth gradient without native dependencies, works in Expo Go)
+- **Color palette:** Eased dark green `#344532` → white with stops at `[0, 0.15, 0.35, 0.55, 0.75, 0.9, 1.0]`
+- **Typography:** SF Pro system font, mostly Light (300) and Regular (400), only CTA buttons use Medium (500)
+- **Constraint:** Running in Expo Go (not dev build), so `expo-linear-gradient` native module doesn't work — hence the 64-band pure-View approach
 
 ### RevenueCat (Not Configured)
 Mobile code is ready for RevenueCat but API keys are not set. Need to:
@@ -289,8 +296,9 @@ If picking this up:
 4. ~~**Dashboard redesign**~~ ✅ Post-call processing, AI summaries, shared components, Messages page
 5. **Re-enable Twilio signature verification** — Fix URL mismatch on Vercel
 6. **Update Google Cloud Console** — Add `https://receptionaix-relay.vercel.app/api/google/callback` as authorized redirect URI
-7. ~~**Build mobile with EAS**~~ ✅ iOS submitted to TestFlight
-8. **TestFlight testing** — Test iOS app on physical device once Apple processes the build
+7. ~~**Build mobile with EAS**~~ ✅ Build #5 completed (redesigned UI)
+8. **Submit build #5 to TestFlight** — `eas submit --platform ios`
+9. **TestFlight testing** — Test iOS app on physical device
 9. **Android build** — `EAS_BUILD_DISABLE_CASING_CHECK=1 eas build --platform android --profile production`
 10. **Configure RevenueCat** — Set up products, connect App Store, add API keys to `.env`
 11. **Apply pending migrations** — `pnpm db:push` for migrations 007 and 011
@@ -326,3 +334,5 @@ If picking this up:
 | `packages/knowledge/src/extractor.ts` | Grok-based KB extraction with output capping (xAI text API) |
 | `packages/types/src/index.ts` | Row type aliases (MerchantRow, CallRow, etc.) |
 | `packages/types/src/database.ts` | Supabase table types (generated via `supabase gen types typescript`) |
+| `apps/mobile/src/theme.ts` | **NEW** Mobile design tokens (typography, gradient colors, color palette) |
+| `apps/mobile/src/components/ScreenBackground.tsx` | **NEW** 64-band gradient background component (pure Views, Expo Go compatible) |

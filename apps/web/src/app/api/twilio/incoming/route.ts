@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
-// TODO: Re-enable billing enforcement after migration 007
-// import { getTierById } from '@/lib/stripe/config';
+import { getTierById } from '@/lib/stripe/config';
 
 /**
  * Verify Twilio webhook signature (HMAC-SHA1).
@@ -74,10 +73,10 @@ export async function POST(request: Request) {
   // Use admin client to bypass RLS since this is an external webhook
   const supabase = createAdminClient();
 
-  // Fetch merchant — use only columns guaranteed to exist
+  // Fetch merchant — includes billing columns from migration 007
   const { data: merchant, error } = await supabase
     .from('merchants')
-    .select('id, business_name, plan_status, phone, voice_id, greeting')
+    .select('id, business_name, plan_status, plan_tier, phone, voice_id, greeting, forward_phone, billing_period_start, stripe_overage_item_id')
     .eq('twilio_phone_number', to)
     .single();
 
@@ -91,9 +90,14 @@ export async function POST(request: Request) {
 
   console.log(`[Twilio Incoming] Merchant found: ${merchant.business_name} (${merchant.id}), status: ${merchant.plan_status}`);
 
-  const fallbackPhone = merchant.phone;
+  // Cast to access columns from migration 007 (not yet in generated types)
+  const m = merchant as Record<string, unknown>;
+  const fallbackPhone = (m.forward_phone as string) || (merchant.phone as string);
+  const planTier = (m.plan_tier as string) || 'starter';
+  const billingPeriodStart = m.billing_period_start as string | null;
+  const stripeOverageItemId = m.stripe_overage_item_id as string | null;
 
-  // --- Subscription validity check (simplified — billing columns may not exist yet) ---
+  // --- Subscription validity check ---
   const status = merchant.plan_status as string;
 
   // Cancelled or expired → forward immediately
@@ -103,8 +107,46 @@ export async function POST(request: Request) {
     return unavailableMessage();
   }
 
-  // For now, allow all active/trial merchants through without call limit checks
-  // TODO: Re-enable billing enforcement after migration 007 is applied
+  // --- Call-limit enforcement ---
+  const tier = getTierById(planTier);
+
+  // Enterprise or unknown tier → unlimited, always allow
+  if (tier && tier.limits.callsPerMonth !== -1) {
+    // Calculate billing period start
+    const periodStart = billingPeriodStart
+      ? new Date(billingPeriodStart)
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+    try {
+      const { data: usageData, error: usageError } = await supabase
+        .rpc('get_merchant_call_count', {
+          p_merchant_id: merchant.id,
+          p_period_start: periodStart.toISOString(),
+        });
+
+      if (!usageError && usageData) {
+        const callCount = (usageData as { call_count: number }[])?.[0]?.call_count ?? 0;
+
+        if (callCount >= tier.limits.callsPerMonth) {
+          if (stripeOverageItemId) {
+            // Has overage billing → allow the call (will be billed via post-call)
+            console.log(`[Twilio Incoming] Over limit (${callCount}/${tier.limits.callsPerMonth}) but has overage billing — allowing`);
+          } else {
+            // No overage billing → forward to fallback phone
+            console.log(`[Twilio Incoming] Call limit reached (${callCount}/${tier.limits.callsPerMonth}) — forwarding to ${fallbackPhone || 'unavailable'}`);
+            if (fallbackPhone) return forwardCall(fallbackPhone);
+            return unavailableMessage();
+          }
+        } else {
+          console.log(`[Twilio Incoming] Call count ${callCount}/${tier.limits.callsPerMonth} — within limit`);
+        }
+      }
+    } catch (rpcError) {
+      // If the RPC fails (e.g. migration 007 not applied), allow the call through
+      console.warn('[Twilio Incoming] Call count check failed, allowing call:', rpcError);
+    }
+  }
+
   console.log('[Twilio Incoming] Subscription check passed — connecting to relay');
 
   // --- Connect to AI relay ---
