@@ -1,7 +1,7 @@
 import type { KnowledgeBaseResult, PlaceResult, ExtractedKnowledge, PipelineSources } from './types';
 import { searchBusiness, getPlaceDetails } from './google-places';
 import { scrapeWebsite } from './firecrawl';
-import { extractKnowledgeWithGrok } from './extractor';
+import { extractKnowledgeWithGrok, generateKnowledgeFromBusinessInfo } from './extractor';
 import { getMockScrapedContent, getMockExtractedKnowledge } from './mock-scraper';
 
 export interface PipelineConfig {
@@ -183,6 +183,30 @@ export async function generateKnowledgeBaseFromPlace(
     }
   } else {
     console.log('[Knowledge] No website URL from Google Places — skipping scrape');
+  }
+
+  // FALLBACK: If we still have no services/FAQs after the primary pipeline,
+  // generate them from business name + type using Grok directly
+  if (extractedKnowledge.services.length === 0 && extractedKnowledge.faqs.length === 0) {
+    console.log('[Knowledge] No services or FAQs from primary pipeline — using AI fallback...');
+    const businessType = placeData.types?.[0]?.replace(/_/g, ' ') || 'business';
+    const fallback = await generateKnowledgeFromBusinessInfo(
+      placeData.name,
+      businessType,
+      aiApiKey
+    );
+
+    if (fallback.services.length > 0 || fallback.faqs.length > 0) {
+      extractedKnowledge.services = fallback.services;
+      extractedKnowledge.faqs = fallback.faqs;
+      if (fallback.businessDescription) {
+        extractedKnowledge.businessDescription = fallback.businessDescription;
+      }
+      sources.grokExtraction = true;
+      console.log(`[Knowledge] Fallback generated ${fallback.services.length} services, ${fallback.faqs.length} FAQs`);
+    } else {
+      console.log('[Knowledge] Fallback also returned empty — Grok may be down');
+    }
   }
 
   console.log('[Knowledge] Pipeline complete. Sources:', JSON.stringify(sources));

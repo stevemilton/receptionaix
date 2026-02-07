@@ -31,21 +31,30 @@ export async function scrapeWebsite(
       body: JSON.stringify({
         url,
         formats: ['markdown'],
+        onlyMainContent: true,
       }),
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
-      console.error(`Firecrawl error: ${response.status} ${response.statusText}`);
+      const errorBody = await response.text().catch(() => 'could not read body');
+      console.error(`[Firecrawl] HTTP ${response.status} ${response.statusText} for ${url}: ${errorBody}`);
       return null;
     }
 
     const result: FirecrawlResponse = await response.json();
 
-    if (!result.success || !result.data?.markdown) {
-      console.error('Firecrawl returned no content:', result.error);
+    if (!result.success) {
+      console.error(`[Firecrawl] API returned success=false for ${url}: ${result.error || 'unknown error'}`);
       return null;
     }
+
+    if (!result.data?.markdown) {
+      console.error(`[Firecrawl] No markdown content returned for ${url}`);
+      return null;
+    }
+
+    console.log(`[Firecrawl] Successfully scraped ${url}: ${result.data.markdown.length} chars`);
 
     return {
       url: result.data.metadata?.sourceURL || url,

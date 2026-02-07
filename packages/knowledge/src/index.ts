@@ -17,7 +17,7 @@ export { scrapeWebsite, crawlWebsite } from './firecrawl';
 export { searchBusiness, getPlaceDetails } from './google-places';
 
 // Extraction
-export { extractKnowledgeWithGrok, extractKnowledgeWithClaude } from './extractor';
+export { extractKnowledgeWithGrok, extractKnowledgeWithClaude, generateKnowledgeFromBusinessInfo } from './extractor';
 
 // Pipeline
 export type { PipelineConfig } from './pipeline';

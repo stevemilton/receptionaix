@@ -88,7 +88,41 @@ export async function extractKnowledgeWithGrok(
     });
 
     if (!response.ok) {
-      console.error(`Grok API error: ${response.status} ${response.statusText}`);
+      console.error(`Grok API error (grok-3-mini): ${response.status} ${response.statusText}`);
+
+      // Retry once with grok-3-mini-fast on 502/503/429
+      if (response.status === 502 || response.status === 503 || response.status === 429) {
+        console.log('[Knowledge] Retrying extraction with grok-3-mini-fast...');
+        const retryResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'grok-3-mini-fast',
+            max_tokens: 2000,
+            messages: [
+              {
+                role: 'user',
+                content: EXTRACTION_PROMPT + truncatedContent,
+              },
+            ],
+          }),
+          signal: AbortSignal.timeout(60_000),
+        });
+
+        if (retryResponse.ok) {
+          const retryData = await retryResponse.json();
+          const retryContent = retryData.choices?.[0]?.message?.content;
+          if (retryContent) {
+            console.log('[Knowledge] Retry with grok-3-mini-fast succeeded');
+            return parseExtractedJson(retryContent);
+          }
+        }
+        console.error(`[Knowledge] Retry also failed: ${retryResponse.status}`);
+      }
+
       return getEmptyKnowledge();
     }
 
@@ -105,6 +139,87 @@ export async function extractKnowledgeWithGrok(
     return parsed;
   } catch (error) {
     console.error('Grok extraction failed:', error);
+    return getEmptyKnowledge();
+  }
+}
+
+/**
+ * Generate knowledge base from business info alone (no website content).
+ * Used as a fallback when website scraping or extraction fails.
+ */
+export async function generateKnowledgeFromBusinessInfo(
+  businessName: string,
+  businessType: string,
+  apiKey: string
+): Promise<ExtractedKnowledge> {
+  try {
+    const prompt = `You are helping build a knowledge base for "${businessName}", a ${businessType} in the UK.
+
+Since we don't have website content, generate realistic and helpful information based on what a typical ${businessType} would offer.
+
+Generate:
+1. A brief business description (1-2 sentences)
+2. 5-8 typical services/offerings for a ${businessType} (with realistic UK prices where appropriate)
+3. 5 common FAQs that callers would ask a ${businessType}
+4. Do NOT generate opening hours (we'll get those from Google)
+
+Return ONLY valid JSON in this exact format (no markdown, no explanation):
+{
+  "businessDescription": "string",
+  "services": [
+    {
+      "name": "string",
+      "description": "string",
+      "duration": number_in_minutes_or_null,
+      "price": number_or_null
+    }
+  ],
+  "faqs": [
+    {
+      "question": "string",
+      "answer": "string"
+    }
+  ],
+  "openingHours": null
+}`;
+
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'grok-3-mini-fast',
+        max_tokens: 2000,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!response.ok) {
+      console.error(`[Fallback] Grok API error: ${response.status} ${response.statusText}`);
+      return getEmptyKnowledge();
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      console.error('[Fallback] Grok returned no content');
+      return getEmptyKnowledge();
+    }
+
+    const parsed = parseExtractedJson(content);
+    console.log(`[Fallback] Generated ${parsed.services.length} services, ${parsed.faqs.length} FAQs from business info`);
+    return parsed;
+  } catch (error) {
+    console.error('[Fallback] Knowledge generation failed:', error);
     return getEmptyKnowledge();
   }
 }
