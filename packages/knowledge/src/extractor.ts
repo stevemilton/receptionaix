@@ -16,8 +16,8 @@ Extract:
 2. What the business offers (call these "services" even if they're products/menu items):
    - name: The item/service name
    - description: Brief description
-   - duration: Only if it's a timed service (leave undefined for products/food)
-   - price: Only if clearly stated (leave undefined if not mentioned)
+   - duration: Only if it's a timed service (use null for products/food)
+   - price: Only if clearly stated (use null if not mentioned)
 3. Common FAQs - Think about what callers would ask:
    - "Do you have parking?"
    - "Do you take reservations/bookings?"
@@ -26,15 +26,15 @@ Extract:
    - Any specific FAQs mentioned on the website
 4. Opening hours if mentioned
 
-Return ONLY valid JSON in this exact format (no markdown, no explanation):
+Return ONLY valid JSON in this exact format (no markdown, no explanation). Use null for unknown values, NEVER use the word undefined:
 {
   "businessDescription": "string or null",
   "services": [
     {
       "name": "string",
-      "description": "string or undefined",
-      "duration": "number in minutes or undefined",
-      "price": "number or undefined"
+      "description": "string or null",
+      "duration": null,
+      "price": 25
     }
   ],
   "faqs": [
@@ -163,15 +163,15 @@ Generate:
 3. 5 common FAQs that callers would ask a ${businessType}
 4. Do NOT generate opening hours (we'll get those from Google)
 
-Return ONLY valid JSON in this exact format (no markdown, no explanation):
+Return ONLY valid JSON in this exact format (no markdown, no explanation). Use null for unknown values, NEVER use undefined:
 {
   "businessDescription": "string",
   "services": [
     {
       "name": "string",
       "description": "string",
-      "duration": number_in_minutes_or_null,
-      "price": number_or_null
+      "duration": null,
+      "price": 25
     }
   ],
   "faqs": [
@@ -241,7 +241,9 @@ function parseExtractedJson(content: string): ExtractedKnowledge {
       return getEmptyKnowledge();
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Sanitize: Grok sometimes outputs JS-style `undefined` instead of JSON `null`
+    const sanitized = jsonMatch[0].replace(/:\s*undefined\b/g, ': null');
+    const parsed = JSON.parse(sanitized);
 
     // Validate and sanitize the response
     return {
