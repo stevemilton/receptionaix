@@ -108,58 +108,57 @@ export async function POST(request: Request) {
 
     let merchantResult;
 
-    if (existingMerchant) {
-      // Update existing merchant
-      const { data: updated, error: updateError } = await supabase
-        .from('merchants')
-        .update({
-          business_name: data.businessName,
-          business_type: data.businessType,
-          address: data.address,
-          phone: data.phone,
-          twilio_phone_number: data.twilioPhoneNumber,
-          forward_phone: data.forwardPhone || data.phone || null,
-          voice_id: data.voiceId,
-          greeting: data.greeting,
-          google_calendar_connected: data.googleCalendarConnected,
-          data_sharing_consent: data.dataSharingConsent || false,
-          marketing_consent: data.marketingConsent || false,
-          consent_updated_at: new Date().toISOString(),
-          onboarding_completed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
-        .select()
-        .single();
+    // Core fields that exist in the base schema
+    const coreFields = {
+      business_name: data.businessName,
+      business_type: data.businessType,
+      address: data.address,
+      phone: data.phone,
+      twilio_phone_number: data.twilioPhoneNumber,
+      voice_id: data.voiceId,
+      greeting: data.greeting,
+      google_calendar_connected: data.googleCalendarConnected,
+      onboarding_completed: true,
+    };
 
-      if (updateError) throw updateError;
-      merchantResult = updated;
-    } else {
-      // Create new merchant
-      const { data: created, error: createError } = await supabase
-        .from('merchants')
-        .insert({
-          id: user.id,
-          email: user.email || '',
-          business_name: data.businessName,
-          business_type: data.businessType,
-          address: data.address,
-          phone: data.phone,
-          twilio_phone_number: data.twilioPhoneNumber,
-          forward_phone: data.forwardPhone || data.phone || null,
-          voice_id: data.voiceId,
-          greeting: data.greeting,
-          google_calendar_connected: data.googleCalendarConnected,
-          data_sharing_consent: data.dataSharingConsent || false,
-          marketing_consent: data.marketingConsent || false,
-          consent_updated_at: new Date().toISOString(),
-          onboarding_completed: true,
-        })
-        .select()
-        .single();
+    // Fields from later migrations (006 consent, 007 forward_phone)
+    // Include them but handle gracefully if columns don't exist yet
+    const extendedFields = {
+      forward_phone: data.forwardPhone || data.phone || null,
+      data_sharing_consent: data.dataSharingConsent || false,
+      marketing_consent: data.marketingConsent || false,
+      consent_updated_at: new Date().toISOString(),
+    };
 
-      if (createError) throw createError;
-      merchantResult = created;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const saveMerchant = async (fields: Record<string, any>): Promise<any> => {
+      if (existingMerchant) {
+        const { data: updated, error: updateError } = await supabase
+          .from('merchants')
+          .update({ ...fields, updated_at: new Date().toISOString() } as never)
+          .eq('id', user.id)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        return updated;
+      } else {
+        const { data: created, error: createError } = await supabase
+          .from('merchants')
+          .insert({ id: user.id, email: user.email || '', ...fields } as never)
+          .select()
+          .single();
+        if (createError) throw createError;
+        return created;
+      }
+    };
+
+    try {
+      // Try with all fields (including extended migration columns)
+      merchantResult = await saveMerchant({ ...coreFields, ...extendedFields });
+    } catch (fullError) {
+      console.warn('[Onboarding Complete] Full save failed, retrying with core fields only:', fullError);
+      // Fallback: save with core fields only (works even if migrations 006/007 not applied)
+      merchantResult = await saveMerchant(coreFields);
     }
 
     // Save knowledge base to separate table using service role to bypass RLS
