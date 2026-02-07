@@ -1,0 +1,25 @@
+# Ignore everything outside the mobile app and its dependencies
+# EAS starts from the monorepo root, so we exclude unrelated dirs
+
+# Other apps
+apps/web
+apps/relay
+
+# Documentation
+docs
+CLAUDE.md
+
+# Docker / deployment configs
+Dockerfile.relay
+fly.toml
+vercel.json
+
+# Root config files not needed for mobile
+.env.local
+
+# Large files
+node_modules
+
+# Any unrelated project directories
+election-research-tool
+strapi-cms-page
