@@ -12,9 +12,20 @@ interface MerchantSettings {
   greeting: string | null;
   voice_id: string | null;
   google_calendar_connected: boolean;
+  calendar_connected: boolean;
+  cronofy_provider: string | null;
   data_sharing_consent: boolean;
   marketing_consent: boolean;
 }
+
+// Map Cronofy provider slugs to display names
+const PROVIDER_NAMES: Record<string, string> = {
+  google: 'Google Calendar',
+  outlook: 'Outlook',
+  office365: 'Office 365',
+  apple: 'iCloud',
+  exchange: 'Exchange',
+};
 
 // Grok voice options - must match onboarding
 const VOICE_OPTIONS = [
@@ -40,9 +51,10 @@ export default function SettingsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
       .from('merchants')
-      .select('business_name, business_type, address, phone, twilio_phone_number, greeting, voice_id, google_calendar_connected, data_sharing_consent, marketing_consent')
+      .select('business_name, business_type, address, phone, twilio_phone_number, greeting, voice_id, google_calendar_connected, calendar_connected, cronofy_provider, data_sharing_consent, marketing_consent')
       .eq('id', user.id)
       .single();
 
@@ -81,6 +93,31 @@ export default function SettingsPage() {
   function updateSetting<K extends keyof MerchantSettings>(key: K, value: MerchantSettings[K]) {
     if (!settings) return;
     setSettings({ ...settings, [key]: value });
+  }
+
+  async function handleDisconnectCalendar() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await (supabase
+      .from('merchants')
+      .update({
+        google_calendar_connected: false,
+        google_calendar_token: null,
+        calendar_connected: false,
+        cronofy_provider: null,
+        cronofy_calendar_id: null,
+      } as any)
+      .eq('id', user.id));
+
+    if (settings) {
+      setSettings({
+        ...settings,
+        google_calendar_connected: false,
+        calendar_connected: false,
+        cronofy_provider: null,
+      });
+    }
   }
 
   if (loading) {
@@ -223,27 +260,39 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Google Calendar */}
+        {/* Calendar Integration */}
         <section className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
           <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Calendar Integration</h2>
           <div className="flex items-start sm:items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-medium text-gray-900 text-sm sm:text-base">Google Calendar</p>
+              <p className="font-medium text-gray-900 text-sm sm:text-base">
+                {(settings.calendar_connected || settings.google_calendar_connected)
+                  ? (settings.cronofy_provider
+                      ? (PROVIDER_NAMES[settings.cronofy_provider] || settings.cronofy_provider)
+                      : 'Calendar')
+                  : 'Calendar'}
+              </p>
               <p className="text-xs sm:text-sm text-gray-500">
-                {settings.google_calendar_connected
-                  ? 'Your calendar is connected for availability checks'
+                {(settings.calendar_connected || settings.google_calendar_connected)
+                  ? `Your ${settings.cronofy_provider ? (PROVIDER_NAMES[settings.cronofy_provider] || settings.cronofy_provider) : 'calendar'} is connected for availability checks`
                   : 'Connect your calendar to enable real-time availability'}
               </p>
             </div>
-            <button
-              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex-shrink-0 ${
-                settings.google_calendar_connected
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                  : 'bg-primary-600 text-white hover:bg-primary-700'
-              }`}
-            >
-              {settings.google_calendar_connected ? 'Disconnect' : 'Connect'}
-            </button>
+            {(settings.calendar_connected || settings.google_calendar_connected) ? (
+              <button
+                onClick={handleDisconnectCalendar}
+                className="px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex-shrink-0 bg-red-100 text-red-700 hover:bg-red-200"
+              >
+                Disconnect
+              </button>
+            ) : (
+              <a
+                href="/api/cronofy/auth"
+                className="px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex-shrink-0 bg-primary-600 text-white hover:bg-primary-700 inline-block"
+              >
+                Connect
+              </a>
+            )}
           </div>
         </section>
 

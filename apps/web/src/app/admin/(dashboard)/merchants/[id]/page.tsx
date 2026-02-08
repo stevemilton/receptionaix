@@ -93,9 +93,28 @@ export default async function MerchantDetailPage({
                 <dd className="font-medium">{merchant.twilio_phone_number || 'Not assigned'}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">Google Calendar</dt>
+                <dt className="text-sm text-gray-500">Calendar</dt>
                 <dd className="font-medium">
-                  {merchant.google_calendar_token ? 'Connected' : 'Not connected'}
+                  {(() => {
+                    const m = merchant as any;
+                    if (m.calendar_connected) {
+                      const providerNames: Record<string, string> = {
+                        google: 'Google Calendar',
+                        outlook: 'Outlook',
+                        office365: 'Office 365',
+                        apple: 'iCloud',
+                        exchange: 'Exchange',
+                      };
+                      const label = m.cronofy_provider
+                        ? (providerNames[m.cronofy_provider] || m.cronofy_provider)
+                        : 'Calendar';
+                      return `Connected (${label})`;
+                    }
+                    if (merchant.google_calendar_token) {
+                      return 'Connected (Google Calendar - legacy)';
+                    }
+                    return 'Not connected';
+                  })()}
                 </dd>
               </div>
               <div>

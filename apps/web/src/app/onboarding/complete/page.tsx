@@ -15,6 +15,7 @@ export default function CompletePage() {
     greeting,
     voiceId,
     googleCalendarConnected,
+    calendarConnected,
     faqs,
     twilioPhoneNumber,
     forwardPhone,
@@ -25,6 +26,8 @@ export default function CompletePage() {
     hasHydrated,
     reset,
   } = useOnboardingStore();
+
+  const isCalendarConnected = calendarConnected || googleCalendarConnected;
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +60,7 @@ export default function CompletePage() {
           greeting,
           voiceId,
           googleCalendarConnected,
+          calendarConnected: isCalendarConnected,
           faqs,
           twilioPhoneNumber,
           forwardPhone,
@@ -266,12 +270,12 @@ export default function CompletePage() {
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="font-medium text-gray-900">Google Calendar</h3>
+              <h3 className="font-medium text-gray-900">Calendar</h3>
               <p className="text-sm text-gray-600">
-                {googleCalendarConnected ? 'Connected' : 'Not connected'}
+                {isCalendarConnected ? 'Connected' : 'Not connected'}
               </p>
             </div>
-            {googleCalendarConnected ? (
+            {isCalendarConnected ? (
               <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"

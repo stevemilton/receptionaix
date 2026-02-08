@@ -113,6 +113,9 @@ importers:
       '@fastify/websocket':
         specifier: ^9.0.0
         version: 9.0.0
+      '@receptionalx/cronofy':
+        specifier: workspace:*
+        version: link:../../packages/cronofy
       '@receptionalx/grok':
         specifier: workspace:*
         version: link:../../packages/grok
@@ -147,6 +150,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@receptionalx/cronofy':
+        specifier: workspace:*
+        version: link:../../packages/cronofy
       '@receptionalx/knowledge':
         specifier: workspace:*
         version: link:../../packages/knowledge
@@ -211,6 +217,12 @@ importers:
       tailwindcss:
         specifier: ^3.4.1
         version: 3.4.19(tsx@4.21.0)(yaml@2.8.2)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  packages/cronofy:
+    devDependencies:
       typescript:
         specifier: ^5.3.3
         version: 5.9.3

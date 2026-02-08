@@ -18,6 +18,7 @@ interface OnboardingData {
   greeting: string;
   voiceId: string;
   googleCalendarConnected: boolean;
+  calendarConnected?: boolean;
   faqs: Array<{
     question: string;
     answer: string;
@@ -141,6 +142,7 @@ export async function POST(request: Request) {
       voice_id: data.voiceId,
       greeting: data.greeting,
       google_calendar_connected: data.googleCalendarConnected,
+      calendar_connected: data.calendarConnected || data.googleCalendarConnected || false,
       onboarding_completed: true,
     };
 

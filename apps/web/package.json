@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@receptionalx/cronofy": "workspace:*",
     "@receptionalx/knowledge": "workspace:*",
     "@receptionalx/shared": "workspace:*",
     "@receptionalx/types": "workspace:*",

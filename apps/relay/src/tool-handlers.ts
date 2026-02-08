@@ -1,5 +1,13 @@
 import { supabaseAdmin } from './supabase-client.js';
-import { decryptToken, isEncrypted } from '@receptionalx/shared';
+import { decryptToken, isEncrypted, encryptToken } from '@receptionalx/shared';
+import {
+  getFreeBusy,
+  refreshAccessToken,
+  createEvent,
+  deleteEvent,
+  computeAvailableSlots,
+} from '@receptionalx/cronofy';
+import type { CronofyFreeBusyBlock } from '@receptionalx/cronofy';
 
 /** Validate that a param is a non-empty string. */
 function requireString(params: Record<string, unknown>, key: string): string | null {
@@ -12,6 +20,107 @@ function optionalString(params: Record<string, unknown>, key: string): string | 
   const val = params[key];
   return typeof val === 'string' && val.length > 0 ? val : undefined;
 }
+
+// ---------- Cronofy helper ----------
+
+interface CronofyClient {
+  accessToken: string;
+  calendarId: string;
+}
+
+/**
+ * Fetch and decrypt the merchant's Cronofy credentials.
+ * Refreshes the access token if it's within 5 minutes of expiry.
+ * Returns null if no Cronofy tokens exist for this merchant.
+ */
+async function getMerchantCronofyClient(merchantId: string): Promise<CronofyClient | null> {
+  const { data: merchant } = await supabaseAdmin
+    .from('merchants')
+    .select('cronofy_access_token, cronofy_refresh_token, cronofy_token_expires_at, cronofy_calendar_id')
+    .eq('id', merchantId)
+    .single();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const m = merchant as any;
+  if (!m?.cronofy_access_token || !m?.cronofy_calendar_id) {
+    return null;
+  }
+
+  // Decrypt tokens
+  const rawAccess = m.cronofy_access_token as string;
+  let accessToken = isEncrypted(rawAccess)
+    ? decryptToken<string>(rawAccess)
+    : rawAccess;
+
+  if (!accessToken) return null;
+
+  // Check if token needs refreshing (within 5 min of expiry)
+  const expiresAt = m.cronofy_token_expires_at
+    ? new Date(m.cronofy_token_expires_at as string).getTime()
+    : 0;
+  const fiveMinFromNow = Date.now() + 5 * 60 * 1000;
+
+  if (expiresAt > 0 && expiresAt < fiveMinFromNow && m.cronofy_refresh_token) {
+    try {
+      const rawRefresh = m.cronofy_refresh_token as string;
+      const refreshToken = isEncrypted(rawRefresh)
+        ? decryptToken<string>(rawRefresh)
+        : rawRefresh;
+
+      if (refreshToken) {
+        const clientId = process.env['CRONOFY_CLIENT_ID'];
+        const clientSecret = process.env['CRONOFY_CLIENT_SECRET'];
+
+        if (clientId && clientSecret) {
+          const newTokens = await refreshAccessToken(refreshToken, clientId, clientSecret);
+          accessToken = newTokens.access_token;
+
+          // Persist new tokens (fire-and-forget)
+          const encryptedAccess = encryptToken(newTokens.access_token) ?? newTokens.access_token;
+          const encryptedRefresh = newTokens.refresh_token
+            ? (encryptToken(newTokens.refresh_token) ?? newTokens.refresh_token)
+            : m.cronofy_refresh_token;
+          const newExpiresAt = newTokens.expires_in
+            ? new Date(Date.now() + newTokens.expires_in * 1000).toISOString()
+            : m.cronofy_token_expires_at;
+
+          void Promise.resolve(
+            supabaseAdmin
+              .from('merchants')
+              .update({
+                cronofy_access_token: encryptedAccess,
+                cronofy_refresh_token: encryptedRefresh,
+                cronofy_token_expires_at: newExpiresAt,
+              } as Record<string, unknown>)
+              .eq('id', merchantId)
+          ).catch((err: unknown) => console.warn('[Cronofy] Token refresh persist failed:', err));
+        }
+      }
+    } catch (refreshErr) {
+      console.warn('[Cronofy] Token refresh failed, using existing token:', refreshErr);
+    }
+  }
+
+  return {
+    accessToken,
+    calendarId: m.cronofy_calendar_id as string,
+  };
+}
+
+// ---------- Mock slots fallback ----------
+
+function getMockSlots(date: string): string[] {
+  return [
+    `${date}T09:00:00`,
+    `${date}T10:00:00`,
+    `${date}T11:00:00`,
+    `${date}T14:00:00`,
+    `${date}T15:00:00`,
+    `${date}T16:00:00`,
+  ];
+}
+
+// ---------- Tool dispatcher ----------
 
 export async function executeToolCall(
   merchantId: string,
@@ -59,6 +168,8 @@ export async function executeToolCall(
   }
 }
 
+// ---------- Tool implementations ----------
+
 async function lookupCustomer(
   merchantId: string,
   phone: string
@@ -95,44 +206,54 @@ interface CustomerInfo {
 async function checkAvailability(
   merchantId: string,
   date: string,
-  service?: string
+  _service?: string
 ): Promise<{ slots?: string[]; error?: string }> {
-  // Get merchant's calendar settings
-  const { data: merchant } = await supabaseAdmin
-    .from('merchants')
-    .select('google_calendar_token, settings')
-    .eq('id', merchantId)
-    .single();
+  // Try Cronofy-based availability first
+  try {
+    const cronofyClient = await getMerchantCronofyClient(merchantId);
 
-  if (!merchant?.google_calendar_token) {
-    // Return mock slots if no calendar connected
-    return {
-      slots: [
-        `${date}T09:00:00`,
-        `${date}T10:00:00`,
-        `${date}T11:00:00`,
-        `${date}T14:00:00`,
-        `${date}T15:00:00`,
-        `${date}T16:00:00`,
-      ],
-    };
+    if (!cronofyClient) {
+      // No Cronofy tokens — return mock slots (backward compat)
+      console.log(`[checkAvailability] No Cronofy client for merchant ${merchantId}, using mock slots`);
+      return { slots: getMockSlots(date) };
+    }
+
+    // Get merchant's opening hours from knowledge base
+    const { data: kb } = await supabaseAdmin
+      .from('knowledge_bases')
+      .select('opening_hours')
+      .eq('merchant_id', merchantId)
+      .single();
+
+    const openingHours = (kb?.opening_hours as Record<string, string>) || null;
+
+    // Query Cronofy free/busy for the date
+    const fromDate = date;
+    const toDate = date; // same day
+    const freeBusyResponse = await getFreeBusy(
+      cronofyClient.accessToken,
+      fromDate,
+      toDate,
+      'Europe/London'
+    );
+
+    const busyBlocks: CronofyFreeBusyBlock[] = freeBusyResponse.free_busy || [];
+
+    // Compute available slots
+    const slots = computeAvailableSlots(date, busyBlocks, openingHours, 30);
+
+    if (slots.length === 0 && !openingHours) {
+      // No opening hours and no slots → fall back to mock
+      console.log(`[checkAvailability] No opening hours for merchant ${merchantId}, using mock slots`);
+      return { slots: getMockSlots(date) };
+    }
+
+    return { slots };
+  } catch (err) {
+    // On any Cronofy error, fall back to mock slots
+    console.warn(`[checkAvailability] Cronofy error for merchant ${merchantId}, falling back to mock slots:`, err);
+    return { slots: getMockSlots(date) };
   }
-
-  // Decrypt token if encrypted, otherwise use as-is
-  const rawToken = merchant.google_calendar_token;
-  const _calendarToken = isEncrypted(rawToken)
-    ? decryptToken<{ access_token: string; refresh_token: string | null; expires_at: number }>(rawToken)
-    : rawToken;
-
-  // TODO: Integrate with Google Calendar API using _calendarToken
-  return {
-    slots: [
-      `${date}T09:00:00`,
-      `${date}T10:30:00`,
-      `${date}T14:00:00`,
-      `${date}T15:30:00`,
-    ],
-  };
 }
 
 async function createBooking(
@@ -171,7 +292,7 @@ async function createBooking(
     customer = newCustomer;
   }
 
-  // Create appointment
+  // Create appointment in Supabase
   const startTime = new Date(dateTime);
   const endTime = new Date(startTime.getTime() + 30 * 60000);
 
@@ -190,6 +311,34 @@ async function createBooking(
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Create event in merchant's calendar via Cronofy (fire-and-forget — don't fail if this errors)
+  try {
+    const cronofyClient = await getMerchantCronofyClient(merchantId);
+    if (cronofyClient) {
+      const eventId = `receptionai-${appointment.id}`;
+
+      await createEvent(cronofyClient.accessToken, cronofyClient.calendarId, {
+        event_id: eventId,
+        summary: service,
+        description: `Booked by ReceptionAI\nCustomer: ${customerName || customerPhone}\nPhone: ${customerPhone}`,
+        start: startTime.toISOString(),
+        end: endTime.toISOString(),
+        tzid: 'Europe/London',
+      });
+
+      // Save the calendar event ID on the appointment
+      await supabaseAdmin
+        .from('appointments')
+        .update({ calendar_event_id: eventId } as Record<string, unknown>)
+        .eq('id', appointment.id);
+
+      console.log(`[createBooking] Cronofy event created: ${eventId}`);
+    }
+  } catch (calErr) {
+    // Log but don't fail — the Supabase appointment is already created
+    console.warn('[createBooking] Cronofy event creation failed (appointment still saved):', calErr);
   }
 
   return {
@@ -231,10 +380,10 @@ async function cancelBooking(
     return { success: false, error: 'Customer not found' };
   }
 
-  // Build query for appointments
+  // Build query for appointments — include calendar_event_id for Cronofy cleanup
   let query = supabaseAdmin
     .from('appointments')
-    .select('id')
+    .select('id, calendar_event_id')
     .eq('merchant_id', merchantId)
     .eq('customer_id', customer.id)
     .eq('status', 'confirmed');
@@ -264,6 +413,21 @@ async function cancelBooking(
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Delete the calendar event via Cronofy (fire-and-forget)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const calEventId = (firstAppointment as any).calendar_event_id;
+  if (calEventId) {
+    try {
+      const cronofyClient = await getMerchantCronofyClient(merchantId);
+      if (cronofyClient) {
+        await deleteEvent(cronofyClient.accessToken, cronofyClient.calendarId, calEventId);
+        console.log(`[cancelBooking] Cronofy event deleted: ${calEventId}`);
+      }
+    } catch (calErr) {
+      console.warn('[cancelBooking] Cronofy event deletion failed (appointment already cancelled):', calErr);
+    }
   }
 
   return { success: true };

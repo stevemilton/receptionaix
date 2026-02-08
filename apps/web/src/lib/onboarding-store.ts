@@ -34,6 +34,7 @@ export interface OnboardingData {
 
   // Step 4: Calendar (tokens stored server-side only)
   googleCalendarConnected: boolean;
+  calendarConnected: boolean;
 
   // Step 5: FAQs
   faqs: OnboardingFAQ[];
@@ -75,6 +76,7 @@ interface OnboardingStore extends OnboardingData {
   setGreeting: (greeting: string) => void;
   setVoiceId: (voiceId: string) => void;
   setGoogleCalendar: (connected: boolean) => void;
+  setCalendarConnected: (connected: boolean) => void;
   setFaqs: (faqs: OnboardingFAQ[]) => void;
   setTwilioPhone: (phone: string) => void;
   setForwardPhone: (phone: string) => void;
@@ -100,6 +102,7 @@ const initialState: OnboardingData = {
   greeting: "Hello! Thank you for calling {businessName}. How can I help you today?",
   voiceId: 'Ara',
   googleCalendarConnected: false,
+  calendarConnected: false,
   faqs: [],
   twilioPhoneNumber: null,
   forwardPhone: '',
@@ -132,6 +135,12 @@ export const useOnboardingStore = create<OnboardingStore>()(
       setVoiceId: (voiceId) => set({ voiceId }),
 
       setGoogleCalendar: (connected) => set({
+        googleCalendarConnected: connected,
+      }),
+
+      setCalendarConnected: (connected) => set({
+        calendarConnected: connected,
+        // Also set legacy field for backward compat
         googleCalendarConnected: connected,
       }),
 

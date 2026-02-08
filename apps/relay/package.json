@@ -12,6 +12,7 @@
     "status": "fly status --app receptionai-relay"
   },
   "dependencies": {
+    "@receptionalx/cronofy": "workspace:*",
     "@receptionalx/grok": "workspace:*",
     "@receptionalx/shared": "workspace:*",
     "@receptionalx/types": "workspace:*",

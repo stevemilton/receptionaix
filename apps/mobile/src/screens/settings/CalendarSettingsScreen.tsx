@@ -15,10 +15,20 @@ import { useAuth } from '../../lib/AuthContext';
 import { colors, typography, radius, shadow } from '../../theme';
 import { ScreenBackground } from '../../components/ScreenBackground';
 
+// Map Cronofy provider slugs to display names
+const PROVIDER_NAMES: Record<string, string> = {
+  google: 'Google Calendar',
+  outlook: 'Outlook',
+  office365: 'Office 365',
+  apple: 'iCloud',
+  exchange: 'Exchange',
+};
+
 export function CalendarSettingsScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
+  const [providerName, setProviderName] = useState<string | null>(null);
 
   useEffect(() => {
     loadCalendarStatus();
@@ -27,24 +37,27 @@ export function CalendarSettingsScreen() {
   async function loadCalendarStatus() {
     if (!user) return;
 
-    const { data } = await supabase
+    const { data } = await (supabase
       .from('merchants')
-      .select('google_calendar_connected')
+      .select('google_calendar_connected, calendar_connected, cronofy_provider') as any)
       .eq('id', user.id)
       .single();
 
     if (data) {
-      setIsConnected(data.google_calendar_connected || false);
+      const connected = data.calendar_connected || data.google_calendar_connected || false;
+      setIsConnected(connected);
+      if (data.cronofy_provider) {
+        setProviderName(PROVIDER_NAMES[data.cronofy_provider] || data.cronofy_provider);
+      }
     }
     setLoading(false);
   }
 
   function handleConnect() {
-    // In a real implementation, this would open the OAuth flow
-    // For now, show instructions to use the web dashboard
+    // Calendar connection via Cronofy OAuth requires a web browser
     Alert.alert(
       'Connect Calendar',
-      'To connect your Google Calendar, please use the web dashboard at receptionai.com. Calendar connection requires secure authentication that is best done on a web browser.',
+      'To connect your calendar (Google, Outlook, iCloud, or Exchange), please use the web dashboard at receptionai.com. Calendar connection requires secure authentication that is best done on a web browser.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -56,27 +69,32 @@ export function CalendarSettingsScreen() {
   }
 
   function handleDisconnect() {
+    const calendarLabel = providerName || 'calendar';
     Alert.alert(
       'Disconnect Calendar',
-      'Are you sure you want to disconnect your Google Calendar? Your AI receptionist will no longer be able to check your availability.',
+      `Are you sure you want to disconnect your ${calendarLabel}? Your AI receptionist will no longer be able to check your availability.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Disconnect',
           style: 'destructive',
           onPress: async () => {
-            const { error } = await supabase
+            const { error } = await (supabase
               .from('merchants')
               .update({
                 google_calendar_connected: false,
                 google_calendar_token: null,
-              })
-              .eq('id', user!.id);
+                calendar_connected: false,
+                cronofy_provider: null,
+                cronofy_calendar_id: null,
+              } as any)
+              .eq('id', user!.id) as any);
 
             if (error) {
               Alert.alert('Error', 'Failed to disconnect calendar');
             } else {
               setIsConnected(false);
+              setProviderName(null);
               Alert.alert('Success', 'Calendar disconnected');
             }
           },
@@ -104,7 +122,7 @@ export function CalendarSettingsScreen() {
               <Ionicons name="calendar" size={32} color={colors.primary} />
             </View>
             <View style={styles.statusInfo}>
-              <Text style={styles.statusTitle}>Google Calendar</Text>
+              <Text style={styles.statusTitle}>{providerName || 'Calendar'}</Text>
               <View style={styles.statusRow}>
                 <View
                   style={[
@@ -163,8 +181,8 @@ export function CalendarSettingsScreen() {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.connectButton} onPress={handleConnect}>
-            <Ionicons name="logo-google" size={20} color={colors.white} />
-            <Text style={styles.connectButtonText}>Connect Google Calendar</Text>
+            <Ionicons name="calendar-outline" size={20} color={colors.white} />
+            <Text style={styles.connectButtonText}>Connect Calendar</Text>
           </TouchableOpacity>
         )}
 
